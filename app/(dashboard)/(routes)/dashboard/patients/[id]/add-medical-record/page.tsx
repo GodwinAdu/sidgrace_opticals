@@ -14,13 +14,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ArrowLeft, Calendar, Loader2, Save } from "lucide-react"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useToast } from "@/hooks/use-toast"
+
 import { format } from "date-fns"
+import { toast } from "sonner"
 
 export default function AddMedicalRecordPage({ params }: { params: { id: string } }) {
   const patientId = params.id
   const router = useRouter()
-  const { toast } = useToast()
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [recordType, setRecordType] = useState("examination")
 

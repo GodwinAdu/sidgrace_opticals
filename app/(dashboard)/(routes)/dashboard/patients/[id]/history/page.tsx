@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { format } from "date-fns"
-import { useToast } from "@/hooks/use-toast"
+
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -50,6 +50,7 @@ import {
   Tooltip as RechartsTooltip,
   Legend,
 } from "recharts"
+import { toast } from "sonner"
 
 // Type definitions
 interface Medication {
@@ -128,7 +129,7 @@ interface Patient {
 export default function PatientHistoryPage({ params }: { params: { id: string } }) {
   const patientId = params.id
   const router = useRouter()
-  const { toast } = useToast()
+
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("overview")
   const [dateRange, setDateRange] = useState("all")
