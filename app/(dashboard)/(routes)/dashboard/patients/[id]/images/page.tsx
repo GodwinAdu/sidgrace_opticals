@@ -31,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import {
   ArrowLeft,
@@ -53,6 +52,7 @@ import {
   List,
   Star,
 } from "lucide-react"
+import { toast } from "sonner"
 
 // Type definitions
 interface ImageCategory {
@@ -86,7 +86,6 @@ interface ClinicalImage {
 export default function PatientImagesPage({ params }: { params: { id: string } }) {
   const patientId = params.id
   const router = useRouter()
-  const { toast } = useToast()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // State
@@ -340,11 +339,7 @@ export default function PatientImagesPage({ params }: { params: { id: string } }
   // Handle image upload
   const handleUpload = async () => {
     if (uploadFiles.length === 0) {
-      toast({
-        title: "No files selected",
-        description: "Please select at least one image to upload.",
-        variant: "destructive",
-      })
+      toast.success("upload successfully")
       return
     }
 
@@ -416,7 +411,6 @@ export default function PatientImagesPage({ params }: { params: { id: string } }
       setClinicalImages((prev) => [...newImages, ...prev])
 
       toast({
-        title: "Images uploaded successfully",
         description: `${uploadFiles.length} image${uploadFiles.length > 1 ? "s" : ""} uploaded to patient record.`,
       })
 
@@ -434,7 +428,7 @@ export default function PatientImagesPage({ params }: { params: { id: string } }
       setIsUploadDialogOpen(false)
     } catch (error) {
       toast({
-        title: "Upload failed",
+       
         description: "There was an error uploading the images. Please try again.",
         variant: "destructive",
       })

@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { useToast } from "@/hooks/use-toast"
 import { format } from "date-fns"
 import {
   ArrowLeft,
@@ -30,12 +29,12 @@ import {
   Check,
   Loader2,
 } from "lucide-react"
+import { toast } from "sonner"
 
 export default function NewPrescriptionPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const patientId = searchParams.get("patient")
-  const { toast } = useToast()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [prescriptionType, setPrescriptionType] = useState("eyeglasses")
   const [searchQuery, setSearchQuery] = useState("")

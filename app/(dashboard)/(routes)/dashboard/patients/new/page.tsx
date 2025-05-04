@@ -487,7 +487,7 @@ export default function RegisterPatientPage() {
             <Card className="max-w-3xl mx-auto">
               <CardHeader>
                 <CardTitle>Medical Information</CardTitle>
-                <CardDescription>Enter the patient&#39;s medical details</CardDescription>
+                <CardDescription>Enter the patient's medical details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
