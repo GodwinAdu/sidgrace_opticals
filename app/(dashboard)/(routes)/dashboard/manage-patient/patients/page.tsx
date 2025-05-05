@@ -18,15 +18,15 @@ import { cn } from "@/lib/utils"
 
 export default function PatientsPage() {
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex flex-col">
+      <div className="flex-1 space-y-6 ">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-blue-900">Patients</h1>
             <p className="text-gray-500">Manage patient records and medical information</p>
           </div>
           <div className="flex gap-2">
-            <Link href={'/dashboard/patients/new'} className={cn(buttonVariants(),"bg-blue-700 hover:bg-blue-800")}>
+            <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants(),"bg-blue-700 hover:bg-blue-800")}>
               <UserPlus className="mr-2 h-4 w-4" />
               Register New Patient
             </Link>

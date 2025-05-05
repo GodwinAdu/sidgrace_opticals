@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -27,6 +27,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { cn } from "@/lib/utils"
 
 // Mock data for staff members
 const staffMembers = [
@@ -160,18 +161,18 @@ const StatusBadge = ({ status }: { status: string }) => {
 
 export default function StaffPage() {
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex flex-col">
+      <div className="flex-1 space-y-6 ">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
             <h1 className="text-3xl font-bold text-blue-900">Staff Management</h1>
             <p className="text-gray-500">Manage doctors, nurses, and other staff members</p>
           </div>
           <div className="flex gap-2">
-            <Button className="bg-blue-700 hover:bg-blue-800">
+            <Link href="/dashboard/manage-user/staff/create" className={cn(buttonVariants(),"bg-blue-700 hover:bg-blue-800")}>
               <UserPlus className="mr-2 h-4 w-4" />
               Add Staff Member
-            </Button>
+            </Link>
           </div>
         </div>
 

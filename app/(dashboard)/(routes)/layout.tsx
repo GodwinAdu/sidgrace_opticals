@@ -39,7 +39,7 @@ export default async function DashboardLayout({
                         </Breadcrumb> */}
                     </div>
                 </header>
-                <main className="">
+                <main className="px-4">
                     {children}
                 </main>
             </SidebarInset>

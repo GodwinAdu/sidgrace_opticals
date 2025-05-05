@@ -1,5 +1,5 @@
 import { AnalyticsDashboard } from '@/components/dashboard-page/analytics-dashboard'
-import { fetchPatientId } from '@/lib/actions/patient.actions'
+import { fetchPatientId, updatePatient } from '@/lib/actions/patient.actions'
 import { sendSMS } from '@/lib/actions/twilo.actions'
 import { Metadata } from 'next'
 import React, { Suspense } from 'react'
@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 }
 
 const page = async () => {
+  // await updatePatient()
   // const id = "6817eb5beb47264c75857419"
   // // const patient = await fetchPatientId()
   // const number = '+233551556650'

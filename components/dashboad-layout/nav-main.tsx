@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRight, HospitalIcon, MailCheck, Menu, Sparkles, UploadCloudIcon, Users, } from "lucide-react"
+import { ChevronRight, HospitalIcon, MailCheck, Menu, Sparkles, ThermometerIcon, UploadCloudIcon, Users, } from "lucide-react"
 
 import {
   Collapsible,
@@ -45,15 +45,22 @@ export function NavMain() {
 
     },
     {
+      title: "OPD",
+      url: `/dashboard/opd`,
+      icon: ThermometerIcon,
+      isActive: false,
+
+    },
+    {
       title: "Attendance",
-      url: `/attendance`,
+      url: `/dashboard/attendance`,
       icon: Users,
       isActive: false,
 
     },
     {
       title: "Admission",
-      url: `/admission`,
+      url: `/dashboard/admission`,
       icon: HospitalIcon,
       isActive: false,
 
@@ -65,20 +72,16 @@ export function NavMain() {
       isActive: true,
       items: [
         {
-          title: "Departments",
-          url: "#",
-        },
-        {
           title: "Add Bulk Staff",
-          url: "#",
+          url: "/dashboard/manage-user/add-bulk",
         },
         {
-          title: "Add Staff",
-          url: "#",
+          title: "Manage Staff",
+          url: "/dashboard/manage-user/staff",
         },
         {
           title: "Staff List",
-          url: "#",
+          url: "/dashboard/manage-user/staff-list",
         },
       ],
     },
@@ -88,41 +91,24 @@ export function NavMain() {
       icon: Bot,
       items: [
         {
-          title: "Genesis",
-          url: "#",
+          title: "Add Bulks",
+          url: "/dashboard/manage-patient/add-bulk",
         },
         {
-          title: "Explorer",
-          url: "#",
+          title: "Manage Patient",
+          url: "/dashboard/manage-patient/patients",
         },
         {
-          title: "Quantum",
-          url: "#",
+          title: "Patient Lists",
+          url: "/dashboard/manage-patient/patient-list",
         },
       ],
     },
     {
       title: "Appointment",
-      url: "#",
+      url: "/dashboard/appointments",
       icon: BookOpen,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
+      isActive:false
     },
     {
       title: "Billing",
@@ -177,11 +163,11 @@ export function NavMain() {
       items: [
         {
           title: "Emails",
-          url: "#",
+          url: "/dashboard/messaging/emails",
         },
         {
           title: "SMS",
-          url: "#",
+          url: "/dashboard/messaging/sms",
         },
       ],
     },
@@ -214,20 +200,8 @@ export function NavMain() {
       icon: UploadCloudIcon,
       items: [
         {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: "Manage Inventory",
+          url: "/dashboard/manage-inventory/inventory",
         },
       ],
     },
