@@ -116,15 +116,16 @@ export default function NewAppointmentPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
-      <div className="flex-1 space-y-6 p-6 md:p-8">
+    <div className="flex flex-col">
+      <div className="flex-1 space-y-6">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center">
             <Link href="/dashboard/appointments">
               <Button variant="ghost" size="sm" className="mr-2">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Appointments
+                <span className="sr-only"> Back to Appointments</span>
+               
               </Button>
             </Link>
             <h1 className="text-3xl font-bold text-blue-900">Schedule New Appointment</h1>

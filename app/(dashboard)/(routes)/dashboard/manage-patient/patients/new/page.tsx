@@ -26,9 +26,8 @@ export default function RegisterPatientPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     // Personal Information
-    firstName: "",
-    lastName: "",
-    dateOfBirth: "",
+    fullName: "",
+    dob: "",
     gender: "",
     maritalStatus: "",
     occupation: "",
@@ -144,7 +143,7 @@ export default function RegisterPatientPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col">
       <div className="flex-1 space-y-6 ">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

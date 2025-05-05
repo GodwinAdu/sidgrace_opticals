@@ -17,30 +17,13 @@ import {
   User,
   Plus,
 } from "lucide-react"
+import { fetchPatientId } from "@/lib/actions/patient.actions"
+import { calculateAge } from "@/lib/utils"
 
-export default function PatientDetailPage({ params }: { params: { id: string } }) {
-  const patientId = params.id
+export default async function PatientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
-  // This would normally be fetched from a database
-  const patient = {
-    id: patientId,
-    name: "John Smith",
-    age: 45,
-    gender: "Male",
-    dob: "1978-06-15",
-    contact: "+1 (555) 123-4567",
-    email: "john.smith@example.com",
-    address: "123 Main Street, Anytown, CA 12345",
-    insurance: "Blue Cross Blue Shield",
-    policyNumber: "BCBS-123456789",
-    emergencyContact: "Mary Smith (Wife) - +1 (555) 987-6543",
-    registrationDate: "2020-03-10",
-    lastVisit: "2023-04-15",
-    status: "Active",
-    bloodType: "O+",
-    allergies: ["Penicillin", "Pollen"],
-    chronicConditions: ["Hypertension", "Type 2 Diabetes"],
-  }
+  const patient = await fetchPatientId(id)
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-4rem)]">
@@ -55,11 +38,10 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
               </Button>
             </Link>
             <Badge
-              className={`${
-                patient.status === "Active"
-                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-              }`}
+              className={`${patient.status === "Active"
+                ? "bg-green-100 text-green-800 hover:bg-green-100"
+                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                }`}
             >
               {patient.status}
             </Badge>
@@ -83,22 +65,22 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
         {/* Patient header */}
         <div className="flex flex-col md:flex-row gap-6 items-start">
           <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 text-4xl font-bold">
-            {patient.name.charAt(0)}
+            {patient.fullName.charAt(0)}
           </div>
           <div className="space-y-2">
-            <h1 className="text-3xl font-bold text-blue-900">{patient.name}</h1>
+            <h1 className="text-3xl font-bold text-blue-900">{patient.fullName}</h1>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-gray-500">
               <div className="flex items-center">
                 <User className="h-4 w-4 mr-1" />
-                {patient.age} years, {patient.gender}
+                {calculateAge(patient?.dob)} years, {patient.gender}
               </div>
               <div className="flex items-center">
                 <Phone className="h-4 w-4 mr-1" />
-                {patient.contact}
+                {patient.phone}
               </div>
               <div className="flex items-center">
                 <FileText className="h-4 w-4 mr-1" />
-                ID: {patient.id}
+                ID: {patient.patientId}
               </div>
               <div className="flex items-center">
                 <Calendar className="h-4 w-4 mr-1" />
@@ -139,7 +121,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                   <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-3">
                     <div>
                       <dt className="text-sm text-gray-500">Full Name</dt>
-                      <dd className="font-medium">{patient.name}</dd>
+                      <dd className="font-medium">{patient.fullName}</dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500">Date of Birth</dt>
@@ -155,7 +137,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500">Phone</dt>
-                      <dd className="font-medium">{patient.contact}</dd>
+                      <dd className="font-medium">{patient.phone}</dd>
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500">Email</dt>
@@ -182,9 +164,9 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                     <div>
                       <dt className="text-sm text-gray-500">Allergies</dt>
                       <dd className="font-medium">
-                        {patient.allergies.length > 0 ? (
+                        {patient?.allergies.length > 0 ? (
                           <div className="flex flex-wrap gap-1 mt-1">
-                            {patient.allergies.map((allergy, index) => (
+                            {patient?.allergies?.map((allergy, index) => (
                               <Badge key={index} variant="outline" className="bg-red-50 text-red-700 border-red-200">
                                 {allergy}
                               </Badge>
@@ -225,7 +207,7 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                     </div>
                     <div>
                       <dt className="text-sm text-gray-500">Registration Date</dt>
-                      <dd className="font-medium">{patient.registrationDate}</dd>
+                      <dd className="font-medium">{patient.registeredAt ?? patient.createdAt}</dd>
                     </div>
                   </dl>
                 </CardContent>
@@ -510,11 +492,10 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-lg">{plan.title}</h3>
                             <Badge
-                              className={`${
-                                plan.status === "Active"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                              }`}
+                              className={`${plan.status === "Active"
+                                ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                                }`}
                             >
                               {plan.status}
                             </Badge>
@@ -635,11 +616,10 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                           <div className="flex items-center gap-2">
                             <h3 className="font-bold text-lg">{prescription.type} Prescription</h3>
                             <Badge
-                              className={`${
-                                prescription.status === "Active"
-                                  ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                              }`}
+                              className={`${prescription.status === "Active"
+                                ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                                }`}
                             >
                               {prescription.status}
                             </Badge>
@@ -880,13 +860,12 @@ export default function PatientDetailPage({ params }: { params: { id: string } }
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap text-sm">
                                 <Badge
-                                  className={`${
-                                    invoice.status === "Paid"
-                                      ? "bg-green-100 text-green-800 hover:bg-green-100"
-                                      : invoice.status === "Pending"
-                                        ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                                        : "bg-red-100 text-red-800 hover:bg-red-100"
-                                  }`}
+                                  className={`${invoice.status === "Paid"
+                                    ? "bg-green-100 text-green-800 hover:bg-green-100"
+                                    : invoice.status === "Pending"
+                                      ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                                      : "bg-red-100 text-red-800 hover:bg-red-100"
+                                    }`}
                                 >
                                   {invoice.status}
                                 </Badge>

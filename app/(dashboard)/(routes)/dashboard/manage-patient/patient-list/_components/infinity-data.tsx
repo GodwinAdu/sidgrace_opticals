@@ -240,7 +240,7 @@ const InfinityTable = () => {
                                 >
                                     <div className="flex-1 font-medium text-gray-900">
                                         <Link
-                                            href={`/dashboard/patients/${patient._id}`}
+                                            href={`/dashboard/manage-patient/patients/${patient._id}`}
                                             className="hover:text-blue-600 transition-colors flex items-center"
                                         >
                                             {patient.fullName}
