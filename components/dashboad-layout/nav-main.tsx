@@ -58,13 +58,7 @@ export function NavMain() {
       isActive: false,
 
     },
-    {
-      title: "Admission",
-      url: `/dashboard/admission`,
-      icon: HospitalIcon,
-      isActive: false,
-
-    },
+   
     can('manage_user') && {
       title: "Manage Staff",
       url: "#",

@@ -18,6 +18,7 @@ import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, Calendar, Check, ChevronRight, Loader2, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { Separator } from "@/components/ui/separator"
 
 
 export default function RegisterPatientPage() {
@@ -67,7 +68,7 @@ export default function RegisterPatientPage() {
     acknowledgmentOfPrivacyPolicy: false,
   })
 
-  const totalSteps = 5
+  const totalSteps = 4
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -126,16 +127,16 @@ export default function RegisterPatientPage() {
     try {
       // In a real app, you would send formData to your API
       await new Promise((resolve) => setTimeout(resolve, 1500))
-      console.log(formData,"patient form")
+      console.log(formData, "patient form")
 
-      toast.success("created successfully",{
-        description:"Patient created Successfully"
+      toast.success("created successfully", {
+        description: "Patient created Successfully"
       })
 
       // Redirect to the patients list
       router.push("/dashboard/patients")
     } catch (error) {
-      console.log("something went wrong",error)
+      console.log("something went wrong", error)
       toast.error("something went wrong")
     } finally {
       setIsSubmitting(false)
@@ -144,19 +145,22 @@ export default function RegisterPatientPage() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex-1 space-y-6 ">
+      <div className="flex-1 space-y-3 ">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 py-4">
           <div className="flex items-center">
-            <Link href="/dashboard/patients">
+            <Link href="/dashboard/manage-patient/patients">
               <Button variant="ghost" size="sm" className="mr-2">
                 <ArrowLeft className="h-4 w-4 mr-1" />
-                Back to Patients
+                <span className="sr-only">Back to Patients</span>
+
               </Button>
             </Link>
             <h1 className="text-3xl font-bold text-blue-900">Register New Patient</h1>
           </div>
         </div>
+
+        <Separator />
 
         {/* Progress indicator */}
         <div className="w-full max-w-3xl mx-auto mb-8">
@@ -183,11 +187,9 @@ export default function RegisterPatientPage() {
                 >
                   {index === 0
                     ? "Personal"
-                    : index === 1
-                      ? "Medical"
-                      : index === 2
+                      : index === 1
                         ? "Insurance"
-                        : index === 3
+                        : index === 2
                           ? "Emergency"
                           : "Review"}
                 </span>
@@ -219,22 +221,9 @@ export default function RegisterPatientPage() {
                     <Input
                       id="firstName"
                       name="firstName"
-                      value={formData.firstName}
+                      value={formData.fullName}
                       onChange={handleInputChange}
                       placeholder="Enter first name"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">
-                      Last Name <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="lastName"
-                      name="lastName"
-                      value={formData.lastName}
-                      onChange={handleInputChange}
-                      placeholder="Enter last name"
                       required
                     />
                   </div>
@@ -251,7 +240,7 @@ export default function RegisterPatientPage() {
                         id="dateOfBirth"
                         name="dateOfBirth"
                         type="date"
-                        value={formData.dateOfBirth}
+                        value={formData.dob}
                         onChange={handleInputChange}
                         className="pl-8"
                         required
@@ -481,178 +470,10 @@ export default function RegisterPatientPage() {
             </Card>
           )}
 
-          {/* Step 2: Medical Information */}
-          {currentStep === 2 && (
-            <Card className="max-w-3xl mx-auto">
-              <CardHeader>
-                <CardTitle>Medical Information</CardTitle>
-                <CardDescription>Enter the patient's medical details</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="bloodType">Blood Type</Label>
-                  <Select value={formData.bloodType} onValueChange={(value) => handleSelectChange("bloodType", value)}>
-                    <SelectTrigger id="bloodType">
-                      <SelectValue placeholder="Select blood type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="A+">A+</SelectItem>
-                      <SelectItem value="A-">A-</SelectItem>
-                      <SelectItem value="B+">B+</SelectItem>
-                      <SelectItem value="B-">B-</SelectItem>
-                      <SelectItem value="AB+">AB+</SelectItem>
-                      <SelectItem value="AB-">AB-</SelectItem>
-                      <SelectItem value="O+">O+</SelectItem>
-                      <SelectItem value="O-">O-</SelectItem>
-                      <SelectItem value="Unknown">Unknown</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="allergies">Allergies</Label>
-                  <Textarea
-                    id="allergies"
-                    name="allergies"
-                    value={formData.allergies}
-                    onChange={handleInputChange}
-                    placeholder="List any allergies (medications, food, environmental, etc.)"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="chronicConditions">Chronic Conditions</Label>
-                  <Textarea
-                    id="chronicConditions"
-                    name="chronicConditions"
-                    value={formData.chronicConditions}
-                    onChange={handleInputChange}
-                    placeholder="List any chronic conditions (diabetes, hypertension, etc.)"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="currentMedications">Current Medications</Label>
-                  <Textarea
-                    id="currentMedications"
-                    name="currentMedications"
-                    value={formData.currentMedications}
-                    onChange={handleInputChange}
-                    placeholder="List any medications the patient is currently taking"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="familyHistory">Family Medical History</Label>
-                  <Textarea
-                    id="familyHistory"
-                    name="familyHistory"
-                    value={formData.familyHistory}
-                    onChange={handleInputChange}
-                    placeholder="Relevant family medical history"
-                    className="min-h-[100px]"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Previous Eye Conditions</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {["Myopia", "Hyperopia", "Astigmatism", "Glaucoma", "Cataracts", "Macular Degeneration"].map(
-                      (condition) => (
-                        <div key={condition} className="flex items-center space-x-2">
-                          <Checkbox id={`condition-${condition}`} />
-                          <label
-                            htmlFor={`condition-${condition}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {condition}
-                          </label>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Previous Eye Surgeries</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {["LASIK", "Cataract Surgery", "Corneal Transplant", "Glaucoma Surgery", "Retinal Surgery"].map(
-                      (surgery) => (
-                        <div key={surgery} className="flex items-center space-x-2">
-                          <Checkbox id={`surgery-${surgery}`} />
-                          <label
-                            htmlFor={`surgery-${surgery}`}
-                            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                          >
-                            {surgery}
-                          </label>
-                        </div>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Current Vision Aids</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {["Glasses", "Contact Lenses", "Reading Glasses", "Bifocals", "Progressive Lenses"].map((aid) => (
-                      <div key={aid} className="flex items-center space-x-2">
-                        <Checkbox id={`aid-${aid}`} />
-                        <label
-                          htmlFor={`aid-${aid}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {aid}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Current Symptoms</Label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {[
-                      "Blurred Vision",
-                      "Eye Pain",
-                      "Redness",
-                      "Dryness",
-                      "Light Sensitivity",
-                      "Floaters",
-                      "Double Vision",
-                      "Headaches",
-                    ].map((symptom) => (
-                      <div key={symptom} className="flex items-center space-x-2">
-                        <Checkbox id={`symptom-${symptom}`} />
-                        <label
-                          htmlFor={`symptom-${symptom}`}
-                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                        >
-                          {symptom}
-                        </label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-between">
-                <Button variant="outline" type="button" onClick={prevStep}>
-                  Previous
-                </Button>
-                <Button type="button" onClick={nextStep} className="bg-blue-700 hover:bg-blue-800">
-                  Next Step
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardFooter>
-            </Card>
-          )}
 
           {/* Step 3: Insurance Information */}
-          {currentStep === 3 && (
-            <Card className="max-w-3xl mx-auto">
+          {currentStep === 2 && (
+            <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Insurance Information</CardTitle>
                 <CardDescription>Enter the patient's insurance details</CardDescription>
@@ -820,8 +641,8 @@ export default function RegisterPatientPage() {
           )}
 
           {/* Step 4: Emergency Contact */}
-          {currentStep === 4 && (
-            <Card className="max-w-3xl mx-auto">
+          {currentStep === 3 && (
+            <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Emergency Contact</CardTitle>
                 <CardDescription>Enter emergency contact information</CardDescription>
@@ -943,7 +764,7 @@ export default function RegisterPatientPage() {
                       </label>
                     </div>
                     <p className="text-xs text-gray-500 ml-6">
-                      I acknowledge that I have received a copy of Sid Grace Opticals' Notice of Privacy Practices.
+                      I acknowledge that I have received a copy of SidGrace Opticals' Notice of Privacy Practices.
                     </p>
                   </div>
                 </div>
@@ -952,7 +773,7 @@ export default function RegisterPatientPage() {
                 <Button variant="outline" type="button" onClick={prevStep}>
                   Previous
                 </Button>
-                <Button type="button" onClick={nextStep} className="bg-blue-700 hover:bg-blue-800">
+                <Button type="button" onClick={nextStep} >
                   Review Information
                   <ChevronRight className="ml-2 h-4 w-4" />
                 </Button>
@@ -961,8 +782,8 @@ export default function RegisterPatientPage() {
           )}
 
           {/* Step 5: Review and Submit */}
-          {currentStep === 5 && (
-            <Card className="max-w-3xl mx-auto">
+          {currentStep === 4 && (
+            <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Review Information</CardTitle>
                 <CardDescription>Please review all information before submitting</CardDescription>
@@ -971,7 +792,6 @@ export default function RegisterPatientPage() {
                 <Tabs defaultValue="personal" className="w-full">
                   <TabsList className="grid grid-cols-4 mb-4">
                     <TabsTrigger value="personal">Personal</TabsTrigger>
-                    <TabsTrigger value="medical">Medical</TabsTrigger>
                     <TabsTrigger value="insurance">Insurance</TabsTrigger>
                     <TabsTrigger value="emergency">Emergency</TabsTrigger>
                   </TabsList>
@@ -981,12 +801,12 @@ export default function RegisterPatientPage() {
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Full Name</h3>
                         <p>
-                          {formData.firstName} {formData.lastName}
+                          {formData.fullName}
                         </p>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Date of Birth</h3>
-                        <p>{formData.dateOfBirth}</p>
+                        <p>{formData.dob}</p>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Gender</h3>
@@ -1033,42 +853,6 @@ export default function RegisterPatientPage() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="medical" className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-500">Blood Type</h3>
-                        <p>{formData.bloodType || "Not specified"}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Allergies</h3>
-                      <p>{formData.allergies || "None reported"}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Chronic Conditions</h3>
-                      <p>{formData.chronicConditions || "None reported"}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Current Medications</h3>
-                      <p>{formData.currentMedications || "None reported"}</p>
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Family Medical History</h3>
-                      <p>{formData.familyHistory || "None reported"}</p>
-                    </div>
-                    <div className="pt-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentStep(2)}
-                        className="text-blue-700"
-                      >
-                        Edit Medical Information
-                      </Button>
-                    </div>
-                  </TabsContent>
-
                   <TabsContent value="insurance" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
@@ -1085,7 +869,7 @@ export default function RegisterPatientPage() {
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Policy Holder</h3>
-                        <p>{formData.policyHolderName || formData.firstName + " " + formData.lastName}</p>
+                        <p>{formData.policyHolderName || formData.fullName}</p>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Relationship to Policy Holder</h3>
@@ -1162,7 +946,6 @@ export default function RegisterPatientPage() {
                 </Button>
                 <Button
                   type="submit"
-                  className="bg-blue-700 hover:bg-blue-800"
                   disabled={
                     isSubmitting ||
                     !formData.consentToTreatment ||

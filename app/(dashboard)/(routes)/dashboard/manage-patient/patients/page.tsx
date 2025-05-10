@@ -26,7 +26,7 @@ export default function PatientsPage() {
             <p className="text-gray-500">Manage patient records and medical information</p>
           </div>
           <div className="flex gap-2">
-            <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants(),"bg-blue-700 hover:bg-blue-800")}>
+            <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants(), "bg-blue-700 hover:bg-blue-800")}>
               <UserPlus className="mr-2 h-4 w-4" />
               Register New Patient
             </Link>
@@ -171,17 +171,16 @@ export default function PatientsPage() {
                     <TableCell>{patient.lastVisit}</TableCell>
                     <TableCell>
                       <Badge
-                        className={`${
-                          patient.status === "Active"
-                            ? "bg-green-100 text-green-800 hover:bg-green-100"
-                            : patient.status === "Scheduled"
-                              ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
-                              : patient.status === "Waiting"
-                                ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                                : patient.status === "Follow-up"
-                                  ? "bg-purple-100 text-purple-800 hover:bg-purple-100"
-                                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                        }`}
+                        className={`${patient.status === "Active"
+                          ? "bg-green-100 text-green-800 hover:bg-green-100"
+                          : patient.status === "Scheduled"
+                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                            : patient.status === "Waiting"
+                              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                              : patient.status === "Follow-up"
+                                ? "bg-purple-100 text-purple-800 hover:bg-purple-100"
+                                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                          }`}
                       >
                         {patient.status}
                       </Badge>

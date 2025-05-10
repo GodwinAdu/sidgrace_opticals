@@ -31,14 +31,6 @@ export default function NewAppointmentPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [appointmentType, setAppointmentType] = useState("examination")
 
-  // Mock data for doctors
-  const doctors = [
-    { id: "1", name: "Dr. Sarah Johnson", specialty: "Ophthalmologist", available: true },
-    { id: "2", name: "Dr. Michael Chen", specialty: "Retina Specialist", available: true },
-    { id: "3", name: "Dr. Amara Patel", specialty: "Pediatric Ophthalmologist", available: false },
-    { id: "4", name: "Dr. Robert Williams", specialty: "Glaucoma Specialist", available: true },
-    { id: "5", name: "Dr. Emily Rodriguez", specialty: "Cornea Specialist", available: true },
-  ]
 
   // Mock data for patients
   const patients = [
@@ -117,7 +109,7 @@ export default function NewAppointmentPage() {
 
   return (
     <div className="flex flex-col">
-      <div className="flex-1 space-y-6">
+      <div className="flex-1 space-y-6 py-5">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center">
@@ -125,7 +117,7 @@ export default function NewAppointmentPage() {
               <Button variant="ghost" size="sm" className="mr-2">
                 <ArrowLeft className="h-4 w-4 mr-1" />
                 <span className="sr-only"> Back to Appointments</span>
-               
+
               </Button>
             </Link>
             <h1 className="text-3xl font-bold text-blue-900">Schedule New Appointment</h1>
@@ -220,7 +212,7 @@ export default function NewAppointmentPage() {
                     </div>
 
                     <div className="text-center">
-                      <p className="text-sm text-gray-500 mb-2">Can't find the patient?</p>
+                      <p className="text-sm text-gray-500 mb-2">Can&apos;t find the patient?</p>
                       <Button
                         type="button"
                         variant="outline"
@@ -352,39 +344,6 @@ export default function NewAppointmentPage() {
                     </div>
                   </RadioGroup>
                 </div>
-
-                <div className="space-y-2">
-                  <Label>Additional Options</Label>
-                  <div className="space-y-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="send-reminder" />
-                      <label
-                        htmlFor="send-reminder"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Send appointment reminder
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="insurance-verification" />
-                      <label
-                        htmlFor="insurance-verification"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Verify insurance before appointment
-                      </label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox id="new-prescription" />
-                      <label
-                        htmlFor="new-prescription"
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        Patient may need new prescription
-                      </label>
-                    </div>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -395,36 +354,6 @@ export default function NewAppointmentPage() {
                 <CardDescription>Select appointment date and time</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Select Doctor</Label>
-                  <div className="grid grid-cols-1 gap-2">
-                    {doctors.map((doctor) => (
-                      <div
-                        key={doctor.id}
-                        className={cn(
-                          "flex items-center justify-between p-3 border rounded-md cursor-pointer",
-                          selectedDoctor === doctor.id
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-blue-300",
-                          !doctor.available && "opacity-50 cursor-not-allowed",
-                        )}
-                        onClick={() => doctor.available && setSelectedDoctor(doctor.id)}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                            {doctor.name.split(" ")[1].charAt(0)}
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{doctor.name}</h3>
-                            <p className="text-xs text-gray-500">{doctor.specialty}</p>
-                          </div>
-                        </div>
-                        {!doctor.available && <span className="text-xs text-red-500">Unavailable</span>}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 <div className="space-y-2">
                   <Label>Select Date</Label>
                   <div className="grid place-items-center">
@@ -453,7 +382,7 @@ export default function NewAppointmentPage() {
 
                 <div className="space-y-2">
                   <Label>Available Time Slots</Label>
-                  <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto">
+                  <div className="grid grid-cols-2 gap-2  overflow-y-auto">
                     {timeSlots.map((slot, index) => (
                       <div
                         key={index}
@@ -468,7 +397,7 @@ export default function NewAppointmentPage() {
                         )}
                         onClick={() => slot.available && setSelectedTimeSlot(slot.time)}
                       >
-                        <Clock className="mr-2 h-3 w-3" />
+                        <Clock className="mr-2 h-3 w-3 " />
                         {slot.time}
                       </div>
                     ))}

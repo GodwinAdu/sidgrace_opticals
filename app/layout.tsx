@@ -4,6 +4,8 @@ import "./globals.css";
 import { DashboardProvider } from "@/hooks/dashboard-provider";
 import { Toaster } from "@/components/ui/sonner";
 import Loader from "@/components/Loader";
+import { ThemeProvider } from "@/components/theme/theme-provider";
+import NextTopLoader from 'nextjs-toploader';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,15 +28,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <DashboardProvider>
-          <Toaster />
-          <Loader />
-          {children}
-        </DashboardProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <DashboardProvider>
+            <Toaster />
+            <NextTopLoader />
+            {/* <Loader /> */}
+            {children}
+          </DashboardProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

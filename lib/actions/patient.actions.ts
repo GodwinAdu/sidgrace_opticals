@@ -3,6 +3,7 @@
 import { Patient } from "../models/patient.models";
 import Record from "../models/record.models";
 import { connectToDB } from "../mongoose";
+import { currentUser } from "../helpers/current-user";
 
 interface FetchPatientsParams {
     page?: number
@@ -51,7 +52,7 @@ export async function fetchInfinityPatient({
         // Add search functionality if provided
         if (search) {
             query = {
-                $or: [{ fullName: { $regex: search, $options: "i" } }, { contact: { $regex: search, $options: "i" } },{ patientId: { $regex: search, $options: "i" } }],
+                $or: [{ fullName: { $regex: search, $options: "i" } }, { contact: { $regex: search, $options: "i" } }, { patientId: { $regex: search, $options: "i" } }],
             }
         }
 
@@ -66,6 +67,38 @@ export async function fetchInfinityPatient({
     } catch (error) {
         console.error("Error fetching patients:", error)
         throw new Error("Failed to fetch patients")
+    }
+}
+
+
+export async function fetchPatientBySearch(search: string) {
+    try {
+
+        const user = await currentUser();
+
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB();
+
+        // Build the query
+        let query = {}
+
+        // Add search functionality if provided
+        if (search) {
+            query = {
+                $or: [{ fullName: { $regex: search, $options: "i" } }, { contact: { $regex: search, $options: "i" } }, { patientId: { $regex: search, $options: "i" } }],
+            }
+        }
+
+        const patient = await Patient.find(query)
+
+        if (!patient) return {}
+
+        return JSON.parse(JSON.stringify(patient))
+
+    } catch (error) {
+        console.log("error happening while fetching patient by search", error);
+        throw error;
     }
 }
 
