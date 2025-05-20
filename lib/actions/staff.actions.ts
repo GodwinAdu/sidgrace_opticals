@@ -3,11 +3,18 @@
 import { compare, hash } from "bcryptjs";
 import Staff from "../models/staff.models";
 import { connectToDB } from "../mongoose";
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken"
+import { User, withAuth } from "../helpers/auth";
+import { login } from "../helpers/user.actions";
 
-export async function createStaff(values) {
+interface LoginProps {
+    username: string;
+    password: string;
+    rememberMe: boolean
+}
+async function _createStaff(user: User, values) {
     try {
+        if (!user) throw new Error("User not authenticated")
+
         const { password, username } = values
         await connectToDB();
         const existingUser = await Staff.findOne({ username })
@@ -29,6 +36,10 @@ export async function createStaff(values) {
     }
 }
 
+export const createStaff = await withAuth(_createStaff)
+
+
+
 export async function fetchStaffById(id: string) {
     try {
         await connectToDB();
@@ -45,10 +56,9 @@ export async function fetchStaffById(id: string) {
 }
 
 
-export async function loginStaff(values) {
+export async function loginStaff(values: LoginProps) {
     try {
-        const { username, password } = values;
-        const cookieStore = await cookies();
+        const { username, password, rememberMe } = values;
 
         await connectToDB();
 
@@ -60,17 +70,10 @@ export async function loginStaff(values) {
         const isPasswordValid = await compare(password, user.password);
         if (!isPasswordValid) throw new Error("Invalid password");
 
-        const tokenData = {
-            id: user._id,
-            role: user.role,
-        };
+        const userId = user._id.toString();
+        const role = user.role
 
-        const token = jwt.sign(tokenData, process.env.TOKEN_SECRET_KEY!, { expiresIn: "1d" });
-
-        cookieStore.set("token", token, {
-            httpOnly: true,
-            path: "/",
-        });
+        await login(userId, role, rememberMe)
 
         return JSON.parse(JSON.stringify(user));
 

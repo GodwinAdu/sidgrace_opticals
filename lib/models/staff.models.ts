@@ -21,8 +21,6 @@ const StaffSchema = new Schema<IStaff>(
         country: { type: String, trim: true },
         role: {
             type: String,
-            enum: ["doctor", "nurse", "admin", "staff"],
-            default: "doctor",
         },
         department: { type: String, trim: true },
         specialization: { type: String, trim: true },
@@ -32,15 +30,6 @@ const StaffSchema = new Schema<IStaff>(
         password: { type: String, required: true },
         confirmPassword: { type: String, select: false },
         profileImage: { type: String, default: null },
-        accessLevel: {
-            type: String,
-            enum: ["limited", "full"],
-            default: "limited",
-        },
-        permissions: {
-            type: [String],
-            default: ["view_patients", "view_appointments"],
-        },
         isActive: { type: Boolean, default: true },
         requirePasswordChange: { type: Boolean, default: true },
         isBanned: { type: Boolean, default: false },

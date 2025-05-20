@@ -216,14 +216,14 @@ export default function RegisterPatientPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="firstName">
-                      First Name <span className="text-red-500">*</span>
+                      Enter Full Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
                       id="firstName"
-                      name="firstName"
+                      name="fullName"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      placeholder="Enter first name"
+                      placeholder="Enter full name"
                       required
                     />
                   </div>
@@ -238,7 +238,7 @@ export default function RegisterPatientPage() {
                       <Calendar className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
                       <Input
                         id="dateOfBirth"
-                        name="dateOfBirth"
+                        name="dob"
                         type="date"
                         value={formData.dob}
                         onChange={handleInputChange}

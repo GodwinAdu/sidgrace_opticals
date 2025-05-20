@@ -32,14 +32,14 @@ const patientSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
-    allergies: {
+    allergies: [{
         type: String,
         default: ""
-    },
-    chronicConditions: {
+    }],
+    chronicConditions:[ {
         type: String,
         default: ""
-    },
+    }],
     currentMedications: {
         type: String,
         default: ""
@@ -65,10 +65,6 @@ const patientSchema = new mongoose.Schema({
         default: ""
     },
     preferredCommunication: {
-        type: String,
-        default: ""
-    },
-    preferredLanguage: {
         type: String,
         default: ""
     },

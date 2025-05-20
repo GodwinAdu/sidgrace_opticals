@@ -8,6 +8,7 @@ import {
     SidebarProvider,
     SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { currentUserRole } from "@/lib/helpers/current-role";
 import { currentUser } from "@/lib/helpers/current-user";
 
 
@@ -17,10 +18,15 @@ export default async function DashboardLayout({
 }: Readonly<{
     children: React.ReactNode;
 }>) {
-    const user = await currentUser()
+    const [user, role] = await Promise.all([
+        currentUser(),
+        currentUserRole(),
+    ]);
+
+
     return (
         <SidebarProvider>
-            <AppSidebar user={user} />
+            <AppSidebar userRole={role as IRole} user={user} />
             <SidebarInset>
                 <header className="flex justify-between items-center w-full sticky top-0 z-50 bg-background h-16 border-b shrink-0 gap-2 shadow-md transition-[width,height] ease-linear">
                     <div className="flex items-center gap-2 px-4">

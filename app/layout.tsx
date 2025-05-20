@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { DashboardProvider } from "@/hooks/dashboard-provider";
 import { Toaster } from "@/components/ui/sonner";
-import Loader from "@/components/Loader";
 import { ThemeProvider } from "@/components/theme/theme-provider";
 import NextTopLoader from 'nextjs-toploader';
 
@@ -38,12 +36,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <DashboardProvider>
             <Toaster />
             <NextTopLoader />
             {/* <Loader /> */}
             {children}
-          </DashboardProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -12,10 +12,11 @@ import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
-    user: any; // Replace `any` with the appropriate type for `user` if known
+    user: IStaff; // Replace `any` with the appropriate type for `user` if known
+    userRole: IRole;
 }
 
-export async function AppSidebar({ user, ...props }: AppSidebarProps) {
+export async function AppSidebar({ user, userRole, ...props }: AppSidebarProps) {
 
     return (
         <Sidebar collapsible="icon" {...props}>
@@ -23,7 +24,7 @@ export async function AppSidebar({ user, ...props }: AppSidebarProps) {
                 {/* <TeamSwitcher teams={data.teams} /> */}
             </SidebarHeader>
             <SidebarContent>
-                <NavMain />
+                <NavMain role={userRole} />
                 {/* <NavProjects projects={data.projects} /> */}
             </SidebarContent>
             <SidebarFooter>

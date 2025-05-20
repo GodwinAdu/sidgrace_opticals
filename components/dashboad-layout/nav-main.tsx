@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRight, HospitalIcon, MailCheck, Menu, Sparkles, ThermometerIcon, UploadCloudIcon, Users, } from "lucide-react"
+import { ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, Settings2Icon, Sparkles, ThermometerIcon, Trash, UploadCloudIcon, Users, } from "lucide-react"
 
 import {
   Collapsible,
@@ -21,27 +21,35 @@ import {
 
   BookOpen,
   Bot,
-  Settings2,
   SquareTerminal,
 } from "lucide-react"
-import { usePermissions } from "@/hooks/dashboard-provider";
-import { useParams, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 
-export function NavMain() {
-  const { can } = usePermissions()
-  const params = useParams();
+interface NavItem {
+  title: string;
+  url: string;
+  icon?: React.ComponentType;
+  roleField?: keyof IRole | string;
+  isActive?: boolean;
+  items?: NavItem[];
+}
+
+
+export function NavMain({ role }:{role:IRole}) {
+  // const params = useParams();
   const pathname = usePathname();
 
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const navMain = [
+  const navMain: (NavItem | false)[] = [
     {
       title: "Dashboard",
       url: `/dashboard`,
       icon: Menu,
       isActive: false,
+      roleField: "dashboard"
 
     },
     {
@@ -49,6 +57,7 @@ export function NavMain() {
       url: `/dashboard/opd`,
       icon: ThermometerIcon,
       isActive: false,
+      roleField: "opdManagement"
 
     },
     {
@@ -56,15 +65,25 @@ export function NavMain() {
       url: `/dashboard/attendance`,
       icon: Users,
       isActive: false,
+      roleField: "attendantManagement"
 
     },
-   
-    can('manage_user') && {
+
+    {
       title: "Manage Staff",
       url: "#",
       icon: SquareTerminal,
       isActive: true,
+      roleField:"staffManagement",
       items: [
+        {
+          title: "Departments",
+          url: "/dashboard/manage-user/department",
+        },
+        {
+          title: "Manage Roles",
+          url: "/dashboard/manage-user/manage-role",
+        },
         {
           title: "Add Bulk Staff",
           url: "/dashboard/manage-user/add-bulk",
@@ -79,10 +98,11 @@ export function NavMain() {
         },
       ],
     },
-    can('manage_patient') && {
+    {
       title: "Manage Patient",
       url: "#",
       icon: Bot,
+      roleField:"patientManagement",
       items: [
         {
           title: "Add Bulks",
@@ -102,28 +122,25 @@ export function NavMain() {
       title: "Appointment",
       url: "/dashboard/appointments",
       icon: BookOpen,
-      isActive:false
+      isActive: false,
+      roleField:"appointmentManagement"
     },
     {
-      title: "Billing",
+      title: "Account",
       url: "#",
       icon: BookOpen,
       items: [
         {
-          title: "Introduction",
-          url: "#",
+          title: "Account List",
+          url: "/dashboard/account/account-list",
         },
         {
-          title: "Get Started",
-          url: "#",
+          title: "Balance Sheet",
+          url: "/dashboard/account/balance-sheet",
         },
         {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          title: "Trial Balance",
+          url: "/dashboard/account/trial-balance",
         },
       ],
     },
@@ -154,6 +171,7 @@ export function NavMain() {
       title: "Messaging",
       url: "#",
       icon: MailCheck,
+      roleField:"messaging",
       items: [
         {
           title: "Emails",
@@ -166,9 +184,10 @@ export function NavMain() {
       ],
     },
     {
-      title: "Analytics",
+      title: "Reports",
       url: "#",
-      icon: UploadCloudIcon,
+      icon: LucideMessagesSquare    ,
+      roleField:"report",
       items: [
         {
           title: "Introduction",
@@ -194,33 +213,50 @@ export function NavMain() {
       icon: UploadCloudIcon,
       items: [
         {
-          title: "Manage Inventory",
-          url: "/dashboard/manage-inventory/inventory",
+          title: "Category",
+          url: "/dashboard/inventory/category",
+        },
+        {
+          title: "Stores",
+          url: "/dashboard/inventory/stores",
+        },
+        {
+          title: "Products",
+          url: "/dashboard/inventory/products",
+        },
+        {
+          title: "Purchase",
+          url: "/dashboard/inventory/purchase",
+        },
+        {
+          title: "Suppliers",
+          url: "/dashboard/inventory/suppliers",
         },
       ],
     },
     {
+      title: "History",
+      url: `/dashboard/history`,
+      icon: History,
+      isActive: false,
+      roleField: "history"
+
+    },
+    {
+      title: "Trash",
+      url: `/dashboard/trash`,
+      icon: Trash,
+      isActive: false,
+      roleField: "trash"
+
+    },
+    {
       title: "Settings",
-      url: "#",
-      icon: Settings2,
-      items: [
-        {
-          title: "General",
-          url: "#",
-        },
-        {
-          title: "Team",
-          url: "#",
-        },
-        {
-          title: "Billing",
-          url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
-        },
-      ],
+      url: `/dashboard/settings`,
+      icon: Settings2Icon,
+      isActive: false,
+      roleField: "trash"
+
     },
   ];
 
@@ -234,12 +270,12 @@ export function NavMain() {
 
       return pathname.startsWith(url) && url !== dashboardPath;
     },
-    [pathname, ]
+    [pathname]
   );
 
   // Automatically open collapsible if an item inside is active
   useEffect(() => {
-    navMain.filter((group): group is Exclude<typeof group, false> => group !== false).forEach((group) => {
+    navMain.filter((group): group is NavItem => group !== false).forEach((group) => {
       if (group.items?.some((item) => isActive(item.url))) {
         setOpenGroup(group.title);
       }
@@ -247,10 +283,13 @@ export function NavMain() {
   }, [pathname]);
 
   return (
-    <SidebarGroup>
-      <SidebarGroupLabel>Platform</SidebarGroupLabel>
-      <SidebarMenu>
-        {navMain.filter((item): item is Exclude<typeof item, false> => Boolean(item)).map((item) =>
+    <SidebarGroup className="scrollbar-hide">
+      <SidebarGroupLabel>Nav links</SidebarGroupLabel>
+      <SidebarMenu >
+        {navMain
+          .filter((item): item is NavItem => item !== false)
+          .filter((item) => !item.roleField || (role && role[item.roleField as keyof IRole]))
+          .map((item) =>
             item.items ? (
               <Collapsible
                 key={item.title}
@@ -277,6 +316,7 @@ export function NavMain() {
                   <CollapsibleContent>
                     <SidebarMenuSub>
                       {item.items
+                        ?.filter((subItem) => !subItem?.roleField || (role && role[subItem?.roleField as keyof IRole]))
                         .map((subItem) => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton

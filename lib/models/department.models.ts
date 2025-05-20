@@ -10,6 +10,10 @@ const DepartmentSchema = new Schema<IDepartment>(
             ref: "Staff",
             default: null,
         },
+        employees: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Staff',
+        }],
         createdBy: {
             type: Schema.Types.ObjectId,
             ref: "Staff",
