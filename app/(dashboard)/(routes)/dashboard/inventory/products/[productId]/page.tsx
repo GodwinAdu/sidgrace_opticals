@@ -1,8 +1,9 @@
-import Heading from '@/components/commons/Header'
+
 import { Separator } from '@/components/ui/separator'
 import { fetchCategories } from '@/lib/actions/inventory-category.actions'
 import ProductForm from '../_components/ProductForm'
 import { fetchProductById } from '@/lib/actions/inventory-product.actions'
+import Heading from '@/app/components/Heading'
 
 const page = async ({ params }: { params: { productId: string } }) => {
 

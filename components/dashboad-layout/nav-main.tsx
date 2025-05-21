@@ -126,25 +126,6 @@ export function NavMain({ role }:{role:IRole}) {
       roleField:"appointmentManagement"
     },
     {
-      title: "Account",
-      url: "#",
-      icon: BookOpen,
-      items: [
-        {
-          title: "Account List",
-          url: "/dashboard/account/account-list",
-        },
-        {
-          title: "Balance Sheet",
-          url: "/dashboard/account/balance-sheet",
-        },
-        {
-          title: "Trial Balance",
-          url: "/dashboard/account/trial-balance",
-        },
-      ],
-    },
-    {
       title: "Sales",
       url: "#",
       icon: Sparkles,

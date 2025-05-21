@@ -11,7 +11,7 @@ const StaffSchema = new Schema<IStaff>(
         dateOfBirth: { type: Date },
         gender: {
             type: String,
-            enum: ["male", "female", "non-binary", "prefer-not-to-say"],
+            enum: ["male", "female", "other", "prefer-not-to-say"],
             default: "prefer-not-to-say",
         },
         address: { type: String, trim: true },
@@ -21,6 +21,7 @@ const StaffSchema = new Schema<IStaff>(
         country: { type: String, trim: true },
         role: {
             type: String,
+            required: true,
         },
         department: { type: String, trim: true },
         specialization: { type: String, trim: true },
@@ -29,7 +30,6 @@ const StaffSchema = new Schema<IStaff>(
         username: { type: String, required: true, unique: true, trim: true },
         password: { type: String, required: true },
         confirmPassword: { type: String, select: false },
-        profileImage: { type: String, default: null },
         isActive: { type: Boolean, default: true },
         requirePasswordChange: { type: Boolean, default: true },
         isBanned: { type: Boolean, default: false },

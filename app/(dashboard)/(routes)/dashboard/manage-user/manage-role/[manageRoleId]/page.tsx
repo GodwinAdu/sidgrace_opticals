@@ -4,24 +4,16 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import DisplayRole from "../_component/DisplayRole";
 import { fetchRoleById } from "@/lib/actions/role.actions";
-import Heading from "@/components/commons/Header";
-import { currentUser } from "@/lib/helpers/current-user";
+import Heading from "@/app/components/Heading";
 
-type Props = Promise<{ id: string,storeId:string,branchId:string }>
+type Props = Promise<{ manageRoleId: string, }>
+
 const page = async ({ params }: { params: Props }) => {
-  const user = await currentUser();
 
-  if (!user) {
-    redirect("/")
-  }
-  const { id,storeId,branchId } = await params;
+  const { manageRoleId } = await params;
 
-
-
-  const initialData = await fetchRoleById({ id }) 
+  const initialData = await fetchRoleById(manageRoleId)
 
 
   return (
@@ -33,7 +25,7 @@ const page = async ({ params }: { params: Props }) => {
         />
 
         <Link
-          href={`/${storeId}/dashboard/${branchId}/users/manage-role`}
+          href={`/dashboard/manage-user/manage-role`}
           className={cn(buttonVariants())}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -41,7 +33,7 @@ const page = async ({ params }: { params: Props }) => {
         </Link>
       </div>
       <Separator />
-      <DisplayRole initialData={initialData} />
+      {/* <DisplayRole initialData={initialData} /> */}
     </>
   )
 }

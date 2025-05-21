@@ -5,6 +5,9 @@ import Staff from "../models/staff.models";
 import { connectToDB } from "../mongoose";
 import { User, withAuth } from "../helpers/auth";
 import { login } from "../helpers/user.actions";
+import Department from "../models/department.models";
+import History from "../models/history.models";
+
 
 interface LoginProps {
     username: string;
@@ -17,8 +20,15 @@ async function _createStaff(user: User, values) {
 
         const { password, username } = values
         await connectToDB();
-        const existingUser = await Staff.findOne({ username })
-        if (existingUser) throw new Error("Staff already exist in database")
+        const [existingUserByUsername, existingUserByEmail, existingUserByPhone, department] = await Promise.all([
+            Staff.findOne({ username }),
+            Staff.findOne({ email: values.email }),
+            Staff.findOne({ phone: values.phone }),
+            Department.findById(values.department as string)
+        ])
+        if (existingUserByUsername || existingUserByEmail || existingUserByPhone || !department) {
+            throw new Error("Staff already exist in database or department not found")
+        }
 
         const hashedPassword = await hash(password, 10)
 
@@ -28,7 +38,24 @@ async function _createStaff(user: User, values) {
             action_type: "created"
         });
 
-        await newUser.save()
+        department.employees.push(newUser._id)
+        const history = new History({
+            actionType: 'STAFF_CREATED',
+            details: {
+                itemId: newUser._id,
+                deletedAt: new Date(),
+            },
+            message: `User ${user.fullName} created Staff named "${newUser.fullName}" (ID: ${newUser._id}) on ${new Date()}.`,
+            performedBy: user._id, // User who performed the action,    
+            entityId: newUser._id,  // The ID of the deleted unit
+            entityType: 'STAFF',  // The type of the entity
+        });
+
+        await Promise.all([
+            newUser.save(),
+            department.save(),
+            history.save()
+        ])
 
     } catch (error) {
         console.log("something went wrong", error);

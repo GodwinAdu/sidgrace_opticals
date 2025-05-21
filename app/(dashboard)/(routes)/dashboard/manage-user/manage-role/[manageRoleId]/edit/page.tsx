@@ -4,27 +4,17 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { fetchRoleById } from "@/lib/actions/role.actions";
-import Heading from "@/components/commons/Header";
 import CreateRoleForm from "../../_component/CreateRoleForm";
-import { currentUser } from "@/lib/helpers/current-user";
+import Heading from "@/app/components/Heading";
 
 
-const page = async ({ params }: { params: { branchId: string, storeId: string, manageRoleId: string } }) => {
+const page = async ({ params }: { params: Promise<{ manageRoleId: string }> }) => {
 
-  const user = await currentUser();
+  const { manageRoleId } = await params;
 
-  if (!user) {
-    redirect("/")
-  }
-  const id = params.manageRoleId as string;
-  const storeId = params.storeId as string;
-  const branchId = params.branchId as string;
 
-  console.log(id)
-
-  const initialData = await fetchRoleById(id)
+  const initialData = await fetchRoleById(manageRoleId)
 
 
   return (
@@ -36,7 +26,7 @@ const page = async ({ params }: { params: { branchId: string, storeId: string, m
         />
 
         <Link
-          href={`/${storeId}/dashboard/${branchId}/users/manage-role`}
+          href={`/dashboard/manage-user/manage-role`}
           className={cn(buttonVariants())}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
