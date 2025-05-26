@@ -3,7 +3,7 @@
 import { Patient } from "../models/patient.models";
 import Record from "../models/record.models";
 import { connectToDB } from "../mongoose";
-import { currentUser } from "../helpers/current-user";
+import { withAuth, type User } from '../helpers/auth';
 
 interface FetchPatientsParams {
     page?: number
@@ -14,8 +14,33 @@ interface FetchPatientsParams {
 }
 
 
-export async function fetchPatientId(id: string) {
+async function _createPatient(user: User, values) {
     try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB();
+
+        const patient = new Patient({
+            ...values,
+            createdBy: user._id,
+            updatedBy: user._id,
+        })
+
+        await patient.save()
+
+        return JSON.parse(JSON.stringify(patient))
+
+    } catch (error) {
+        console.log("error while creating patient", error);
+        throw error;
+    }
+}
+
+export const createPatient = await withAuth(_createPatient)
+
+async function _fetchPatientId(user: User, id: string) {
+    try {
+        if (!user) throw new Error("User not authenticated")
 
         await connectToDB();
 
@@ -32,8 +57,10 @@ export async function fetchPatientId(id: string) {
     }
 }
 
+export const fetchPatientId = await withAuth(_fetchPatientId)
 
-export async function fetchInfinityPatient({
+
+async function _fetchInfinityPatient(user: User, {
     page = 1,
     limit = 20,
     search = "",
@@ -41,6 +68,7 @@ export async function fetchInfinityPatient({
     sortOrder = "desc",
 }: FetchPatientsParams = {}) {
     try {
+        if (!user) throw new Error("User not authenticated")
         await connectToDB()
 
         // Calculate how many documents to skip
@@ -70,37 +98,131 @@ export async function fetchInfinityPatient({
     }
 }
 
+export const fetchInfinityPatient = await withAuth(_fetchInfinityPatient)
 
-export async function fetchPatientBySearch(search: string) {
+async function _fetchPatientBySearch(user: User, search: string) {
     try {
+        if (!user) throw new Error("User not authenticated");
 
-        const user = await currentUser();
+        await connectToDB();
 
+        let query = {};
+
+        if (search) {
+            const searchTerms = search.trim().split(/\s+/).filter(Boolean);
+
+            if (searchTerms.length > 1) {
+                // For multiple words (e.g., "John Doe" or "Doe John")
+                query = {
+                    $or: [
+                        {
+                            $and: searchTerms.map(term => ({
+                                fullName: { $regex: term, $options: "i" },
+                            }))
+                        },
+                        { contact: { $regex: search, $options: "i" } },
+                        { patientId: { $regex: search, $options: "i" } },
+                    ]
+                };
+            } else {
+                // For single word search
+                query = {
+                    $or: [
+                        { fullName: { $regex: search, $options: "i" } },
+                        { contact: { $regex: search, $options: "i" } },
+                        { patientId: { $regex: search, $options: "i" } },
+                    ]
+                };
+            }
+        }
+
+        const patients = await Patient.find(query);
+
+        return JSON.parse(JSON.stringify(patients));
+
+    } catch (error) {
+        console.error("Error while fetching patient by search:", error);
+        throw error;
+    }
+}
+
+export const fetchPatientBySearch = await withAuth(_fetchPatientBySearch);
+
+
+
+async function _fetchPatientThisMonth(user: User) {
+    try {
         if (!user) throw new Error("User not authenticated")
 
         await connectToDB();
 
-        // Build the query
-        let query = {}
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        // Add search functionality if provided
-        if (search) {
-            query = {
-                $or: [{ fullName: { $regex: search, $options: "i" } }, { contact: { $regex: search, $options: "i" } }, { patientId: { $regex: search, $options: "i" } }],
-            }
-        }
+        // Query patients created this month
+        const patientsThisMonth = await Patient.find({ createdAt: { $gte: startOfMonth } }).sort({ createdAt: -1 }).lean();
 
-        const patient = await Patient.find(query)
+        if(patientsThisMonth.length === 0 ) return []
 
-        if (!patient) return {}
-
-        return JSON.parse(JSON.stringify(patient))
+        return JSON.parse(JSON.stringify(patientsThisMonth));
 
     } catch (error) {
-        console.log("error happening while fetching patient by search", error);
+        console.log("error while fetching patient this month", error);
         throw error;
+
     }
 }
+
+export const fetchPatientThisMonth = await withAuth(_fetchPatientThisMonth)
+
+export async function getPatientDashboardStats() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Query patients
+    const [totalPatients, newPatientsThisMonth, newPatientsLastMonth, appointmentsToday, followUpsRequired] = await Promise.all([
+        Patient.countDocuments({}),
+        Patient.countDocuments({ createdAt: { $gte: startOfMonth } }),
+        Patient.countDocuments({ createdAt: { $gte: startOfLastMonth, $lte: endOfLastMonth } }),
+
+        // Placeholder for "appointments today"
+        Promise.resolve(32), // Replace with actual query if you have Appointments collection
+
+        // Placeholder for "follow-ups required"
+        Promise.resolve(16)  // Replace with actual logic
+    ]);
+
+    const newPatientsChangeValue = newPatientsThisMonth - newPatientsLastMonth;
+    const newPatientsChangePercent = newPatientsLastMonth === 0
+        ? 100
+        : ((newPatientsChangeValue / newPatientsLastMonth) * 100).toFixed(1);
+
+    return [
+        {
+            title: "Total Patients",
+            value: totalPatients.toLocaleString(),
+            change: `+${newPatientsThisMonth} this month`,
+        },
+        {
+            title: "New Patients",
+            value: newPatientsThisMonth.toString(),
+            change: `${newPatientsChangeValue >= 0 ? '+' : ''}${newPatientsChangePercent}% from last month`,
+        },
+        {
+            title: "Appointments Today",
+            value: appointmentsToday.toString(),
+            change: "8 remaining", // You can make this dynamic later
+        },
+        {
+            title: "Follow-ups Required",
+            value: followUpsRequired.toString(),
+            change: "5 urgent", // You can make this dynamic later
+        },
+    ];
+}
+
 
 
 

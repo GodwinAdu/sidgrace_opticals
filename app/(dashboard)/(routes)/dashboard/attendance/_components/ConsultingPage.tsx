@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -40,7 +40,7 @@ import MedicationsTab from "./medications-tab"
 import SurgicalNotesTab from "./surgical-notes-tab"
 import ProceduresTab from "./procedures-tab"
 import EyeTestTab from "./eye-test-tab"
-
+import { calculateAge } from "@/lib/utils"
 
 // Define the attendance data structure based on the Mongoose schema
 interface AttendanceData {
@@ -97,60 +97,84 @@ interface AttendanceData {
         date: string
         notes: string
     }[]
-    status: "PENDING" | "ONGOING" | "COMPLETED" | "CANCELLED"
-    visitType: "OUTPATIENT" | "INPATIENT" | "EMERGENCY"
+    status: "pending" | "ongoing" | "completed" | "cancelled"
+    visitType: "outpatient" | "inpatient" | "emergency"
 }
 
-export default function PatientRecord() {
+interface PatientRecordProps {
+    attendance: AttendanceData
+}
+
+// Default empty attendance data
+const defaultAttendanceData: AttendanceData = {
+    patientId: "",
+    eyeTest: {
+        visualAcuity: "",
+        colorVision: "",
+        intraocularPressure: "",
+        remarks: "",
+    },
+    vitals: {
+        temperature: null,
+        pulse: null,
+        bloodPressure: "",
+        respiratoryRate: null,
+        weight: null,
+        height: null,
+        bmi: null,
+    },
+    history: {
+        presentingComplaints: "",
+        pastMedicalHistory: "",
+        familyHistory: "",
+        drugHistory: "",
+    },
+    physicExam: {
+        general: "",
+        cardiovascular: "",
+        respiratory: "",
+        gastrointestinal: "",
+        nervousSystem: "",
+    },
+    diagnosis: {
+        primary: "",
+        secondary: [],
+    },
+    scan: {},
+    doctorNote: null,
+    nurseNote: null,
+    drugs: [],
+    labReport: {},
+    plan: {
+        treatment: "",
+        followUp: "",
+    },
+    surgicalNote: "",
+    procedures: [],
+    status: "pending",
+    visitType: "outpatient",
+}
+
+export default function PatientRecord({ attendance }: PatientRecordProps) {
     const [activeTab, setActiveTab] = useState("history")
-    const [attendanceData, setAttendanceData] = useState<AttendanceData>({
-        patientId: "",
-        eyeTest: {
-            visualAcuity: "",
-            colorVision: "",
-            intraocularPressure: "",
-            remarks: "",
-        },
-        vitals: {
-            temperature: null,
-            pulse: null,
-            bloodPressure: "",
-            respiratoryRate: null,
-            weight: null,
-            height: null,
-            bmi: null,
-        },
-        history: {
-            presentingComplaints: "",
-            pastMedicalHistory: "",
-            familyHistory: "",
-            drugHistory: "",
-        },
-        physicExam: {
-            general: "",
-            cardiovascular: "",
-            respiratory: "",
-            gastrointestinal: "",
-            nervousSystem: "",
-        },
-        diagnosis: {
-            primary: "",
-            secondary: [],
-        },
-        scan: {},
-        doctorNote: null,
-        nurseNote: null,
-        drugs: [],
-        labReport: {},
-        plan: {
-            treatment: "",
-            followUp: "",
-        },
-        surgicalNote: "",
-        procedures: [],
-        status: "PENDING",
-        visitType: "OUTPATIENT",
-    })
+    const [attendanceData, setAttendanceData] = useState<AttendanceData>(defaultAttendanceData)
+
+    // Initialize state with the passed attendance data
+    useEffect(() => {
+        if (attendance) {
+            setAttendanceData({
+                ...defaultAttendanceData,
+                ...attendance,
+                // Ensure nested objects are properly merged
+                eyeTest: { ...defaultAttendanceData.eyeTest, ...attendance.eyeTest },
+                vitals: { ...defaultAttendanceData.vitals, ...attendance.vitals },
+                history: { ...defaultAttendanceData.history, ...attendance.history },
+                physicExam: { ...defaultAttendanceData.physicExam, ...attendance.physicExam },
+                diagnosis: { ...defaultAttendanceData.diagnosis, ...attendance.diagnosis },
+                plan: { ...defaultAttendanceData.plan, ...attendance.plan },
+            })
+        }
+    }, [attendance])
 
     // Handler functions for each tab's data
     const handleEyeTestSave = (data: any) => {
@@ -205,9 +229,11 @@ export default function PatientRecord() {
         setAttendanceData((prev) => ({ ...prev, procedures: data }))
     }
 
-    // Function to handle tab selection from dropdown
-    const handleTabSelect = (tabValue: string) => {
-        setActiveTab(tabValue)
+    // Function to handle saving all attendance data
+    const handleSaveRecord = () => {
+        console.log("Saving attendance record:", attendanceData)
+        // Here you would typically call an API to save the data
+        // Example: await saveAttendanceRecord(attendanceData)
     }
 
     return (
@@ -220,7 +246,18 @@ export default function PatientRecord() {
                             <Clock className="h-3 w-3" />
                             Last updated: 5 min ago
                         </Badge>
-                        <Badge variant="secondary">Patient ID: 303702</Badge>
+                        <Badge variant="secondary">Patient ID: {attendanceData.patientId.patientId || "303702"}</Badge>
+                        <Badge
+                            variant="outline"
+                            className={`
+                            ${attendanceData.status === "completed" ? "bg-green-100 text-green-800" : ""}
+                            ${attendanceData.status === "ongoing" ? "bg-blue-100 text-blue-800" : ""}
+                            ${attendanceData.status === "pending" ? "bg-yellow-100 text-yellow-800" : ""}
+                            ${attendanceData.status === "cancelled" ? "bg-red-100 text-red-800" : ""}
+                        `}
+                        >
+                            Status: {attendanceData.status}
+                        </Badge>
                     </div>
                 </div>
             </div>
@@ -233,28 +270,23 @@ export default function PatientRecord() {
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 border-2 border-blue-500">
-                                        <AvatarImage src="/patient-consultation.png" alt="Patient" />
-                                        <AvatarFallback>PT</AvatarFallback>
+                                        <AvatarImage src="/placeholder.svg?height=40&width=40&query=patient avatar" alt="Patient" />
+                                        <AvatarFallback>{attendanceData.patientId.fullName && attendanceData.patientId.fullName[0]}{attendanceData.patientId.fullName && attendanceData.patientId.fullName[1]}</AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <CardTitle className="text-lg font-bold text-blue-800 dark:text-blue-300">
-                                            Patient Information
+                                            {attendanceData.patientId.fullName}
                                         </CardTitle>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">Female • 37 years</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{attendanceData.patientId.gender} • {calculateAge(attendanceData.patientId.dob)} years</p>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
+                                   
                                     <Badge
                                         variant="outline"
                                         className="text-blue-800 border-blue-800 dark:text-blue-300 dark:border-blue-500"
                                     >
-                                        Time: 12:20:08 PM
-                                    </Badge>
-                                    <Badge
-                                        variant="outline"
-                                        className="text-blue-800 border-blue-800 dark:text-blue-300 dark:border-blue-500"
-                                    >
-                                        Date: 06-05-2025
+                                        Date: {attendanceData.date ? new Date(attendanceData.date).toLocaleDateString() : "N/A"}
                                     </Badge>
                                 </div>
                             </div>
@@ -265,7 +297,11 @@ export default function PatientRecord() {
                                 <div className="space-y-4">
                                     <div>
                                         <Label className="text-sm font-medium dark:text-gray-300">Type of Service</Label>
-                                        <RadioGroup defaultValue="inpatient" className="flex flex-wrap gap-4 pt-2">
+                                        <RadioGroup
+                                            value={attendanceData.visitType}
+                                            onValueChange={(value) => setAttendanceData((prev) => ({ ...prev, visitType: value as any }))}
+                                            className="flex flex-wrap gap-4 pt-2"
+                                        >
                                             <div className="flex items-center space-x-2">
                                                 <RadioGroupItem value="outpatient" id="outpatient" />
                                                 <Label htmlFor="outpatient" className="dark:text-gray-300">
@@ -279,9 +315,9 @@ export default function PatientRecord() {
                                                 </Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="investigation" id="investigation" />
-                                                <Label htmlFor="investigation" className="dark:text-gray-300">
-                                                    Investigation
+                                                <RadioGroupItem value="emergency" id="emergency" />
+                                                <Label htmlFor="emergency" className="dark:text-gray-300">
+                                                    Emergency
                                                 </Label>
                                             </div>
                                         </RadioGroup>
@@ -510,7 +546,10 @@ export default function PatientRecord() {
                                 <span className="inline sm:hidden">Export</span>
                             </Button>
                         </div>
-                        <Button className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700">
+                        <Button
+                            onClick={handleSaveRecord}
+                            className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                        >
                             <Save className="h-4 w-4 mr-2" />
                             Save
                         </Button>

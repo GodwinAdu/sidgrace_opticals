@@ -80,7 +80,26 @@ export async function fetchStaffById(id: string) {
         console.log("error while fetching staff by id", error);
         throw error;
     }
+
 }
+
+async function _fetchAllStaffs(user: User) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB();
+        const staffs = await Staff.find({}).populate("department").populate("createdBy").sort({ createdAt: -1 })
+
+        if (staffs.length === 0) return []
+
+        return JSON.parse(JSON.stringify(staffs))
+
+    } catch (error) {
+        console.log("error while fetching all staffs", error);
+        throw error;
+    }
+}
+export const fetchAllStaffs = await withAuth(_fetchAllStaffs)
 
 
 export async function loginStaff(values: LoginProps) {
@@ -111,3 +130,54 @@ export async function loginStaff(values: LoginProps) {
         throw error;
     }
 }
+
+
+
+async function _getStaffStatistics(user: User) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        const allStaff = await Staff.find({ del_flag: false });
+
+        const totalStaff = allStaff.length;
+
+        const doctors = allStaff.filter((staff) => staff.role.toLowerCase() === "doctor");
+        const supportStaff = allStaff.filter((staff) => staff.role.toLowerCase() !== "doctor");
+        const onLeave = allStaff.filter((staff) => staff.onLeave);
+
+        // Count specializations
+        const countBySpecialization = (staffList: typeof allStaff) => {
+            const counts: Record<string, number> = {};
+            staffList.forEach((s) => {
+                const spec = s.specialization || s.role || "Unknown";
+                counts[spec] = (counts[spec] || 0) + 1;
+            });
+            return Object.entries(counts)
+                .map(([key, val]) => `${val} ${key}${val > 1 ? "s" : ""}`)
+                .join(", ");
+        };
+
+        const doctorsChange = countBySpecialization(doctors);
+        const supportStaffChange = countBySpecialization(supportStaff);
+
+        const onLeaveChange = onLeave.length > 0 && onLeave[0].updatedAt
+            ? `Returns ${new Date(onLeave[0].updatedAt as string | number | Date).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+            })}`
+            : "No one on leave";
+
+        return [
+            { title: "Total Staff", value: `${totalStaff}`, change: `+${totalStaff} this month` }, // You can make this dynamic with a date filter
+            { title: "Doctors", value: `${doctors.length}`, change: doctorsChange },
+            { title: "Support Staff", value: `${supportStaff.length}`, change: supportStaffChange },
+            { title: "On Leave", value: `${onLeave.length}`, change: onLeaveChange },
+        ];
+    } catch (error) {
+        console.error("Error fetching staff statistics:", error);
+        throw error;
+    }
+};
+
+export const getStaffStatistics = await withAuth(_getStaffStatistics)

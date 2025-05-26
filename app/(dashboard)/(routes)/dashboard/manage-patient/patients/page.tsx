@@ -14,9 +14,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+import { calculateAge, cn } from "@/lib/utils"
+import { fetchPatientThisMonth, getPatientDashboardStats } from "@/lib/actions/patient.actions"
 
-export default function PatientsPage() {
+export default async function PatientsPage() {
+  const [statistics, patients] = await Promise.all([
+    getPatientDashboardStats(),
+    fetchPatientThisMonth()
+  ])
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-6 ">
@@ -26,7 +31,7 @@ export default function PatientsPage() {
             <p className="text-gray-500">Manage patient records and medical information</p>
           </div>
           <div className="flex gap-2">
-            <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants(), "bg-blue-700 hover:bg-blue-800")}>
+            <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants())}>
               <UserPlus className="mr-2 h-4 w-4" />
               Register New Patient
             </Link>
@@ -60,12 +65,7 @@ export default function PatientsPage() {
 
         {/* Patient Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[
-            { title: "Total Patients", value: "1,284", change: "+24 this month" },
-            { title: "New Patients", value: "48", change: "+12% from last month" },
-            { title: "Appointments Today", value: "32", change: "8 remaining" },
-            { title: "Follow-ups Required", value: "16", change: "5 urgent" },
-          ].map((stat, index) => (
+          {statistics.map((stat, index) => (
             <Card key={index}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -78,11 +78,20 @@ export default function PatientsPage() {
           ))}
         </div>
 
+
         {/* Patients Table */}
         <Card>
-          <CardHeader>
-            <CardTitle>Patient Records</CardTitle>
-            <CardDescription>View and manage your patient database</CardDescription>
+          <CardHeader className="flex items-center justify-between">
+            <div className="">
+              <CardTitle>Patient Records This Month</CardTitle>
+              <CardDescription>View and manage your patient database</CardDescription>
+            </div>
+            <div className="">
+              <Link href="/dashboard/manage-patient/patient-list" className={cn(buttonVariants())}>
+                <Eye className="h-4 w-4" />
+              View All Patients
+              </Link>
+              </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -103,127 +112,73 @@ export default function PatientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[
-                  {
-                    id: "SGO-P1001",
-                    name: "John Smith",
-                    age: 45,
-                    gender: "Male",
-                    contact: "+1 (555) 123-4567",
-                    lastVisit: "2023-04-15",
-                    status: "Active",
-                  },
-                  {
-                    id: "SGO-P1002",
-                    name: "Emily Johnson",
-                    age: 32,
-                    gender: "Female",
-                    contact: "+1 (555) 987-6543",
-                    lastVisit: "2023-04-28",
-                    status: "Scheduled",
-                  },
-                  {
-                    id: "SGO-P1003",
-                    name: "Michael Brown",
-                    age: 58,
-                    gender: "Male",
-                    contact: "+1 (555) 456-7890",
-                    lastVisit: "2023-04-10",
-                    status: "Follow-up",
-                  },
-                  {
-                    id: "SGO-P1004",
-                    name: "Sarah Williams",
-                    age: 27,
-                    gender: "Female",
-                    contact: "+1 (555) 789-0123",
-                    lastVisit: "2023-04-22",
-                    status: "New",
-                  },
-                  {
-                    id: "SGO-P1005",
-                    name: "Robert Davis",
-                    age: 62,
-                    gender: "Male",
-                    contact: "+1 (555) 234-5678",
-                    lastVisit: "2023-03-30",
-                    status: "Active",
-                  },
-                  {
-                    id: "SGO-P1006",
-                    name: "Jennifer Lee",
-                    age: 41,
-                    gender: "Female",
-                    contact: "+1 (555) 345-6789",
-                    lastVisit: "2023-04-05",
-                    status: "Waiting",
-                  },
-                ].map((patient) => (
-                  <TableRow key={patient.id}>
-                    <TableCell className="font-medium">
-                      <Link href={`/dashboard/patients/${patient.id}`} className="hover:text-blue-700">
-                        {patient.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{patient.id}</TableCell>
-                    <TableCell>{`${patient.age} / ${patient.gender}`}</TableCell>
-                    <TableCell>{patient.contact}</TableCell>
-                    <TableCell>{patient.lastVisit}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={`${patient.status === "Active"
-                          ? "bg-green-100 text-green-800 hover:bg-green-100"
-                          : patient.status === "Scheduled"
-                            ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
-                            : patient.status === "Waiting"
-                              ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
-                              : patient.status === "Follow-up"
-                                ? "bg-purple-100 text-purple-800 hover:bg-purple-100"
-                                : "bg-gray-100 text-gray-800 hover:bg-gray-100"
-                          }`}
-                      >
-                        {patient.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem>
-                            <Link href={`/dashboard/patients/${patient.id}`} className="flex items-center">
-                              <Eye className="mr-2 h-4 w-4" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Link
-                              href={`/dashboard/patients/${patient.id}/medical-records`}
-                              className="flex items-center"
-                            >
-                              <FileText className="mr-2 h-4 w-4" />
-                              Medical Records
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Link
-                              href={`/dashboard/appointments/new?patient=${patient.id}`}
-                              className="flex items-center"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              Schedule Appointment
-                            </Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {patients
+                  .map((patient) => (
+                    <TableRow key={patient._id}>
+                      <TableCell className="font-medium">
+                        <Link href={`/dashboard/patients/${patient.id}`} className="hover:text-blue-700">
+                          {patient.fullName}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{patient.patientId}</TableCell>
+                      <TableCell>{`${calculateAge(patient.dob)} / ${patient.gender}`}</TableCell>
+                      <TableCell>{patient.phone}</TableCell>
+                      <TableCell>{patient?.lastVisit}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`${patient.status === "Active"
+                            ? "bg-green-100 text-green-800 hover:bg-green-100"
+                            : patient.status === "Scheduled"
+                              ? "bg-blue-100 text-blue-800 hover:bg-blue-100"
+                              : patient.status === "Waiting"
+                                ? "bg-amber-100 text-amber-800 hover:bg-amber-100"
+                                : patient.status === "Follow-up"
+                                  ? "bg-purple-100 text-purple-800 hover:bg-purple-100"
+                                  : "bg-gray-100 text-gray-800 hover:bg-gray-100"
+                            }`}
+                        >
+                          {patient.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <Link href={`/dashboard/patients/${patient.id}`} className="flex items-center">
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Link
+                                href={`/dashboard/patients/${patient.id}/medical-records`}
+                                className="flex items-center"
+                              >
+                                <FileText className="mr-2 h-4 w-4" />
+                                Medical Records
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Link
+                                href={`/dashboard/appointments/new?patient=${patient.id}`}
+                                className="flex items-center"
+                              >
+                                <Calendar className="mr-2 h-4 w-4" />
+                                Schedule Appointment
+                              </Link>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
               </TableBody>
             </Table>
           </CardContent>

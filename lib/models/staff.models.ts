@@ -29,10 +29,10 @@ const StaffSchema = new Schema<IStaff>(
         bio: { type: String, trim: true },
         username: { type: String, required: true, unique: true, trim: true },
         password: { type: String, required: true },
-        confirmPassword: { type: String, select: false },
         isActive: { type: Boolean, default: true },
         requirePasswordChange: { type: Boolean, default: true },
         isBanned: { type: Boolean, default: false },
+        onLeave: { type: Boolean, default: false },
         createdBy: {
             type: Schema.Types.ObjectId,
             ref: "Staff",

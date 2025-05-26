@@ -48,6 +48,20 @@ const patientSchema = new mongoose.Schema({
         type: String,
         default: ""
     },
+    familyOcularHistory: {
+        type: String,
+        default: ""
+    },
+    medicalHistory:[{
+        type:String,
+        default:""
+    }],
+    socialHistory:[
+        {
+            type:String,
+            default:""
+        }
+    ],
     emergencyContactName: {
         type: String,
         default: ""
@@ -89,6 +103,14 @@ const patientSchema = new mongoose.Schema({
     emergencyPhone: {
         type: String,
     },
+    lastVisit:{
+        type:Date
+    },
+    status: {
+        type: String,
+        enum: ['active', 'inactive', 'archived','follow-up', 'deceased','pending'],
+        default: 'active',
+    },
     registeredAt: String,
     registeredInfo: String,
     patientId: {
@@ -105,43 +127,3 @@ const patientSchema = new mongoose.Schema({
 
 export const Patient = mongoose.models.Patient || mongoose.model('Patient', patientSchema);
 
-
-// fullName: "",
-// dob: "",
-// gender: "",
-// maritalStatus: "",
-// occupation: "",
-// email: "",
-// phone: "",
-// alternatePhone: "",
-// address: {
-//   street: "",
-//   city: "",
-//   state: "",
-//   zipCode: "",
-//   country: "United States",
-// },
-// // Medical Information
-// bloodType: "",
-// allergies: "",
-// chronicConditions: "",
-// currentMedications: "",
-// familyHistory: "",
-// // Insurance Information
-// insuranceProvider: "",
-// policyNumber: "",
-// groupNumber: "",
-// policyHolderName: "",
-// policyHolderRelationship: "Self",
-// // Emergency Contact
-// emergencyContactName: "",
-// emergencyContactRelationship: "",
-// emergencyContactPhone: "",
-// // Additional Information
-// referralSource: "",
-// preferredCommunication: "Email",
-// preferredLanguage: "English",
-// // Consent
-// consentToTreatment: false,
-// consentToShareInformation: false,
-// acknowledgmentOfPrivacyPolicy: false,

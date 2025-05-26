@@ -18,7 +18,7 @@ interface IStaff extends Document {
     bio?: string;
     username: string;
     password: string;
-    confirmPassword?: string;
+    onLeave?: boolean;
     profileImage?: string | null;
     isActive: boolean;
     requirePasswordChange: boolean;

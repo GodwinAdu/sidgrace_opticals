@@ -1,8 +1,13 @@
 import React from 'react'
+import AttendancePage from './_components/attendance-list'
+import { getAllAttendances } from '@/lib/actions/attendance.actions'
 
-const page = () => {
+const page = async() => {
+  const attendance = await getAllAttendances()
   return (
-    <div>page</div>
+    <div>
+      <AttendancePage attendance={attendance} />
+    </div>
   )
 }
 

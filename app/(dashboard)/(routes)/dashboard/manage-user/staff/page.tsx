@@ -28,9 +28,10 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
+import { fetchAllStaffs, getStaffStatistics } from "@/lib/actions/staff.actions"
 
 // Mock data for staff members
-const staffMembers = [
+const staffs = [
   {
     id: "STF-001",
     name: "Dr. Sarah Johnson",
@@ -146,30 +147,35 @@ const staffMembers = [
 ]
 
 // Status badge component
-const StatusBadge = ({ status }: { status: string }) => {
+const StatusBadge = ({ status }: { status: boolean }) => {
   switch (status) {
-    case "active":
+    case true:
       return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
-    case "on-leave":
-      return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">On Leave</Badge>
-    case "inactive":
+    // case "on-leave":
+    //   return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">On Leave</Badge>
+    case false:
       return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-100">Inactive</Badge>
     default:
       return <Badge>{status}</Badge>
   }
 }
 
-export default function StaffPage() {
+export default async function StaffPage() {
+  const [staffs, statistics] = await Promise.all([
+    fetchAllStaffs(),
+    getStaffStatistics()
+  ])
+
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-6 ">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-blue-900">Staff Management</h1>
+            <h1 className="text-3xl font-bold">Staff Management</h1>
             <p className="text-gray-500">Manage doctors, nurses, and other staff members</p>
           </div>
           <div className="flex gap-2">
-            <Link href="/dashboard/manage-user/staff/create" className={cn(buttonVariants(),"bg-blue-700 hover:bg-blue-800")}>
+            <Link href="/dashboard/manage-user/staff/create" className={cn(buttonVariants())}>
               <UserPlus className="mr-2 h-4 w-4" />
               Add Staff Member
             </Link>
@@ -215,12 +221,7 @@ export default function StaffPage() {
 
         {/* Staff Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[
-            { title: "Total Staff", value: "8", change: "+1 this month" },
-            { title: "Doctors", value: "5", change: "4 Ophthalmologists, 1 Optometrist" },
-            { title: "Support Staff", value: "3", change: "1 Optician, 1 Nurse, 1 Receptionist" },
-            { title: "On Leave", value: "1", change: "Returns May 15, 2025" },
-          ].map((stat, index) => (
+          {statistics.map((stat, index) => (
             <Card key={index}>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
@@ -258,32 +259,29 @@ export default function StaffPage() {
                         </div>
                       </TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Specialty</TableHead>
                       <TableHead>Contact</TableHead>
-                      <TableHead>Schedule</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staffMembers.map((staff) => (
-                      <TableRow key={staff.id}>
+                    {staffs.map((staff) => (
+                      <TableRow key={staff._id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-3">
                             <Avatar className="h-8 w-8">
-                              <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.name} />
-                              <AvatarFallback>{staff.name.charAt(0)}</AvatarFallback>
+                              <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.fullName} />
+                              <AvatarFallback>{staff.fullName.charAt(0)}</AvatarFallback>
                             </Avatar>
                             <div>
-                              <Link href={`/dashboard/staff/${staff.id}`} className="hover:text-blue-700">
-                                {staff.name}
+                              <Link href={`/dashboard/staff/${staff._id}`} className="hover:text-blue-700">
+                                {staff.fullName}
                               </Link>
-                              <div className="text-xs text-gray-500">{staff.id}</div>
+                              <div className="text-xs text-gray-500">{staff.username}</div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>{staff.role}</TableCell>
-                        <TableCell>{staff.specialty}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
                             <div className="flex items-center gap-1">
@@ -296,9 +294,8 @@ export default function StaffPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell>{staff.schedule}</TableCell>
                         <TableCell>
-                          <StatusBadge status={staff.status} />
+                          <StatusBadge status={staff.isActive} />
                         </TableCell>
                         <TableCell className="text-right">
                           <DropdownMenu>
@@ -350,7 +347,6 @@ export default function StaffPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Doctor</TableHead>
-                      <TableHead>Specialty</TableHead>
                       <TableHead>Appointments Today</TableHead>
                       <TableHead>Total Patients</TableHead>
                       <TableHead>Status</TableHead>
@@ -358,8 +354,8 @@ export default function StaffPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staffMembers
-                      .filter((staff) => staff.role === "Ophthalmologist" || staff.role === "Optometrist")
+                    {staffs
+                      .filter((staff) => staff.role === "ophthalmologist" || staff.role === "optometrist")
                       .map((doctor) => (
                         <TableRow key={doctor.id}>
                           <TableCell className="font-medium">
@@ -376,11 +372,10 @@ export default function StaffPage() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell>{doctor.specialty}</TableCell>
                           <TableCell>{doctor.appointmentsToday}</TableCell>
                           <TableCell>{doctor.totalPatients}</TableCell>
                           <TableCell>
-                            <StatusBadge status={doctor.status} />
+                            <StatusBadge status={doctor.isActive} />
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
@@ -427,39 +422,36 @@ export default function StaffPage() {
                     <TableRow>
                       <TableHead>Staff Member</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Specialty</TableHead>
-                      <TableHead>Schedule</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staffMembers
-                      .filter((staff) => staff.role === "Nurse" || staff.role === "Optician")
+                    {staffs
+                      .filter((staff) => staff.role === "nurse" || staff.role === "optician")
                       .map((staff) => (
-                        <TableRow key={staff.id}>
+                        <TableRow key={staff._id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.name} />
-                                <AvatarFallback>{staff.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.fullName} />
+                                <AvatarFallback>{staff.fullName.charAt(0)}</AvatarFallback>
                               </Avatar>
                               <div>
                                 <Link href={`/dashboard/staff/${staff.id}`} className="hover:text-blue-700">
-                                  {staff.name}
+                                  {staff.fullName}
                                 </Link>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>{staff.role}</TableCell>
-                          <TableCell>{staff.specialty}</TableCell>
-                          <TableCell>{staff.schedule}</TableCell>
+
                           <TableCell>
-                            <StatusBadge status={staff.status} />
+                            <StatusBadge status={staff.isActive} />
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" asChild>
-                              <Link href={`/dashboard/staff/${staff.id}`}>View Profile</Link>
+                              <Link href={`/dashboard/staff/${staff._id}`}>View Profile</Link>
                             </Button>
                           </TableCell>
                         </TableRow>
@@ -482,39 +474,36 @@ export default function StaffPage() {
                     <TableRow>
                       <TableHead>Staff Member</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>Specialty</TableHead>
-                      <TableHead>Schedule</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staffMembers
-                      .filter((staff) => staff.role === "Receptionist")
+                    {staffs
+                      .filter((staff) => staff.role === "receptionist")
                       .map((staff) => (
                         <TableRow key={staff.id}>
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-3">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.name} />
-                                <AvatarFallback>{staff.name.charAt(0)}</AvatarFallback>
+                                <AvatarImage src={staff.avatar || "/placeholder.svg"} alt={staff.Name} />
+                                <AvatarFallback>{staff.fullName.charAt(0)}</AvatarFallback>
                               </Avatar>
                               <div>
-                                <Link href={`/dashboard/staff/${staff.id}`} className="hover:text-blue-700">
-                                  {staff.name}
+                                <Link href={`/dashboard/staff/${staff._id}`} className="hover:text-blue-700">
+                                  {staff.fullName}
                                 </Link>
                               </div>
                             </div>
                           </TableCell>
                           <TableCell>{staff.role}</TableCell>
-                          <TableCell>{staff.specialty}</TableCell>
-                          <TableCell>{staff.schedule}</TableCell>
+
                           <TableCell>
                             <StatusBadge status={staff.status} />
                           </TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="sm" asChild>
-                              <Link href={`/dashboard/staff/${staff.id}`}>View Profile</Link>
+                              <Link href={`/dashboard/staff/${staff._id}`}>View Profile</Link>
                             </Button>
                           </TableCell>
                         </TableRow>

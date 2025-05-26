@@ -6,14 +6,17 @@ const AttendanceSchema = new Schema({
         ref: "Patient",
         required: true,
     },
-
+    date: {
+        type: Date,
+        required: true,
+        default: Date.now,
+    },
     eyeTest: {
         visualAcuity: { type: String },
         colorVision: { type: String },
         intraocularPressure: { type: String },
         remarks: { type: String },
     },
-
     vitals: {
         temperature: { type: Number },
         pulse: { type: Number },
@@ -23,14 +26,12 @@ const AttendanceSchema = new Schema({
         height: { type: Number },
         bmi: { type: Number },
     },
-
     history: {
         presentingComplaints: { type: String },
         pastMedicalHistory: { type: String },
         familyHistory: { type: String },
         drugHistory: { type: String },
     },
-
     physicExam: {
         general: { type: String },
         cardiovascular: { type: String },
@@ -38,16 +39,13 @@ const AttendanceSchema = new Schema({
         gastrointestinal: { type: String },
         nervousSystem: { type: String },
     },
-
     diagnosis: {
         primary: { type: String },
         secondary: [{ type: String }],
     },
-
     scan: {
         type: Schema.Types.Mixed,
     },
-
     doctorNote: {
         type: String,
         default: null,
@@ -86,13 +84,25 @@ const AttendanceSchema = new Schema({
 
     status: {
         type: String,
-        enum: ["PENDING", "ONGOING", "COMPLETED", "CANCELLED"],
-        default: "PENDING",
+        enum: ["waiting","pending", "ongoing", "completed", "cancelled"],
+        default: "pending",
     },
 
     visitType: {
         type: String,
-        enum: ["OUTPATIENT", "INPATIENT", "EMERGENCY"],
+        enum: ["outpatient", "inpatient", "emergency",""],
+        default: "outpatient",
+    },
+    visitReason: {
+        type: String,
+    },
+    followUpDate: {
+        type: Date,
+        default: null,
+    },
+    followUpInstructions: {
+        type: String,
+        default: null,
     },
 
     createdBy: {

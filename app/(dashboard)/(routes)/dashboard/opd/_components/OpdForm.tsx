@@ -1,7 +1,5 @@
 "use client"
 
-import { Label } from "@/components/ui/label"
-
 import { useState, useCallback } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
@@ -19,16 +17,12 @@ import {
     Calendar,
     Filter,
     MoreHorizontal,
-    RefreshCw,
     ChevronUp,
     ChevronDown,
     AlertTriangle,
     CheckCircle2,
     Stethoscope,
     FileText,
-    Moon,
-    Sun,
-    Users,
     Gauge,
     Thermometer,
     Heart,
@@ -36,9 +30,6 @@ import {
     TreesIcon as Lungs,
     Microscope,
     Ruler,
-    Palette,
-    Upload,
-    Trash2,
     Printer,
     ArrowUpRight,
     ArrowDownRight,
@@ -66,12 +57,12 @@ import {
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { useTheme } from "next-themes"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import { toast } from "sonner"
 import { fetchPatientBySearch } from "@/lib/actions/patient.actions"
 import { calculateAge } from "@/lib/utils"
+import { createAttendance } from "@/lib/actions/attendance.actions"
 
 
 type VitalSigns = {
@@ -99,9 +90,8 @@ type EyeTest = {
     posteriorSegment: string
 }
 
-type AttendancePatient = Patient & {
+type AttendancePatient = IPatient & {
     visitType: string
-    assignedDoctor: Doctor | null
     vitals: VitalSigns | null
     eyeTest: EyeTest | null
     checkInTime: Date
@@ -254,20 +244,10 @@ export function OpdPatientManagement() {
     const [filterStatus, setFilterStatus] = useState<string>("all")
     const [sortBy, setSortBy] = useState<string>("checkInTime")
     const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc")
-    const [refreshing, setRefreshing] = useState(false)
-    const [stats, setStats] = useState({
-        total: 0,
-        waiting: 0,
-        inProgress: 0,
-        completed: 0,
-        averageWaitTime: 0,
-    })
-    const [eyeImages, setEyeImages] = useState<string[]>([])
     const [showVitalHistory, setShowVitalHistory] = useState(false)
     const [vitalHistory, setVitalHistory] = useState<VitalSigns[]>([])
     const [visitType, setVisitType] = useState("")
     const [priority, setPriority] = useState("normal")
-    const [doctor, setDoctor] = useState<Doctor | null>(null)
 
     // Form for vital signs
     const vitalsForm = useForm<z.infer<typeof vitalsFormSchema>>({
@@ -303,30 +283,6 @@ export function OpdPatientManagement() {
     })
 
 
-    // Update stats when attendance list changes
-    const updateStats = useCallback((list: AttendancePatient[]) => {
-        const waiting = list.filter((p) => p.status === "waiting").length
-        const inProgress = list.filter((p) => p.status === "in-progress").length
-        const completed = list.filter((p) => p.status === "completed").length
-
-        // Calculate average wait time
-        const completedPatients = list.filter((p) => p.status === "completed")
-        const avgWaitTime = completedPatients.length
-            ? completedPatients.reduce((sum, p) => {
-                const waitTime = (p.eyeTest?.timestamp.getTime() || Date.now()) - p.checkInTime.getTime()
-                return sum + waitTime / (60 * 1000) // convert to minutes
-            }, 0) / completedPatients.length
-            : 0
-
-        setStats({
-            total: list.length,
-            waiting,
-            inProgress,
-            completed,
-            averageWaitTime: Math.round(avgWaitTime),
-        })
-    }, [])
-
     // Search for patients
     const handleSearch = async () => {
         try {
@@ -356,7 +312,7 @@ export function OpdPatientManagement() {
         setIsAddingToAttendance(true)
 
         // Check if patient is already in attendance list
-        if (attendanceList.some((p) => p.id === patient.id)) {
+        if (attendanceList.some((p) => p._id === patient._id)) {
             toast.warning("Patient already in attendance", {
                 description: `${patient.fullName} is already in today's attendance list.`,
             })
@@ -370,7 +326,6 @@ export function OpdPatientManagement() {
                 ...patient,
                 priority,
                 visitType,
-                assignedDoctor: doctor,
                 vitals: null, // Ensure vitals is null for new attendance
                 eyeTest: null, // Ensure eyeTest is null for new attendance
                 checkInTime: new Date(),
@@ -380,7 +335,6 @@ export function OpdPatientManagement() {
 
             const newList = [...attendanceList, attendancePatient]
             setAttendanceList(newList)
-            updateStats(newList)
             setSearchResults([])
             setSearchQuery("")
 
@@ -421,12 +375,11 @@ export function OpdPatientManagement() {
             anteriorSegment: "",
             posteriorSegment: "",
         })
-        setEyeImages([])
     }
 
 
     // Save both vital signs and eye test data together
-    const savePatientData = () => {
+    const savePatientData = async () => {
         if (!selectedPatient) return
 
         // Get values from both forms
@@ -478,24 +431,11 @@ export function OpdPatientManagement() {
             eyeTest,
             status: "waiting",
         }
-
-        // Log the data that would be saved to the database
-        console.log("Saving patient attendance data to database:", patientAttendanceData)
-
-        // Here you would add code to save to database
-        // Example:
-        // savePatientAttendanceToDatabase(patientAttendanceData)
-        //   .then(() => {
-        //     toast.success("Patient data saved to database");
-        //   })
-        //   .catch((error) => {
-        //     toast.error("Failed to save patient data to database");
-        //     console.error(error);
-        //   });
+        await createAttendance(patientAttendanceData)
 
         // Update the patient in the attendance list
         const updatedList = attendanceList.map((p) =>
-            p.id === selectedPatient.id
+            p._id === selectedPatient._id
                 ? {
                     ...p,
                     vitals,
@@ -506,7 +446,6 @@ export function OpdPatientManagement() {
         )
 
         setAttendanceList(updatedList)
-        updateStats(updatedList)
 
         // Update the selected patient
         setSelectedPatient((prev) => (prev ? { ...prev, vitals, eyeTest, status: "completed" } : null))
@@ -516,60 +455,6 @@ export function OpdPatientManagement() {
         })
     }
 
-    // Assign doctor to patient
-    const assignDoctor = (patient: AttendancePatient, doctor: Doctor) => {
-        const updatedList = attendanceList.map((p) =>
-            p.id === patient.id
-                ? {
-                    ...p,
-                    assignedDoctor: doctor,
-                }
-                : p,
-        )
-
-        setAttendanceList(updatedList)
-
-        // Update selected patient if it's the one being assigned
-        if (selectedPatient && selectedPatient.id === patient.id) {
-            setSelectedPatient({
-                ...selectedPatient,
-                assignedDoctor: doctor,
-            })
-        }
-
-        toast.success("Doctor assigned", {
-            description: `${doctor.name} has been assigned to ${patient.name}.`,
-        })
-    }
-
-    // Refresh data
-    const refreshData = () => {
-        setRefreshing(true)
-
-        // Simulate API call with timeout
-        setTimeout(() => {
-            // Update estimated wait times
-            const updatedList = attendanceList.map((patient) => {
-                if (patient.status === "waiting") {
-                    // Reduce wait time by a random amount to simulate progress
-                    const reduction = Math.floor(Math.random() * 5) + 1
-                    return {
-                        ...patient,
-                        estimatedWaitTime: Math.max(0, patient.estimatedWaitTime - reduction),
-                    }
-                }
-                return patient
-            })
-
-            setAttendanceList(updatedList)
-            updateStats(updatedList)
-            setRefreshing(false)
-
-            toast("Data refreshed", {
-                description: "Patient data has been updated.",
-            })
-        }, 1000)
-    }
 
     // Filter and sort attendance list
     const filteredAttendance = attendanceList
@@ -604,7 +489,6 @@ export function OpdPatientManagement() {
 
     const [localVisitType, setLocalVisitType] = useState("")
     const [localPriority, setLocalPriority] = useState("")
-    const [localDoctor, setLocalDoctor] = useState<Doctor | null>(null)
 
     const PatientSelect = useCallback(
         ({ patient }) => {
@@ -660,7 +544,7 @@ export function OpdPatientManagement() {
                 </TableRow>
             )
         },
-        [isAddingToAttendance],
+        [isAddingToAttendance, addToAttendance, localPriority, localVisitType],
     )
 
     return (
@@ -763,7 +647,7 @@ export function OpdPatientManagement() {
                     <CardHeader className="bg-muted/40 border-b">
                         <div className="flex items-center gap-2">
                             <ClipboardList className="h-5 w-5" />
-                            <CardTitle>Today's Attendance</CardTitle>
+                            <CardTitle>Today&#39;s Attendance</CardTitle>
                         </div>
                         <CardDescription>
                             {format(new Date(), "EEEE, MMMM d, yyyy")} • {filteredAttendance.length} patients
@@ -779,7 +663,7 @@ export function OpdPatientManagement() {
                                 <div className="divide-y">
                                     {filteredAttendance.map((patient) => (
                                         <div
-                                            key={patient.id}
+                                            key={patient._id}
                                             className={`p-4 hover:bg-muted/50 cursor-pointer ${selectedPatient?._id === patient._id ? "bg-muted/50" : ""
                                                 }`}
                                             onClick={() => selectPatient(patient)}

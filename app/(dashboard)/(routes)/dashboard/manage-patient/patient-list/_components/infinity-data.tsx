@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
-import { ArrowUpDown, Calendar, ChevronRight, Eye, FileText, Loader2, MoreHorizontal, Search } from "lucide-react"
+import { ArrowUpDown, Calendar, ChevronRight, Edit, Eye, FileText, Loader2, MoreHorizontal, Search, Trash } from "lucide-react"
 
 import { fetchInfinityPatient } from "@/lib/actions/patient.actions"
 import { Badge } from "@/components/ui/badge"
@@ -280,6 +280,13 @@ const InfinityTable = () => {
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>
+                                                    <Link href={`/dashboard/patients/${patient._id}`} className="flex items-center w-full">
+                                                        <Edit className="mr-2 h-4 w-4 text-gray-500" />
+                                                        Edit Details
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                               
+                                                <DropdownMenuItem>
                                                     <Link
                                                         href={`/dashboard/patients/${patient._id}/medical-records`}
                                                         className="flex items-center w-full"
@@ -295,6 +302,12 @@ const InfinityTable = () => {
                                                     >
                                                         <Calendar className="mr-2 h-4 w-4 text-gray-500" />
                                                         Schedule Appointment
+                                                    </Link>
+                                                </DropdownMenuItem>
+                                                 <DropdownMenuItem>
+                                                    <Link href={`/dashboard/patients/${patient._id}`} className="flex items-center w-full">
+                                                        <Trash className="mr-2 h-4 w-4 text-gray-500" />
+                                                        Delete Patient
                                                     </Link>
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
