@@ -40,7 +40,7 @@ import MedicationsTab from "./medications-tab"
 import SurgicalNotesTab from "./surgical-notes-tab"
 import ProceduresTab from "./procedures-tab"
 import EyeTestTab from "./eye-test-tab"
-import { calculateAge } from "@/lib/utils"
+import { useRouter } from "next/navigation"
 
 // Define the attendance data structure based on the Mongoose schema
 interface AttendanceData {
@@ -99,10 +99,26 @@ interface AttendanceData {
     }[]
     status: "pending" | "ongoing" | "completed" | "cancelled"
     visitType: "outpatient" | "inpatient" | "emergency"
+    _id?: string
+    date?: Date
+}
+
+interface PreviousVisit {
+    _id: string
+    date: Date
+    status: "pending" | "ongoing" | "completed" | "cancelled"
+    visitType: "outpatient" | "inpatient" | "emergency"
 }
 
 interface PatientRecordProps {
     attendance: AttendanceData
+    previousVisits?: PreviousVisit[]
+    onLoadPreviousVisit?: (visitId: string) => void
+    onSaveAttendance?: (attendanceData: AttendanceData) => Promise<{ success: boolean; error?: string }>
+    onSaveSection?: (section: string, sectionData: any) => Promise<{ success: boolean; error?: string }>
+    onReturnToCurrent?: () => void
+    isViewingHistorical?: boolean
+    saving?: boolean
 }
 
 // Default empty attendance data
@@ -155,9 +171,23 @@ const defaultAttendanceData: AttendanceData = {
     visitType: "outpatient",
 }
 
-export default function PatientRecord({ attendance }: PatientRecordProps) {
+export default function PatientRecord({
+    attendance,
+    previousVisits = [],
+    onLoadPreviousVisit,
+    onSaveAttendance,
+    onSaveSection,
+    onReturnToCurrent,
+    isViewingHistorical,
+    saving = false,
+}: PatientRecordProps) {
     const [activeTab, setActiveTab] = useState("history")
     const [attendanceData, setAttendanceData] = useState<AttendanceData>(defaultAttendanceData)
+    const [loadingVisitId, setLoadingVisitId] = useState<string | null>(null)
+    const [activeVisitId, setActiveVisitId] = useState<string | null>(null)
+    const [dataKey, setDataKey] = useState(0)
+
+    const router = useRouter()
 
     // Initialize state with the passed attendance data
     useEffect(() => {
@@ -173,12 +203,19 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                 diagnosis: { ...defaultAttendanceData.diagnosis, ...attendance.diagnosis },
                 plan: { ...defaultAttendanceData.plan, ...attendance.plan },
             })
+            // Set the current attendance as active
+            setActiveVisitId(attendance._id || null)
+            // Force re-render of tab components
+            setDataKey((prev) => prev + 1)
         }
     }, [attendance])
 
     // Handler functions for each tab's data
-    const handleEyeTestSave = (data: any) => {
+    const handleEyeTestSave = async (data: any) => {
         setAttendanceData((prev) => ({ ...prev, eyeTest: data }))
+        if (onSaveSection) {
+            await onSaveSection("eyeTest", data)
+        }
     }
 
     const handleVitalsSave = (data: any) => {
@@ -230,10 +267,20 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
     }
 
     // Function to handle saving all attendance data
-    const handleSaveRecord = () => {
-        console.log("Saving attendance record:", attendanceData)
-        // Here you would typically call an API to save the data
-        // Example: await saveAttendanceRecord(attendanceData)
+    const handleSaveRecord = async () => {
+        if (onSaveAttendance) {
+            const result = await onSaveAttendance(attendanceData)
+            if (result.success) {
+                console.log("Attendance record saved successfully")
+            } else {
+                console.error("Failed to save attendance record:", result.error)
+            }
+            // router.refresh() // Refresh the page to reflect changes
+            window.location.reload() // Fallback to reload the page
+        } else {
+            console.log("Saving attendance record:", attendanceData)
+            // Fallback for when no save function is provided
+        }
     }
 
     return (
@@ -250,15 +297,29 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                         <Badge
                             variant="outline"
                             className={`
-                            ${attendanceData.status === "completed" ? "bg-green-100 text-green-800" : ""}
-                            ${attendanceData.status === "ongoing" ? "bg-blue-100 text-blue-800" : ""}
-                            ${attendanceData.status === "pending" ? "bg-yellow-100 text-yellow-800" : ""}
-                            ${attendanceData.status === "cancelled" ? "bg-red-100 text-red-800" : ""}
-                        `}
+          ${attendanceData.status === "completed" ? "bg-green-100 text-green-800" : ""}
+          ${attendanceData.status === "ongoing" ? "bg-blue-100 text-blue-800" : ""}
+          ${attendanceData.status === "pending" ? "bg-yellow-100 text-yellow-800" : ""}
+          ${attendanceData.status === "cancelled" ? "bg-red-100 text-red-800" : ""}
+        `}
                         >
                             Status: {attendanceData.status}
                         </Badge>
+                        {isViewingHistorical && (
+                            <Badge variant="outline" className="bg-orange-100 text-orange-800 border-orange-300">
+                                📜 Historical View
+                            </Badge>
+                        )}
                     </div>
+                    {isViewingHistorical && onReturnToCurrent && (
+                        <Button
+                            onClick={onReturnToCurrent}
+                            variant="outline"
+                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+                        >
+                            ← Return to Current Visit
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -270,18 +331,21 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
                                 <div className="flex items-center gap-3">
                                     <Avatar className="h-10 w-10 border-2 border-blue-500">
-                                        <AvatarImage src="/placeholder.svg?height=40&width=40&query=patient avatar" alt="Patient" />
-                                        <AvatarFallback>{attendanceData.patientId.fullName && attendanceData.patientId.fullName[0]}{attendanceData.patientId.fullName && attendanceData.patientId.fullName[1]}</AvatarFallback>
+                                        <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Patient" />
+                                        <AvatarFallback>
+                                            {attendanceData.patientId && attendanceData.patientId?.fullName?.charAt(0)}
+                                        </AvatarFallback>
                                     </Avatar>
                                     <div>
                                         <CardTitle className="text-lg font-bold text-blue-800 dark:text-blue-300">
                                             {attendanceData.patientId.fullName}
                                         </CardTitle>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400">{attendanceData.patientId.gender} • {calculateAge(attendanceData.patientId.dob)} years</p>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                                            {/* {attendanceData.patientId.gender} • {calculateAge(attendanceData.patientId.dob)} years */}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
-                                   
                                     <Badge
                                         variant="outline"
                                         className="text-blue-800 border-blue-800 dark:text-blue-300 dark:border-blue-500"
@@ -292,30 +356,35 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                             </div>
                         </CardHeader>
                         <CardContent className="pt-4">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div
+                                className={`grid grid-cols-1 ${previousVisits && previousVisits.length > 0 ? "md:grid-cols-3" : "md:grid-cols-2"} gap-6`}
+                            >
                                 <div></div>
                                 <div className="space-y-4">
                                     <div>
                                         <Label className="text-sm font-medium dark:text-gray-300">Type of Service</Label>
                                         <RadioGroup
                                             value={attendanceData.visitType}
-                                            onValueChange={(value) => setAttendanceData((prev) => ({ ...prev, visitType: value as any }))}
+                                            onValueChange={(value) =>
+                                                !isViewingHistorical && setAttendanceData((prev) => ({ ...prev, visitType: value as any }))
+                                            }
+                                            disabled={isViewingHistorical}
                                             className="flex flex-wrap gap-4 pt-2"
                                         >
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="outpatient" id="outpatient" />
+                                                <RadioGroupItem value="outpatient" id="outpatient" disabled={isViewingHistorical} />
                                                 <Label htmlFor="outpatient" className="dark:text-gray-300">
                                                     Outpatient
                                                 </Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="inpatient" id="inpatient" />
+                                                <RadioGroupItem value="inpatient" id="inpatient" disabled={isViewingHistorical} />
                                                 <Label htmlFor="inpatient" className="dark:text-gray-300">
                                                     Inpatient
                                                 </Label>
                                             </div>
                                             <div className="flex items-center space-x-2">
-                                                <RadioGroupItem value="emergency" id="emergency" />
+                                                <RadioGroupItem value="emergency" id="emergency" disabled={isViewingHistorical} />
                                                 <Label htmlFor="emergency" className="dark:text-gray-300">
                                                     Emergency
                                                 </Label>
@@ -327,7 +396,7 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                                             <Label htmlFor="visit-type" className="dark:text-gray-300">
                                                 Type of Visit
                                             </Label>
-                                            <Select defaultValue="cash">
+                                            <Select defaultValue="cash" disabled={isViewingHistorical}>
                                                 <SelectTrigger className="w-32 bg-white dark:bg-gray-700 dark:text-gray-300">
                                                     <SelectValue placeholder="Select type" />
                                                 </SelectTrigger>
@@ -342,21 +411,81 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                                             <Label htmlFor="balance" className="dark:text-gray-300">
                                                 BALANCE
                                             </Label>
-                                            <Input id="balance" className="w-32 bg-white dark:bg-gray-700 dark:text-gray-300" />
+                                            <Input
+                                                id="balance"
+                                                className="w-32 bg-white dark:bg-gray-700 dark:text-gray-300"
+                                                disabled={isViewingHistorical}
+                                            />
                                         </div>
                                     </div>
                                 </div>
-                                <div className="mx-auto">
-                                    <ScrollArea className="h-24 w-56">
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                        <div className="">20/08/24</div>
-                                    </ScrollArea>
-                                </div>
+                                {/* Only show previous visits section when not viewing historical data */}
+                                {previousVisits && previousVisits.length > 0 && (
+                                    <div className="mx-auto">
+                                        <div className="mb-2">
+                                            <Label className="text-sm font-medium dark:text-gray-300">Previous Visits</Label>
+                                        </div>
+                                        <ScrollArea className="h-24 w-56">
+                                            <div className="space-y-1">
+                                                {previousVisits.map((visit) => (
+                                                    <div
+                                                        key={visit._id}
+                                                        className={`
+                  p-2 rounded cursor-pointer transition-colors text-sm
+                  ${activeVisitId === visit._id
+                                                                ? "bg-blue-200 dark:bg-blue-800 border-2 border-blue-500"
+                                                                : "hover:bg-blue-50 dark:hover:bg-gray-700"
+                                                            }
+                  ${loadingVisitId === visit._id ? "bg-blue-100 dark:bg-gray-600" : ""}
+                `}
+                                                        onClick={() => {
+                                                            if (onLoadPreviousVisit && loadingVisitId !== visit._id) {
+                                                                setLoadingVisitId(visit._id)
+                                                                setActiveVisitId(visit._id)
+                                                                onLoadPreviousVisit(visit._id)
+                                                                setTimeout(() => setLoadingVisitId(null), 1000)
+                                                            }
+                                                        }}
+                                                    >
+                                                        <div className="flex justify-between items-center">
+                                                            <span
+                                                                className={`font-medium ${activeVisitId === visit._id ? "text-blue-900 dark:text-blue-100" : ""}`}
+                                                            >
+                                                                {new Date(visit.date).toLocaleDateString("en-GB", {
+                                                                    day: "2-digit",
+                                                                    month: "2-digit",
+                                                                    year: "2-digit",
+                                                                })}
+                                                            </span>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className={`
+                      text-xs
+                      ${visit.status === "completed" ? "bg-green-100 text-green-800 border-green-300" : ""}
+                      ${visit.status === "ongoing" ? "bg-blue-100 text-blue-800 border-blue-300" : ""}
+                      ${visit.status === "pending" ? "bg-yellow-100 text-yellow-800 border-yellow-300" : ""}
+                      ${visit.status === "cancelled" ? "bg-red-100 text-red-800 border-red-300" : ""}
+                      ${activeVisitId === visit._id ? "ring-2 ring-blue-400" : ""}
+                    `}
+                                                            >
+                                                                {visit.status}
+                                                            </Badge>
+                                                        </div>
+                                                        <div
+                                                            className={`text-xs mt-1 ${activeVisitId === visit._id ? "text-blue-800 dark:text-blue-200" : "text-gray-500 dark:text-gray-400"}`}
+                                                        >
+                                                            {visit.visitType}
+                                                            {activeVisitId === visit._id && <span className="ml-2 font-semibold">• Active</span>}
+                                                        </div>
+                                                        {loadingVisitId === visit._id && (
+                                                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">Loading...</div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </ScrollArea>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -470,64 +599,120 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
 
                             {/* Tab Contents */}
                             <TabsContent value="history" className="mt-4 px-0">
-                                <HistoryTab initialData={attendanceData.history} onSave={handleHistorySave} />
+                                <HistoryTab
+                                    key={`history-${dataKey}`}
+                                    initialData={attendanceData.history}
+                                    onSave={handleHistorySave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="physic-exam" className="mt-4 px-0">
-                                <PhysicalExamTab initialData={attendanceData.physicExam} onSave={handlePhysicalExamSave} />
+                                <PhysicalExamTab
+                                    key={`physic-exam-${dataKey}`}
+                                    initialData={attendanceData.physicExam}
+                                    onSave={handlePhysicalExamSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="diagnosis" className="mt-4 px-0">
-                                <DiagnosisTab initialData={attendanceData.diagnosis} onSave={handleDiagnosisSave} />
+                                <DiagnosisTab
+                                    key={`diagnosis-${dataKey}`}
+                                    initialData={attendanceData.diagnosis}
+                                    onSave={handleDiagnosisSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="lab-report" className="mt-4 px-0">
-                                <LabReportTab initialData={attendanceData.labReport} onSave={handleLabReportSave} />
+                                <LabReportTab
+                                    key={`lab-report-${dataKey}`}
+                                    initialData={attendanceData.labReport}
+                                    onSave={handleLabReportSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="scan" className="mt-4 px-0">
-                                <ScanTab initialData={attendanceData.scan} onSave={handleScanSave} />
+                                <ScanTab
+                                    key={`scan-${dataKey}`}
+                                    initialData={attendanceData.scan}
+                                    onSave={handleScanSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="dr-notes" className="mt-4 px-0">
                                 <DoctorNotesTab
+                                    key={`dr-notes-${dataKey}`}
                                     initialData={{ doctorNote: attendanceData.doctorNote || "" }}
                                     onSave={handleDoctorNotesSave}
+                                    disabled={isViewingHistorical}
                                 />
                             </TabsContent>
 
                             <TabsContent value="nurse-notes" className="mt-4 px-0">
                                 <NurseNotesTab
+                                    key={`nurse-notes-${dataKey}`}
                                     initialData={{ nurseNote: attendanceData.nurseNote || "" }}
                                     onSave={handleNurseNotesSave}
+                                    disabled={isViewingHistorical}
                                 />
                             </TabsContent>
 
                             <TabsContent value="vitals" className="mt-4 px-0">
-                                <VitalsTab initialData={attendanceData.vitals} onSave={handleVitalsSave} />
+                                <VitalsTab
+                                    key={`vitals-${dataKey}`}
+                                    initialData={attendanceData.vitals}
+                                    onSave={handleVitalsSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="medications" className="mt-4 px-0">
-                                <MedicationsTab initialData={attendanceData.drugs} onSave={handleMedicationsSave} />
+                                <MedicationsTab
+                                    key={`medications-${dataKey}`}
+                                    initialData={attendanceData.drugs}
+                                    onSave={handleMedicationsSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="treatment-plan" className="mt-4 px-0">
-                                <TreatmentPlanTab initialData={attendanceData.plan} onSave={handleTreatmentPlanSave} />
+                                <TreatmentPlanTab
+                                    key={`treatment-plan-${dataKey}`}
+                                    initialData={attendanceData.plan}
+                                    onSave={handleTreatmentPlanSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="surgical-notes" className="mt-4 px-0">
                                 <SurgicalNotesTab
+                                    key={`surgical-notes-${dataKey}`}
                                     initialData={{ surgicalNote: attendanceData.surgicalNote }}
                                     onSave={handleSurgicalNotesSave}
+                                    disabled={isViewingHistorical}
                                 />
                             </TabsContent>
 
                             <TabsContent value="procedures" className="mt-4 px-0">
-                                <ProceduresTab initialData={attendanceData.procedures} onSave={handleProceduresSave} />
+                                <ProceduresTab
+                                    key={`procedures-${dataKey}`}
+                                    initialData={attendanceData.procedures}
+                                    onSave={handleProceduresSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
 
                             <TabsContent value="eye-test" className="mt-4 px-0">
-                                <EyeTestTab initialData={attendanceData.eyeTest} onSave={handleEyeTestSave} />
+                                <EyeTestTab
+                                    key={`eye-test-${dataKey}`}
+                                    initialData={attendanceData.eyeTest}
+                                    onSave={handleEyeTestSave}
+                                    disabled={isViewingHistorical}
+                                />
                             </TabsContent>
                         </Tabs>
                     </div>
@@ -535,12 +720,12 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                     {/* Footer with action buttons */}
                     <div className="flex flex-wrap justify-between mt-6 mb-6 gap-4">
                         <div className="flex flex-wrap items-center gap-2">
-                            <Button variant="outline" className="gap-2">
+                            <Button variant="outline" className="gap-2" disabled={isViewingHistorical}>
                                 <Printer className="h-4 w-4" />
                                 <span className="hidden sm:inline">Print Record</span>
                                 <span className="inline sm:hidden">Print</span>
                             </Button>
-                            <Button variant="outline" className="gap-2">
+                            <Button variant="outline" className="gap-2" disabled={isViewingHistorical}>
                                 <Download className="h-4 w-4" />
                                 <span className="hidden sm:inline">Export PDF</span>
                                 <span className="inline sm:hidden">Export</span>
@@ -548,10 +733,16 @@ export default function PatientRecord({ attendance }: PatientRecordProps) {
                         </div>
                         <Button
                             onClick={handleSaveRecord}
-                            className="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                            disabled={saving || isViewingHistorical}
+                            className={`
+    ${isViewingHistorical
+                                    ? "bg-gray-400 hover:bg-gray-400 cursor-not-allowed"
+                                    : "bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700"
+                                }
+  `}
                         >
                             <Save className="h-4 w-4 mr-2" />
-                            Save
+                            {isViewingHistorical ? "Read Only" : saving ? "Saving..." : "Save"}
                         </Button>
                     </div>
                 </div>

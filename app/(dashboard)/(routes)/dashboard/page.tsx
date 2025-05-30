@@ -19,6 +19,9 @@ const page = async () => {
   // await sendSMS(number, message)
 
   // console.log(patient,"patient 2 details")
+
+
+
   return (
     <main className="flex-1 overflow-auto">
       <div className="flex-1 space-y-4 ">

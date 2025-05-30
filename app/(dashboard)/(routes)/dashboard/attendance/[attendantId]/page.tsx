@@ -1,14 +1,20 @@
-import React from 'react'
-import PatientRecord from '../_components/ConsultingPage'
-import { getAttendanceById } from '@/lib/actions/attendance.actions'
+import ConsultingPageWrapper from "../_components/consulting-page-wrapper"
+import { getAttendanceById, getPreviousVisitsByPatientId } from "@/lib/actions/attendance.actions"
 
 const page = async ({ params }: { params: Promise<{ attendantId: string }> }) => {
   const { attendantId } = await params
+
+  // Fetch current attendance data
   const patient = await getAttendanceById(attendantId)
-  console.log('Patient Data:', patient)
+
+  // Fetch previous visits for the same patient
+  const previousVisits = patient?.patientId
+    ? await getPreviousVisitsByPatientId(patient.patientId._id || patient.patientId, attendantId)
+    : []
+
   return (
     <div>
-      <PatientRecord attendance={patient} />
+      <ConsultingPageWrapper initialAttendance={patient} previousVisits={previousVisits} />
     </div>
   )
 }
