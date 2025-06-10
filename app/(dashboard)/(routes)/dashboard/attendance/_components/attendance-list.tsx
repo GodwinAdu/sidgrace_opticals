@@ -34,6 +34,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { calculateAge } from "@/lib/utils"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { updateUserAttendance } from "@/lib/actions/attendance.actions"
 
 // Mock data based on the provided structure
 // const attendance = [
@@ -175,6 +177,8 @@ export default function AttendancePage({ attendance }) {
     const [visitTypeFilter, setVisitTypeFilter] = useState("all")
     const [selectedTab, setSelectedTab] = useState("overview")
 
+    const router = useRouter()
+
     const filteredData = attendance.filter((record) => {
         const matchesSearch =
             record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,8 +193,19 @@ export default function AttendancePage({ attendance }) {
         total: attendance.length,
         completed: attendance.filter((r) => r.status === "completed").length,
         waiting: attendance.filter((r) => r.status === "waiting").length,
-        inProgress: attendance.filter((r) => r.status === "in-progress").length,
+        inProgress: attendance.filter((r) => r.status === "ongoing").length,
+    };
+
+    const handleUpdate = async (id: string) => {
+        try {
+            await updateUserAttendance(id)
+            console.log("update successfully")
+        } catch (error) {
+            console.log("error happened while update attendance", error)
+        }
     }
+
+
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -372,9 +387,9 @@ export default function AttendancePage({ attendance }) {
                                                             </DropdownMenuTrigger>
                                                             <DropdownMenuContent align="end">
                                                                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                                <Link href={`/dashboard/attendance/${record._id}`}>
-                                                                    <DropdownMenuItem>Attend</DropdownMenuItem>
-                                                                </Link>
+
+                                                                <DropdownMenuItem onClick={() => { router.push(`/dashboard/attendance/${record._id}`); handleUpdate(record._id); }}>Attend</DropdownMenuItem>
+
                                                                 <DropdownMenuSeparator />
                                                                 <DropdownMenuItem>Delete Record</DropdownMenuItem>
                                                             </DropdownMenuContent>

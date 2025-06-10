@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { ArrowUpDown, Calendar, ChevronRight, Edit, Eye, FileText, Loader2, MoreHorizontal, Search, Trash } from "lucide-react"
 
-import { fetchInfinityPatient } from "@/lib/actions/patient.actions"
+import { deletePatient, fetchInfinityPatient } from "@/lib/actions/patient.actions"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { calculateAge } from "@/lib/utils"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 
 // Define the Patient type based on your data structure
 interface Patient {
@@ -41,8 +43,11 @@ const InfinityTable = () => {
     const [error, setError] = useState<string | null>(null)
     const [hasMore, setHasMore] = useState(true)
     const [searchQuery, setSearchQuery] = useState("")
+    const [deleteLoading, setDeleteLoading] = useState(false)
     const observerTarget = useRef<HTMLDivElement>(null)
     const tableRef = useRef<HTMLDivElement>(null)
+
+    const router = useRouter();
 
     const loadPatients = async (pageNumber: number, search = searchQuery) => {
         if ((loading && pageNumber > 1) || !hasMore) return
@@ -111,6 +116,26 @@ const InfinityTable = () => {
         setPage(1)
         setHasMore(true)
         loadPatients(1, searchQuery)
+    }
+
+
+    const handleDelete = async (id: string) => {
+        try {
+            setDeleteLoading(true)
+            await deletePatient(id)
+            router.refresh()
+
+            toast.success("Patient Deleted", {
+                description: "Patient deleted successfully"
+            })
+        } catch (error) {
+            console.log(error)
+            toast.error("Something went wrong", {
+                description: "Please try again later"
+            })
+        } finally {
+            setDeleteLoading(false)
+        }
     }
 
     const getStatusBadgeClass = (status: string) => {
@@ -285,30 +310,19 @@ const InfinityTable = () => {
                                                         Edit Details
                                                     </Link>
                                                 </DropdownMenuItem>
-                                               
-                                                <DropdownMenuItem>
-                                                    <Link
-                                                        href={`/dashboard/patients/${patient._id}/medical-records`}
-                                                        className="flex items-center w-full"
-                                                    >
-                                                        <FileText className="mr-2 h-4 w-4 text-gray-500" />
-                                                        Medical Records
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem>
-                                                    <Link
-                                                        href={`/dashboard/appointments/new?patient=${patient._id}`}
-                                                        className="flex items-center w-full"
-                                                    >
-                                                        <Calendar className="mr-2 h-4 w-4 text-gray-500" />
-                                                        Schedule Appointment
-                                                    </Link>
-                                                </DropdownMenuItem>
-                                                 <DropdownMenuItem>
-                                                    <Link href={`/dashboard/patients/${patient._id}`} className="flex items-center w-full">
-                                                        <Trash className="mr-2 h-4 w-4 text-gray-500" />
-                                                        Delete Patient
-                                                    </Link>
+                                                <DropdownMenuItem onClick={() => handleDelete(patient._id)}>
+                                                    {deleteLoading ? (
+                                                        <>
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            Deleting ....
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Trash className="mr-2 h-4 w-4 text-gray-500" />
+                                                            Delete Patient
+                                                        </>
+                                                    )}
+
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>

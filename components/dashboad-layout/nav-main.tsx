@@ -165,30 +165,6 @@ export function NavMain({ role }:{role:IRole}) {
       ],
     },
     {
-      title: "Reports",
-      url: "#",
-      icon: LucideMessagesSquare    ,
-      roleField:"report",
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
-    {
       title: "Inventory",
       url: "#",
       icon: UploadCloudIcon,

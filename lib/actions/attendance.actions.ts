@@ -143,7 +143,7 @@ async function _updateAttendanceById(
 
     // Append updatedBy field to the update object
     updateFields.updatedBy = user._id;
-    updateFields.status="completed"
+    updateFields.status = "completed"
 
     try {
         const updatedAttendance = await Attendance.findByIdAndUpdate(
@@ -164,3 +164,28 @@ async function _updateAttendanceById(
 }
 
 export const updateAttendance = await withAuth(_updateAttendanceById);
+
+
+export async function updateUserAttendance(id:string) {
+    try {
+        await connectToDB();
+
+        const updateFields = {
+            status:"ongoing"
+        }
+
+        const updatedAttendance = await Attendance.findByIdAndUpdate(
+            id,
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedAttendance) {
+            throw new Error("Attendance not found.");
+        }
+
+        return JSON.parse(JSON.stringify(updatedAttendance));
+    } catch (error) {
+        throw error
+    }
+}

@@ -10,15 +10,7 @@ export const metadata: Metadata = {
 }
 
 const page = async () => {
-  // await updatePatient()
-  // const id = "6817eb5beb47264c75857419"
-  // // const patient = await fetchPatientId()
-  // const number = '+233551556650'
-  // const message = "Twilio testing by JuTech Devs"
-
-  // await sendSMS(number, message)
-
-  // console.log(patient,"patient 2 details")
+ 
 
 
 

@@ -6,6 +6,7 @@ import { currentUser } from "../helpers/current-user";
 import { model } from "mongoose";
 import { Schema } from "mongoose";
 import Trash from "../models/tash.models";
+import History from "../models/history.models";
 
 
 

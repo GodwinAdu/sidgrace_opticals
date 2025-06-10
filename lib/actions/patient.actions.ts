@@ -4,6 +4,7 @@ import { Patient } from "../models/patient.models";
 import Record from "../models/record.models";
 import { connectToDB } from "../mongoose";
 import { withAuth, type User } from '../helpers/auth';
+import { deleteDocument } from "./trash.actions";
 
 interface FetchPatientsParams {
     page?: number
@@ -147,6 +148,53 @@ async function _fetchPatientBySearch(user: User, search: string) {
 }
 
 export const fetchPatientBySearch = await withAuth(_fetchPatientBySearch);
+async function _fetchSinglePatientBySearch(user: User, search: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+
+        await connectToDB();
+
+        let query = {};
+
+        if (search) {
+            const searchTerms = search.trim().split(/\s+/).filter(Boolean);
+
+            if (searchTerms.length > 1) {
+                // For multiple words (e.g., "John Doe" or "Doe John")
+                query = {
+                    $or: [
+                        {
+                            $and: searchTerms.map(term => ({
+                                fullName: { $regex: term, $options: "i" },
+                            }))
+                        },
+                        { contact: { $regex: search, $options: "i" } },
+                        { patientId: { $regex: search, $options: "i" } },
+                    ]
+                };
+            } else {
+                // For single word search
+                query = {
+                    $or: [
+                        { fullName: { $regex: search, $options: "i" } },
+                        { contact: { $regex: search, $options: "i" } },
+                        { patientId: { $regex: search, $options: "i" } },
+                    ]
+                };
+            }
+        }
+
+        const patients = await Patient.findOne(query);
+
+        return JSON.parse(JSON.stringify(patients));
+
+    } catch (error) {
+        console.error("Error while fetching patient by search:", error);
+        throw error;
+    }
+}
+
+export const fetchSinglePatientBySearch = await withAuth(_fetchSinglePatientBySearch);
 
 
 
@@ -162,7 +210,7 @@ async function _fetchPatientThisMonth(user: User) {
         // Query patients created this month
         const patientsThisMonth = await Patient.find({ createdAt: { $gte: startOfMonth } }).sort({ createdAt: -1 }).lean();
 
-        if(patientsThisMonth.length === 0 ) return []
+        if (patientsThisMonth.length === 0) return []
 
         return JSON.parse(JSON.stringify(patientsThisMonth));
 
@@ -311,3 +359,30 @@ export async function updatePatient() {
 
     }
 }
+
+
+async function _deletePatient(user: User, id: string) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB()
+
+        const patient = await Patient.findById(id)
+
+        await deleteDocument({
+            actionType: 'PATIENT_DELETED',
+            documentId: patient._id,
+            collectionName: 'Patient',
+            userId: `${user?._id}`,
+            trashMessage: `"${patient.fullName}" (ID: ${id}) was moved to trash by ${user.fullName}.`,
+            historyMessage: `User ${user.fullName} deleted "${patient.fullName}" (ID: ${id}) on ${new Date().toLocaleString()}.`
+        });
+
+        return { success: true, message: "Class deleted successfully" };
+    } catch (error) {
+        console.log("error while deleting patient", error)
+        throw error;
+    }
+}
+
+export const deletePatient = await withAuth(_deletePatient)

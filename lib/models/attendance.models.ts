@@ -84,7 +84,7 @@ const AttendanceSchema = new Schema({
 
     status: {
         type: String,
-        enum: ["waiting","pending", "ongoing", "completed", "cancelled"],
+        enum: ["waiting", "ongoing", "completed", "cancelled"],
         default: "pending",
     },
 

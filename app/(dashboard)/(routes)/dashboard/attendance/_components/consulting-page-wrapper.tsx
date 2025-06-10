@@ -8,7 +8,7 @@ import { toast } from "sonner"
 interface PreviousVisit {
     _id: string
     date: Date
-    status: "ongoing" | "completed" | "cancelled"
+    status: "waiting" | "ongoing" | "completed" | "cancelled"
     visitType: "outpatient" | "inpatient" | "emergency"
 }
 
@@ -64,51 +64,12 @@ export default function ConsultingPageWrapper({ initialAttendance, previousVisit
     }
 
     const handleReturnToCurrent = () => {
-    setCurrentAttendance(originalAttendance)
-    setIsViewingHistorical(false)
-    toast({
-      title: "Current Visit",
-      description: "Returned to current visit",
-    })
-  }
-
-    // const handleSaveSection = async (section: string, sectionData: any) => {
-    //     try {
-    //         const response = await fetch(`/api/attendance/${currentAttendance._id}/section`, {
-    //             method: "PUT",
-    //             headers: {
-    //                 "Content-Type": "application/json",
-    //             },
-    //             body: JSON.stringify({ section, data: sectionData }),
-    //         })
-
-    //         if (response.ok) {
-    //             const result = await response.json()
-    //             setCurrentAttendance(result.data)
-    //             toast({
-    //                 title: "Success",
-    //                 description: `${section} updated successfully`,
-    //             })
-    //             return { success: true }
-    //         } else {
-    //             const error = await response.json()
-    //             toast({
-    //                 title: "Error",
-    //                 description: error.error || `Failed to update ${section}`,
-    //                 variant: "destructive",
-    //             })
-    //             return { success: false, error: error.error }
-    //         }
-    //     } catch (error) {
-    //         console.error(`Error updating ${section}:`, error)
-    //         toast({
-    //             title: "Error",
-    //             description: `An error occurred while updating ${section}`,
-    //             variant: "destructive",
-    //         })
-    //         return { success: false, error: "Network error" }
-    //     }
-    // }
+        setCurrentAttendance(originalAttendance)
+        setIsViewingHistorical(false)
+        toast.success( "Current Visit",{
+            description: "Returned to current visit",
+        })
+    }
 
 
     return (
