@@ -450,6 +450,8 @@ export function OpdPatientManagement() {
         // Update the selected patient
         setSelectedPatient((prev) => (prev ? { ...prev, vitals, eyeTest, status: "completed" } : null))
 
+        window.location.reload()
+
         toast.success("Patient data recorded", {
             description: `Vital signs and eye test results for ${selectedPatient.fullName} have been saved.`,
         })

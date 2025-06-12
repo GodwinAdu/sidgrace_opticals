@@ -181,8 +181,7 @@ export default function AttendancePage({ attendance }) {
 
     const filteredData = attendance.filter((record) => {
         const matchesSearch =
-            record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            record.diagnosis.primary.toLowerCase().includes(searchTerm.toLowerCase())
+            record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) 
         const matchesStatus = statusFilter === "all" || record.status === statusFilter
         const matchesVisitType = visitTypeFilter === "all" || record.visitType === visitTypeFilter
 

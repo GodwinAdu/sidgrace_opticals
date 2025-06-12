@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -23,8 +21,6 @@ import { fetchBookedAppointments, createAppointment } from "@/lib/actions/appoin
 
 export default function NewAppointmentPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const patientId = searchParams.get("patient")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
@@ -129,10 +125,7 @@ export default function NewAppointmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if(!patientId){
-      toast.warning("Please select a patient")
-    }
-
+  
     if (!searchResult || !date || !selectedTimeSlot) {
       toast.error("Please fill in all required fields")
       return
@@ -142,7 +135,7 @@ export default function NewAppointmentPage() {
 
     try {
       const appointmentData = {
-        patientId,
+        patientId:searchResult._id,
         date: date,
         timeSlot: selectedTimeSlot,
         appointmentType: appointmentType,

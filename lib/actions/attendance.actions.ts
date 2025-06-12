@@ -78,12 +78,14 @@ async function _getAllAttendances(user: User) {
             .populate([{
                 path: 'patientId',
                 model: Patient,
+                select:'fullName'
             }, {
                 path: 'createdBy',
                 model: Staff,
                 select: 'fullName'
             }])
-            .sort({ date: -1 });
+            .sort({ date: -1 })
+            .exec();
 
         if (!attendances || attendances.length === 0) return [];
         // Convert Mongoose documents to plain objects

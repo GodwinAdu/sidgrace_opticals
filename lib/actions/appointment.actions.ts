@@ -1,5 +1,6 @@
 "use server"
 import Appointment from "../models/appointment.models"
+import { Patient } from "../models/patient.models"
 import { connectToDB } from "../mongoose"
 
 
@@ -42,9 +43,8 @@ export async function fetchAppointments() {
         await connectToDB()
 
         const appointments = await Appointment.find({})
-            .populate("patientId", "fullName patientId dob profilePhoto")
+            .populate([{path:"patientId",model:Patient, select:"fullName patientId dob profilePhoto"}])
             .sort({ date: 1, timeSlot: 1 })
-            .lean()
 
         // Transform the data to match the component's expected format
         const transformedAppointments = appointments.map((appointment) => {
@@ -69,7 +69,7 @@ export async function fetchAppointments() {
 
         return {
             success: true,
-            appointments: transformedAppointments,
+            appointments: JSON.parse(JSON.stringify(transformedAppointments)),
         }
     } catch (error) {
         console.error("Error fetching booked transformedAppointments:", error)
@@ -78,6 +78,16 @@ export async function fetchAppointments() {
             error: "Failed to fetch booked appointments",
             bookedSlots: [],
         }
+    }
+};
+
+export async function fetchAppointmentById(id:string){
+    try {
+        await connectToDB();
+        const appointment = await Appointment.findById(Id)
+    } catch (error) {
+        console.log("something went wrong",error)
+        throw error
     }
 }
 
@@ -92,6 +102,8 @@ export async function createAppointment(appointmentData: {
 }) {
     try {
         await connectToDB()
+
+        console.log(appointmentData)
 
         // Check if the time slot is already booked
         const existingAppointment = await Appointment.findOne({
