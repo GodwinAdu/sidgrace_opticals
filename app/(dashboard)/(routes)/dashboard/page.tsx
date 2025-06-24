@@ -1,6 +1,5 @@
 import { AnalyticsDashboard } from '@/components/dashboard-page/analytics-dashboard'
-import { fetchPatientId, updatePatient } from '@/lib/actions/patient.actions'
-import { sendSMS } from '@/lib/actions/twilo.actions'
+import { patientAnalytics } from '@/lib/actions/analytics.actions'
 import { Metadata } from 'next'
 import React, { Suspense } from 'react'
 
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 }
 
 const page = async () => {
- 
+  const patientData = await patientAnalytics()
 
 
 
@@ -21,7 +20,7 @@ const page = async () => {
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
         <Suspense fallback={<div>Loading analytics...</div>}>
-          <AnalyticsDashboard />
+          <AnalyticsDashboard patientData={patientData} />
         </Suspense>
       </div>
     </main>

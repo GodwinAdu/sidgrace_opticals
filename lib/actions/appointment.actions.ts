@@ -43,7 +43,7 @@ export async function fetchAppointments() {
         await connectToDB()
 
         const appointments = await Appointment.find({})
-            .populate([{path:"patientId",model:Patient, select:"fullName patientId dob profilePhoto"}])
+            .populate([{ path: "patientId", model: Patient, select: "fullName patientId dob profilePhoto" }])
             .sort({ date: 1, timeSlot: 1 })
 
         // Transform the data to match the component's expected format
@@ -59,8 +59,8 @@ export async function fetchAppointments() {
                 date: appointment.date.toISOString(), // Convert to ISO string for serialization
                 duration: appointment.duration,
                 type: appointment.appointmentType,
-                department: appointment.department || "General Medicine",
-                doctor: appointment.doctorId || "Dr. Sarah Johnson",
+                // department: appointment.department || "General Medicine",
+                // doctor: appointment.doctorId || "Dr. Sarah Johnson",
                 status: appointment.status,
                 notes: appointment.reason || appointment.notes || "",
                 createdAt: appointment.createdAt.toISOString(), // Convert to ISO string for serialization
@@ -81,16 +81,43 @@ export async function fetchAppointments() {
     }
 };
 
-export async function fetchAppointmentById(id:string){
+export async function fetchAppointmentById(id: string) {
     try {
+
+        console.log(id, "id")
         await connectToDB();
-        const appointment = await Appointment.findById(Id)
+
+        const appointment = await Appointment.findById(id)
+            .populate([{ path: "patientId", model: Patient }])
+
+
+        if (!appointment) throw new Error("Couldn't fetch appointment");
+
+        // Fetch previous appointments for the same patient, before this appointment's date
+        const previousAppointments = await Appointment.find({
+            patientId: appointment.patientId._id,
+            // date: { $lt: appointment.date },
+            _id: { $ne: appointment._id }, // exclude the current one
+        })
+            .sort({ date: -1 }) // latest first
+            .limit(5); // or any number you want
+
+        const fullData = {
+            ...appointment.toObject(),
+            previousAppointments: previousAppointments.map((prev) => ({
+                date: prev.date,
+                type: prev.appointmentType,
+                status: prev.status,
+            })),
+        };
+
+        console.log(fullData, "data")
+        return JSON.parse(JSON.stringify(fullData));
     } catch (error) {
-        console.log("something went wrong",error)
-        throw error
+        console.error("Something went wrong while fetching appointment:", error);
+        throw error;
     }
 }
-
 export async function createAppointment(appointmentData: {
     patientId: string
     date: Date

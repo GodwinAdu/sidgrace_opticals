@@ -31,6 +31,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { fetchAppointmentById } from "@/lib/actions/appointment.actions"
 
 // Mock appointment data
 const appointmentData = {
@@ -100,8 +101,12 @@ const StatusIcon = ({ status }: { status: string }) => {
   }
 }
 
-export default function AppointmentDetailsPage({ params }: { params: { id: string } }) {
-  const appointment = appointmentData // In a real app, fetch by params.id
+export default async function AppointmentDetailsPage({params}:{params:Promise<{id:string}>}) {
+
+
+  const {id} = await params;
+
+  const appointment = await fetchAppointmentById(id)
 
   return (
     <div className="container mx-auto py-6">
@@ -239,48 +244,24 @@ export default function AppointmentDetailsPage({ params }: { params: { id: strin
                   </Avatar>
                   <div>
                     <div className="font-medium">
-                      <Link href={`/dashboard/patients/${appointment.patientId}`} className="hover:underline">
-                        {appointment.patientName}
+                      <Link href={`/dashboard/patients/${appointment.patientId._id}`} className="hover:underline">
+                        {appointment.patientId.fullName}
                       </Link>
                     </div>
-                    <div className="text-sm text-gray-500">Patient ID: {appointment.patientId}</div>
+                    <div className="text-sm text-gray-500">Patient ID: {appointment.patientId.patientId}</div>
                   </div>
                 </div>
                 <Separator />
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{appointment.phone}</span>
+                    <span className="text-sm">{appointment.patientId.phone}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Mail className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{appointment.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <CreditCard className="h-4 w-4 text-gray-500" />
-                    <span className="text-sm">{appointment.insurance}</span>
+                    <span className="text-sm">{appointment.patientId.email}</span>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Appointment History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {appointment.history.map((item, index) => (
-                  <div key={index}>
-                    <div className="flex justify-between">
-                      <span className="text-sm font-medium">{item.action}</span>
-                      <span className="text-xs text-gray-500">{item.date}</span>
-                    </div>
-                    <div className="text-xs text-gray-500">By: {item.user}</div>
-                    {index < appointment.history.length - 1 && <Separator className="my-2" />}
-                  </div>
-                ))}
               </div>
             </CardContent>
           </Card>
@@ -305,7 +286,6 @@ export default function AppointmentDetailsPage({ params }: { params: { id: strin
                         <span className="text-sm font-medium">{prevAppt.date}</span>
                       </div>
                       <div className="mt-1 text-sm">{prevAppt.type}</div>
-                      <div className="text-xs text-gray-500">Doctor: {prevAppt.doctor}</div>
                     </div>
                     <StatusBadge status={prevAppt.status} />
                   </div>

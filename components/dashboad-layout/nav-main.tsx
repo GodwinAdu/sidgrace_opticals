@@ -85,16 +85,8 @@ export function NavMain({ role }:{role:IRole}) {
           url: "/dashboard/manage-user/manage-role",
         },
         {
-          title: "Add Bulk Staff",
-          url: "/dashboard/manage-user/add-bulk",
-        },
-        {
           title: "Manage Staff",
           url: "/dashboard/manage-user/staff",
-        },
-        {
-          title: "Staff List",
-          url: "/dashboard/manage-user/staff-list",
         },
       ],
     },
@@ -104,10 +96,6 @@ export function NavMain({ role }:{role:IRole}) {
       icon: Bot,
       roleField:"patientManagement",
       items: [
-        {
-          title: "Add Bulks",
-          url: "/dashboard/manage-patient/add-bulk",
-        },
         {
           title: "Manage Patient",
           url: "/dashboard/manage-patient/patients",

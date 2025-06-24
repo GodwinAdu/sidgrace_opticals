@@ -317,7 +317,6 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                             <TableHead>Patient</TableHead>
                                             <TableHead>Date & Time</TableHead>
                                             <TableHead>Type</TableHead>
-                                            <TableHead>Department</TableHead>
                                             <TableHead>Duration</TableHead>
                                             <TableHead>Status</TableHead>
                                             <TableHead className="text-right">Actions</TableHead>
@@ -360,7 +359,6 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                             </div>
                                                         </TableCell>
                                                         <TableCell>{appointment.type}</TableCell>
-                                                        <TableCell>{appointment.department}</TableCell>
                                                         <TableCell>{appointment.duration} min</TableCell>
                                                         <TableCell>{getStatusBadge(appointment.status)}</TableCell>
                                                         <TableCell className="text-right">
@@ -599,7 +597,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                 <TabsContent value="today" className="space-y-4">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Today's Appointments</CardTitle>
+                            <CardTitle>Today&#39;s Appointments</CardTitle>
                             <CardDescription>Appointments scheduled for today ({new Date().toLocaleDateString()})</CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -732,7 +730,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                 ) : (
                                     <div className="flex h-[200px] items-center justify-center rounded-lg border border-dashed">
                                         <div className="flex flex-col items-center gap-1 text-center">
-                                            <Calendar className="h-10 w-10 text-muted-foreground/50" />
+                                            <CalendarIcon className="h-10 w-10 text-muted-foreground/50" />
                                             <h3 className="font-medium">No appointments today</h3>
                                             <p className="text-xs text-muted-foreground">There are no appointments scheduled for today</p>
                                         </div>
@@ -816,9 +814,6 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                     <div className="pt-2">
                                                                         <p className="text-sm">
                                                                             <span className="font-medium">Type:</span> {appointment.type}
-                                                                        </p>
-                                                                        <p className="text-sm">
-                                                                            <span className="font-medium">Department:</span> {appointment.department}
                                                                         </p>
                                                                         {appointment.notes && (
                                                                             <p className="text-sm mt-1">
@@ -944,12 +939,10 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                         <p className="text-sm">
                                                                             <span className="font-medium">Type:</span> {appointment.type}
                                                                         </p>
-                                                                        <p className="text-sm">
-                                                                            <span className="font-medium">Department:</span> {appointment.department}
-                                                                        </p>
+                                                                
                                                                         {appointment.notes && (
                                                                             <p className="text-sm mt-1">
-                                                                                <span className="font-medium">Notes:</span> {appointment.notes}
+                                                                                <span className="font-medium">Notes:</span> {appointment?.notes}
                                                                             </p>
                                                                         )}
                                                                     </div>
@@ -958,7 +951,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                             size="sm"
                                                                             onClick={(e) => {
                                                                                 e.stopPropagation()
-                                                                                router.push(`/dashboard/appointments/${appointment.id}`)
+                                                                                router.push(`/dashboard/appointments/${appointment._id}`)
                                                                             }}
                                                                         >
                                                                             View Details
