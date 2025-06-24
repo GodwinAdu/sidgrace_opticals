@@ -224,6 +224,7 @@ async function _fetchPatientThisMonth(user: User) {
 export const fetchPatientThisMonth = await withAuth(_fetchPatientThisMonth)
 
 export async function getPatientDashboardStats() {
+    await connectToDB();
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);

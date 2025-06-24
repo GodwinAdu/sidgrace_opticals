@@ -2,9 +2,11 @@
 
 import Appointment from "../models/appointment.models";
 import { Patient } from "../models/patient.models";
+import { connectToDB } from "../mongoose";
 
 export async function patientAnalytics() {
     try {
+        await connectToDB()
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
