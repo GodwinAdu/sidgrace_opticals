@@ -1,4 +1,5 @@
 "use server"
+import { format } from "date-fns"
 import { type User, withAuth } from "../helpers/auth"
 import Appointment from "../models/appointment.models"
 import { Patient } from "../models/patient.models"
@@ -132,14 +133,16 @@ export async function createAppointment(appointmentData: {
     try {
         await connectToDB()
 
-        console.log(appointmentData)
-
         // Check if the time slot is already booked
         const existingAppointment = await Appointment.findOne({
             date: appointmentData.date,
             timeSlot: appointmentData.timeSlot,
             status: { $in: ["scheduled", "completed"] },
-        })
+        });
+
+        const patient = await Patient.findById(appointmentData.patientId)
+
+        if (!patient) throw new Error("Patient not found")
 
         if (existingAppointment) {
             return {
@@ -148,13 +151,25 @@ export async function createAppointment(appointmentData: {
             }
         }
 
+        const values = {
+            destination: patient.phone,
+            message: `Dear ${patient.fullName}, your appointment is confirmed for ${format(appointmentData.date, "PPP")} at ${appointmentData.timeSlot}.`
+        }
+
         // Create the new appointment
         const newAppointment = await Appointment.create({
             ...appointmentData,
             status: "scheduled",
             createdAt: new Date(),
             updatedAt: new Date(),
-        })
+        });
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(values),
+        });
 
         return {
             success: true,

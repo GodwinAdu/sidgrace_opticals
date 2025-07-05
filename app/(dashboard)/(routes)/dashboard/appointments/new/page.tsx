@@ -125,7 +125,7 @@ export default function NewAppointmentPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-  
+
     if (!searchResult || !date || !selectedTimeSlot) {
       toast.error("Please fill in all required fields")
       return
@@ -135,7 +135,7 @@ export default function NewAppointmentPage() {
 
     try {
       const appointmentData = {
-        patientId:searchResult._id,
+        patientId: searchResult._id,
         date: date,
         timeSlot: selectedTimeSlot,
         appointmentType: appointmentType,
@@ -189,9 +189,11 @@ export default function NewAppointmentPage() {
       const result = await fetchBookedAppointments(date.toISOString())
       if (result.success) {
         setBookedSlots(result.bookedSlots)
+
         toast.success("Time slots refreshed")
       }
     } catch (error) {
+      console.log(error)
       toast.error("Failed to refresh time slots")
     } finally {
       setIsLoadingSlots(false)

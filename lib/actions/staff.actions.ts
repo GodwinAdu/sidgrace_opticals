@@ -27,7 +27,17 @@ interface CreateStaffValues {
 
 async function _createStaff(user: User, values: CreateStaffValues) {
     try {
-        if (!user) throw new Error("User not authenticated")
+        if (!user) throw new Error("User not authenticated");
+        const data = {
+            destination: values.phone,
+            message: `Dear ${values.fullName}, your staff account has been successfully created.
+
+       Login Email: ${values.email}
+       Temporary Password: ${values.password}
+
+        Please log in and change your password upon first login. Do not share your login credentials with anyone for security reasons.`
+        }
+
 
         const { password, username } = values
         await connectToDB();
@@ -66,7 +76,15 @@ async function _createStaff(user: User, values: CreateStaffValues) {
             newUser.save(),
             department.save(),
             history.save()
-        ])
+        ]);
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
 
     } catch (error) {
         console.log("something went wrong", error);

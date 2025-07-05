@@ -19,6 +19,10 @@ async function _createPatient(user: User, values) {
     try {
         if (!user) throw new Error("User not authenticated")
 
+        const data = {
+            destination: values.phone,
+            message: `Hi ${values.fullName}, welcome to SidGrace! Your account is now active. We're glad to have you with us!`
+        }
         await connectToDB();
 
         const patient = new Patient({
@@ -28,6 +32,14 @@ async function _createPatient(user: User, values) {
         })
 
         await patient.save()
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
 
         return JSON.parse(JSON.stringify(patient))
 
