@@ -65,21 +65,21 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
           </DropdownMenuItem>
         ) : (
           <>
-            {role?.viewRole && (
+            {role?.permissions.viewRole && (
               <DropdownMenuItem asChild>
                 <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}`}>
                   <Eye className="mr-2 h-4 w-4" /> View
                 </Link>
               </DropdownMenuItem>
             )}
-            {role?.editRole && (
+            {role?.permissions.editRole && (
               <DropdownMenuItem asChild>
                 <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" /> Update
                 </Link>
               </DropdownMenuItem>
             )}
-            {role?.deleteRole && (
+            {role?.permissions.deleteRole && (
               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="bg-red-500 hover:bg-red-800">
                 <DeleteDialog
                   id={data?._id}

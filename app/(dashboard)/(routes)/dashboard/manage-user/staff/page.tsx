@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -15,6 +17,7 @@ import {
   UserPlus,
   Mail,
   Phone,
+  Trash,
 } from "lucide-react"
 import {
   DropdownMenu,
@@ -28,7 +31,10 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
-import { fetchAllStaffs, getStaffStatistics } from "@/lib/actions/staff.actions"
+import { deleteStaff, fetchAllStaffs, getStaffStatistics } from "@/lib/actions/staff.actions"
+import { toast } from "sonner"
+import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 
 // Mock data for staff members
 const staffs = [
@@ -160,11 +166,35 @@ const StatusBadge = ({ status }: { status: boolean }) => {
   }
 }
 
-export default async function StaffPage() {
-  const [staffs, statistics] = await Promise.all([
-    fetchAllStaffs(),
-    getStaffStatistics()
-  ])
+export default function StaffPage() {
+  const router = useRouter();
+  const [staffs, setStaffs] = useState<any[]>([]);
+  const [statistics, setStatistics] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const [staffsData, statisticsData] = await Promise.all([
+        fetchAllStaffs(),
+        getStaffStatistics()
+      ]);
+      setStaffs(staffsData);
+      setStatistics(statisticsData);
+    };
+    fetchData();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteStaff(id);
+
+      router.refresh();
+      toast.success("Deleted Successfully", {
+        description: "Staff was deleted successfully"
+      })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Something went wrong")
+    }
+  }
 
   return (
     <div className="flex flex-col">
@@ -319,11 +349,9 @@ export default async function StaffPage() {
                                   Edit Details
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem>
-                                <Link href={`/dashboard/staff/${staff.id}/schedule`} className="flex items-center">
-                                  <Calendar className="mr-2 h-4 w-4" />
-                                  View Schedule
-                                </Link>
+                              <DropdownMenuItem onClick={() => handleDelete(staff._id)}>
+                                <Trash className=" h-4 w-4" />
+                                Delete Staff
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>

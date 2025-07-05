@@ -5,8 +5,9 @@ import Attendance from '../models/attendance.models';
 import { connectToDB } from '../mongoose';
 import Staff from '../models/staff.models';
 import { Patient } from '../models/patient.models';
+import { deleteDocument } from './trash.actions';
 
-async function _createAttendance(user: User, values) {
+async function _createAttendance(user: User, values: Record<string, unknown>) {
 
     try {
         if (!user) throw new Error("User is not authenticated");
@@ -78,7 +79,7 @@ async function _getAllAttendances(user: User) {
             .populate([{
                 path: 'patientId',
                 model: Patient,
-                select:'fullName'
+                select: 'fullName'
             }, {
                 path: 'createdBy',
                 model: Staff,
@@ -97,7 +98,7 @@ async function _getAllAttendances(user: User) {
 }
 export const getAllAttendances = await withAuth(_getAllAttendances);
 
-export async function getPreviousVisitsByPatientId(patientId: string, currentAttendanceId?: string) {
+export async function getPreviousVisitsByPatientId(patientId: string) {
     try {
         await connectToDB()
 
@@ -129,7 +130,7 @@ export async function getPreviousVisitsByPatientId(patientId: string, currentAtt
 async function _updateAttendanceById(
     user: User,
     id: string,
-    values: any
+    values: Record<string, unknown>
 ) {
     if (!user || !user._id) {
         throw new Error("Unauthorized: User is not authenticated.");
@@ -168,12 +169,12 @@ async function _updateAttendanceById(
 export const updateAttendance = await withAuth(_updateAttendanceById);
 
 
-export async function updateUserAttendance(id:string) {
+export async function updateUserAttendance(id: string) {
     try {
         await connectToDB();
 
         const updateFields = {
-            status:"ongoing"
+            status: "ongoing"
         }
 
         const updatedAttendance = await Attendance.findByIdAndUpdate(
@@ -191,3 +192,30 @@ export async function updateUserAttendance(id:string) {
         throw error
     }
 }
+
+
+async function _deleteAttendance(user: User, id: string) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB()
+
+        const patient = await Attendance.findById(id)
+
+        await deleteDocument({
+            actionType: 'ATTENDANCE_DELETED',
+            documentId: patient._id,
+            collectionName: 'Attendance',
+            userId: `${user?._id}`,
+            trashMessage: `Attendance with (ID: ${id}) was moved to trash by ${user.fullName}.`,
+            historyMessage: `User ${user.fullName} deleted Attendance with (ID: ${id}) on ${new Date().toLocaleString()}.`
+        });
+
+        return { success: true, message: "Attendance deleted successfully" };
+    } catch (error) {
+        console.log("error while deleting Attendance", error)
+        throw error;
+    }
+}
+
+export const deleteAttendance = await withAuth(_deleteAttendance)

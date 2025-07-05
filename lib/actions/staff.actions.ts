@@ -7,6 +7,7 @@ import { User, withAuth } from "../helpers/auth";
 import { login } from "../helpers/user.actions";
 import Department from "../models/department.models";
 import History from "../models/history.models";
+import { deleteDocument } from "./trash.actions";
 
 
 interface LoginProps {
@@ -14,7 +15,17 @@ interface LoginProps {
     password: string;
     rememberMe: boolean
 }
-async function _createStaff(user: User, values) {
+interface CreateStaffValues {
+    username: string;
+    password: string;
+    email: string;
+    phone: string;
+    department: string;
+    fullName: string;
+    [key: string]: unknown; // Add this if there are additional dynamic fields
+}
+
+async function _createStaff(user: User, values: CreateStaffValues) {
     try {
         if (!user) throw new Error("User not authenticated")
 
@@ -181,3 +192,36 @@ async function _getStaffStatistics(user: User) {
 };
 
 export const getStaffStatistics = await withAuth(_getStaffStatistics)
+
+
+
+
+async function _deleteStaff(user: User, id: string) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB()
+
+        const staff = await Staff.findById(id)
+
+        if (!staff) {
+            throw new Error("Staff not found");
+        }
+
+        await deleteDocument({
+            actionType: 'STAFF_DELETED',
+            documentId: staff._id,
+            collectionName: 'Staff',
+            userId: `${user?._id}`,
+            trashMessage: `"${staff.fullName}" (ID: ${id}) was moved to trash by ${user.fullName}.`,
+            historyMessage: `User ${user.fullName} deleted "${staff.fullName}" (ID: ${id}) on ${new Date().toLocaleString()}.`,
+        });
+
+        return { success: true, message: "Staff deleted successfully" };
+    } catch (error) {
+        console.log("error while deleting staff", error)
+        throw error;
+    }
+}
+
+export const deleteStaff = await withAuth(_deleteStaff)

@@ -1,28 +1,25 @@
-
 import { AppSidebar } from "@/components/dashboad-layout/app-sidebar";
 import FullScreenButton from "@/components/FullscreenButton";
 import { ModeToggle } from "@/components/theme/mode-toggle";
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@/components/ui/separator";
 import {
     SidebarInset,
     SidebarProvider,
     SidebarTrigger,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import { currentUserRole } from "@/lib/helpers/current-role";
 import { currentUser } from "@/lib/helpers/current-user";
-
-
 
 export default async function DashboardLayout({
     children,
 }: Readonly<{
     children: React.ReactNode;
 }>) {
+
     const [user, role] = await Promise.all([
         currentUser(),
         currentUserRole(),
     ]);
-
 
     return (
         <SidebarProvider>

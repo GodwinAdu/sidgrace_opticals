@@ -1,7 +1,9 @@
 "use server"
+import { type User, withAuth } from "../helpers/auth"
 import Appointment from "../models/appointment.models"
 import { Patient } from "../models/patient.models"
 import { connectToDB } from "../mongoose"
+import { deleteDocument } from "./trash.actions"
 
 
 export async function fetchBookedAppointments(date: string) {
@@ -232,3 +234,30 @@ export async function updateAppointmentStatus(appointmentId: string, status: str
         }
     }
 }
+
+
+async function _deleteAppointment(user: User, id: string) {
+    try {
+        if (!user) throw new Error("User not authenticated")
+
+        await connectToDB()
+
+        const appointment = await Appointment.findById(id)
+
+        await deleteDocument({
+            actionType: 'APPOINTMENT_DELETED',
+            documentId: appointment._id,
+            collectionName: 'Appointment',
+            userId: `${user?._id}`,
+            trashMessage: `"Appointment" with (ID: ${id}) was moved to trash by ${user.fullName}.`,
+            historyMessage: `User ${user.fullName} deleted "Appointment" with (ID: ${id}) on ${new Date().toLocaleString()}.`
+        });
+
+        return { success: true, message: "Class deleted successfully" };
+    } catch (error) {
+        console.log("error while deleting patient", error)
+        throw error;
+    }
+}
+
+export const deleteAppointment = await withAuth(_deleteAppointment)

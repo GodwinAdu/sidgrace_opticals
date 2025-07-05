@@ -5,6 +5,7 @@ import { connectToDB } from "../mongoose"
 import Department from '../models/department.models';
 import History from "../models/history.models";
 import { User, withAuth } from '../helpers/auth';
+import { deleteDocument } from "./trash.actions";
 
 
 async function _createDepartment(user: User, values: { name: string }) {
@@ -143,24 +144,29 @@ async function _updateDepartment(user:User,departmentId: string, values: UpdateD
 export const updateDepartment = await withAuth(_updateDepartment)
 async function _deleteDepartment(user:User,id:string) {
     try {
+        if (!user) throw new Error("User not authenticated")
 
-        if (!user) throw new Error('user not logged in');
+        await connectToDB()
 
-        await connectToDB();
+        const department = await Department.findById(id)
 
-        const department = await Department.findByIdAndDelete(id)
-
-        if (!department) {
-            console.log("department don't exist");
-            return null; // or throw an error if you want to handle it differently
+        if (!department || !department._id) {
+            throw new Error("Department not found or missing _id");
         }
-        console.log("delete successfully")
 
-        return JSON.parse(JSON.stringify(department));
+        await deleteDocument({
+            actionType: 'DEPARTMENT_DELETED',
+            documentId: department._id.toString(),
+            collectionName: 'department',
+            userId: `${user?._id}`,
+            trashMessage: `"${department.name}" (ID: ${id}) was moved to trash by ${user.fullName}.`,
+            historyMessage: `User ${user.fullName} deleted "${department.name}" (ID: ${id}) on ${new Date().toLocaleString()}.`,
+        });
 
+        return { success: true, message: "Department deleted successfully" };
     } catch (error) {
-        console.error("Error deleting department:", error);
-        throw error; // throw the error to handle it at a higher Department if needed
+        console.log("error while deleting department", error)
+        throw error;
     }
 
 }

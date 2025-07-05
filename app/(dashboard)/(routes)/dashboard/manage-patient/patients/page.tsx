@@ -158,15 +158,6 @@ export default async function PatientsPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Link
-                                href={`/dashboard/patients/${patient.id}/medical-records`}
-                                className="flex items-center"
-                              >
-                                <FileText className="mr-2 h-4 w-4" />
-                                Medical Records
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Link
                                 href={`/dashboard/appointments/new?patient=${patient.id}`}
                                 className="flex items-center"
                               >

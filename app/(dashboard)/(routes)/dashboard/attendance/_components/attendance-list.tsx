@@ -4,8 +4,6 @@ import { useState } from "react"
 import {
     Search,
     Calendar,
-    Eye,
-    Heart,
     Stethoscope,
     FileText,
     Clock,
@@ -33,115 +31,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { calculateAge } from "@/lib/utils"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { updateUserAttendance } from "@/lib/actions/attendance.actions"
+import { deleteAttendance, updateUserAttendance } from "@/lib/actions/attendance.actions"
+import { toast } from "sonner"
 
-// Mock data based on the provided structure
-// const attendance = [
-//     {
-//         _id: "68328e2fce90f1cdcbcf783d",
-//         patientId: "68319dfc7b4e91089a867329",
-//         patientName: "John Smith",
-//         patientAge: 45,
-//         date: "2025-05-25T03:27:43.575+00:00",
-//         eyeTest: {
-//             vision: "20/20",
-//             pressure: "Normal",
-//             completed: true,
-//         },
-//         vitals: {
-//             bloodPressure: "120/80",
-//             heartRate: 72,
-//             temperature: 98.6,
-//             weight: 180,
-//         },
-//         diagnosis: {
-//             primary: "Routine Checkup",
-//             secondary: null,
-//             severity: "Low",
-//         },
-//         doctorNote: "Patient in good health. Continue current medications.",
-//         nurseNote: "Vitals stable. Patient cooperative.",
-//         status: "completed",
-//         visitType: "routine",
-//         followUpDate: "2025-06-25T03:27:43.575+00:00",
-//         followUpInstructions: "Return in 1 month for follow-up",
-//         createdBy: "6817a25290fca1bfffa1061e",
-//         drugs: ["Lisinopril 10mg", "Metformin 500mg"],
-//         procedures: ["Blood pressure check", "Eye examination"],
-//         createdAt: "2025-05-25T03:27:43.782+00:00",
-//         updatedAt: "2025-05-25T03:27:43.782+00:00",
-//     },
-//     {
-//         _id: "68328e2fce90f1cdcbcf783e",
-//         patientId: "68319dfc7b4e91089a867330",
-//         patientName: "Sarah Johnson",
-//         patientAge: 32,
-//         date: "2025-05-24T10:15:30.575+00:00",
-//         eyeTest: {
-//             vision: "20/25",
-//             pressure: "Elevated",
-//             completed: true,
-//         },
-//         vitals: {
-//             bloodPressure: "140/90",
-//             heartRate: 85,
-//             temperature: 99.1,
-//             weight: 145,
-//         },
-//         diagnosis: {
-//             primary: "Hypertension",
-//             secondary: "Anxiety",
-//             severity: "Medium",
-//         },
-//         doctorNote: "Monitor blood pressure. Lifestyle changes recommended.",
-//         nurseNote: "Patient anxious about results. Provided reassurance.",
-//         status: "waiting",
-//         visitType: "follow-up",
-//         followUpDate: "2025-06-01T10:15:30.575+00:00",
-//         followUpInstructions: "Monitor BP daily, return if readings consistently high",
-//         createdBy: "6817a25290fca1bfffa1061e",
-//         drugs: ["Amlodipine 5mg"],
-//         procedures: ["ECG", "Blood pressure monitoring"],
-//         createdAt: "2025-05-24T10:15:30.782+00:00",
-//         updatedAt: "2025-05-24T10:15:30.782+00:00",
-//     },
-//     {
-//         _id: "68328e2fce90f1cdcbcf783f",
-//         patientId: "68319dfc7b4e91089a867331",
-//         patientName: "Michael Brown",
-//         patientAge: 58,
-//         date: "2025-05-23T14:30:15.575+00:00",
-//         eyeTest: {
-//             vision: "20/40",
-//             pressure: "Normal",
-//             completed: false,
-//         },
-//         vitals: {
-//             bloodPressure: "110/70",
-//             heartRate: 68,
-//             temperature: 98.2,
-//             weight: 200,
-//         },
-//         diagnosis: {
-//             primary: "Diabetes Type 2",
-//             secondary: "Obesity",
-//             severity: "High",
-//         },
-//         doctorNote: null,
-//         nurseNote: null,
-//         status: "in-progress",
-//         visitType: "emergency",
-//         followUpDate: null,
-//         followUpInstructions: null,
-//         createdBy: "6817a25290fca1bfffa1061e",
-//         drugs: [],
-//         procedures: ["Blood glucose test"],
-//         createdAt: "2025-05-23T14:30:15.782+00:00",
-//         updatedAt: "2025-05-23T14:30:15.782+00:00",
-//     },
-// ]
+
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -158,18 +52,18 @@ const getStatusColor = (status: string) => {
     }
 }
 
-const getVisitTypeColor = (visitType: string) => {
-    switch (visitType) {
-        case "routine":
-            return "bg-blue-50 text-blue-700 border-blue-200"
-        case "follow-up":
-            return "bg-purple-50 text-purple-700 border-purple-200"
-        case "emergency":
-            return "bg-red-50 text-red-700 border-red-200"
-        default:
-            return "bg-gray-50 text-gray-700 border-gray-200"
-    }
-}
+// const getVisitTypeColor = (visitType: string) => {
+//     switch (visitType) {
+//         case "routine":
+//             return "bg-blue-50 text-blue-700 border-blue-200"
+//         case "follow-up":
+//             return "bg-purple-50 text-purple-700 border-purple-200"
+//         case "emergency":
+//             return "bg-red-50 text-red-700 border-red-200"
+//         default:
+//             return "bg-gray-50 text-gray-700 border-gray-200"
+//     }
+// }
 
 export default function AttendancePage({ attendance }) {
     const [searchTerm, setSearchTerm] = useState("")
@@ -181,7 +75,7 @@ export default function AttendancePage({ attendance }) {
 
     const filteredData = attendance.filter((record) => {
         const matchesSearch =
-            record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()) 
+            record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase())
         const matchesStatus = statusFilter === "all" || record.status === statusFilter
         const matchesVisitType = visitTypeFilter === "all" || record.visitType === visitTypeFilter
 
@@ -201,6 +95,18 @@ export default function AttendancePage({ attendance }) {
             console.log("update successfully")
         } catch (error) {
             console.log("error happened while update attendance", error)
+        }
+    }
+
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteAttendance(id)
+            router.refresh()
+            toast.success("Deleted Successfully", {
+                description: "Attendance was deleted successfully"
+            })
+        } catch (error) {
+            toast.error(error ? String(error) : "Deleted error")
         }
     }
 
@@ -390,7 +296,7 @@ export default function AttendancePage({ attendance }) {
                                                                 <DropdownMenuItem onClick={() => { router.push(`/dashboard/attendance/${record._id}`); handleUpdate(record._id); }}>Attend</DropdownMenuItem>
 
                                                                 <DropdownMenuSeparator />
-                                                                <DropdownMenuItem>Delete Record</DropdownMenuItem>
+                                                                <DropdownMenuItem onClick={() => handleDelete(record._id)}>Delete Record</DropdownMenuItem>
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </TableCell>

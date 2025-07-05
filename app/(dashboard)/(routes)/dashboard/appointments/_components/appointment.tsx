@@ -42,7 +42,7 @@ import { toast } from "sonner"
 import { updateAppointmentStatus } from "@/lib/actions/appointment.actions"
 
 // Generate calendar events from real appointments data
-const generateCalendarEvents = (appointments: any[]) => {
+const generateCalendarEvents = (appointments: Appointment[]) => {
     return appointments.map((appointment) => ({
         id: appointment.id,
         title: appointment.type,
@@ -51,10 +51,24 @@ const generateCalendarEvents = (appointments: any[]) => {
     }))
 }
 
+interface Appointment {
+    id: string
+    patientId: string
+    patientName: string
+    patientPhoto?: string
+    type: string
+    status: string
+    date: Date
+    duration: number
+    department?: string
+    notes?: string
+    createdAt: Date
+}
+
 interface AppointmentsPageProps {
     appointments: {
         success: boolean
-        appointments: any[]
+        appointments: Appointment[]
         error?: string
     }
 }
@@ -219,7 +233,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                         <div className="text-center">
                             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
                             <h3 className="text-lg font-medium mb-2">Failed to load appointments</h3>
-                            <p className="text-muted-foreground mb-4">{appointmentsData.error}</p>
+                            <p className="text-muted-foreground mb-4">{appointmentsData?.error}</p>
                             <Button onClick={() => router.refresh()}>Try Again</Button>
                         </div>
                     </CardContent>
@@ -431,15 +445,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                         </>
                                                                     )}
                                                                     <DropdownMenuSeparator />
-                                                                    <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation()
-                                                                            router.push(`/dashboard/appointments/reschedule/${appointment.id}`)
-                                                                        }}
-                                                                    >
-                                                                        <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                        Reschedule
-                                                                    </DropdownMenuItem>
+
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </TableCell>
@@ -939,7 +945,7 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                         <p className="text-sm">
                                                                             <span className="font-medium">Type:</span> {appointment.type}
                                                                         </p>
-                                                                
+
                                                                         {appointment.notes && (
                                                                             <p className="text-sm mt-1">
                                                                                 <span className="font-medium">Notes:</span> {appointment?.notes}

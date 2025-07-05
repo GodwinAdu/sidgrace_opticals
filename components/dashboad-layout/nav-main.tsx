@@ -113,29 +113,29 @@ export function NavMain({ role }:{role:IRole}) {
       isActive: false,
       roleField:"appointmentManagement"
     },
-    {
-      title: "Sales",
-      url: "#",
-      icon: Sparkles,
-      items: [
-        {
-          title: "Introduction",
-          url: "#",
-        },
-        {
-          title: "Get Started",
-          url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
-        },
-      ],
-    },
+    // {
+    //   title: "Sales",
+    //   url: "#",
+    //   icon: Sparkles,
+    //   items: [
+    //     {
+    //       title: "Introduction",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Get Started",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Tutorials",
+    //       url: "#",
+    //     },
+    //     {
+    //       title: "Changelog",
+    //       url: "#",
+    //     },
+    //   ],
+    // },
     {
       title: "Messaging",
       url: "#",
@@ -191,14 +191,6 @@ export function NavMain({ role }:{role:IRole}) {
       title: "Trash",
       url: `/dashboard/trash`,
       icon: Trash,
-      isActive: false,
-      roleField: "trash"
-
-    },
-    {
-      title: "Settings",
-      url: `/dashboard/settings`,
-      icon: Settings2Icon,
       isActive: false,
       roleField: "trash"
 
