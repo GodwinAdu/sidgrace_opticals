@@ -1,4 +1,5 @@
 "use client"
+import { currentUserRole } from "@/lib/helpers/current-role";
 import { useEffect, useState } from "react";
 
 
@@ -11,9 +12,9 @@ const useClientRole = () => {
     useEffect(() => {
         const fetchRole = async () => {
             setIsLoading(true);
-            // const data = await currentUserRole();
-            // setRole(data);
-            // setIsLoading(false);
+            const data = await currentUserRole();
+            setRole(data);
+            setIsLoading(false);
         };
         fetchRole();
     }, []);

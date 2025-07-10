@@ -5,13 +5,13 @@ import { getAllRoles } from '@/lib/actions/role.actions'
 
 const page = async () => {
 
-    const [departments,roles] = await Promise.all([
-     getAllDepartments(),
+  const [departments, roles] = await Promise.all([
+    getAllDepartments(),
     getAllRoles()
-    ])
+  ])
   return (
     <>
-      <CreateUser departments={departments} roles={roles} />
+      <CreateUser type='create' departments={departments} roles={roles} />
     </>
   )
 }

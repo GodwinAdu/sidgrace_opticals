@@ -57,13 +57,13 @@ const getStatusColor = (status: string) => {
     }
 }
 
-export function AttendanceDialog({ data = [], isLoading = false }: AttendanceDialogProps) {
+export function AttendanceDialog({ data , isLoading = false }: AttendanceDialogProps) {
     const [searchTerm, setSearchTerm] = useState("")
     const [open, setOpen] = useState(false)
 
     // Filter data based on search term
     const filteredData = data.filter((record) =>
-        record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase()),
+        record.patient.toLowerCase().includes(searchTerm.toLowerCase()),
     )
 
     return (
@@ -111,12 +111,12 @@ export function AttendanceDialog({ data = [], isLoading = false }: AttendanceDia
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage
                                                         src={`/placeholder.svg?height=32&width=32&text=${record.patientId.fullName.charAt(0)}`}
-                                                        alt={record.patientId.fullName}
+                                                        alt={record.patient}
                                                     />
-                                                    <AvatarFallback>{record.patientId.fullName.charAt(0)}</AvatarFallback>
+                                                    <AvatarFallback>{record.patient.charAt(0)}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <div className="font-medium">{record.patientId.fullName}</div>
+                                                    <div className="font-medium">{record.patient}</div>
                                                     <div className="text-sm text-muted-foreground">Age: {calculateAge(record.patientId.dob)}</div>
                                                 </div>
                                             </div>

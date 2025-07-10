@@ -2,38 +2,22 @@
 
 import { useState } from "react"
 import {
-    Search,
-    Calendar,
     Stethoscope,
     FileText,
     Clock,
     User,
-    MoreHorizontal,
     Download,
     RefreshCw,
 } from "lucide-react"
-import { format } from "date-fns"
+
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { calculateAge } from "@/lib/utils"
+import { Card, CardContent } from "@/components/ui/card"
 import { useRouter } from "next/navigation"
 import { deleteAttendance, updateUserAttendance } from "@/lib/actions/attendance.actions"
 import { toast } from "sonner"
+import { DataTable } from "@/components/table/data-table"
+import { columns } from "./column"
 
 
 
@@ -66,21 +50,7 @@ const getStatusColor = (status: string) => {
 // }
 
 export default function AttendancePage({ attendance }) {
-    const [searchTerm, setSearchTerm] = useState("")
-    const [statusFilter, setStatusFilter] = useState("all")
-    const [visitTypeFilter, setVisitTypeFilter] = useState("all")
-    const [selectedTab, setSelectedTab] = useState("overview")
-
     const router = useRouter()
-
-    const filteredData = attendance.filter((record) => {
-        const matchesSearch =
-            record.patientId.fullName.toLowerCase().includes(searchTerm.toLowerCase())
-        const matchesStatus = statusFilter === "all" || record.status === statusFilter
-        const matchesVisitType = visitTypeFilter === "all" || record.visitType === visitTypeFilter
-
-        return matchesSearch && matchesStatus && matchesVisitType
-    })
 
     const stats = {
         total: attendance.length,
@@ -89,14 +59,7 @@ export default function AttendancePage({ attendance }) {
         inProgress: attendance.filter((r) => r.status === "ongoing").length,
     };
 
-    const handleUpdate = async (id: string) => {
-        try {
-            await updateUserAttendance(id)
-            console.log("update successfully")
-        } catch (error) {
-            console.log("error happened while update attendance", error)
-        }
-    }
+  
 
     const handleDelete = async (id: string) => {
         try {
@@ -182,133 +145,9 @@ export default function AttendancePage({ attendance }) {
                 </div>
 
                 {/* Filters */}
-                <Card>
-                    <CardContent className="p-6">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                                <Input
-                                    placeholder="Search by patient name or diagnosis..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="pl-10"
-                                />
-                            </div>
-                            <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder="Filter by status" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Status</SelectItem>
-                                    <SelectItem value="completed">Completed</SelectItem>
-                                    <SelectItem value="waiting">Waiting</SelectItem>
-                                    <SelectItem value="in-progress">In Progress</SelectItem>
-                                    <SelectItem value="cancelled">Cancelled</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Select value={visitTypeFilter} onValueChange={setVisitTypeFilter}>
-                                <SelectTrigger className="w-full sm:w-[180px]">
-                                    <SelectValue placeholder="Filter by visit type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Types</SelectItem>
-                                    <SelectItem value="routine">Routine</SelectItem>
-                                    <SelectItem value="follow-up">Follow-up</SelectItem>
-                                    <SelectItem value="emergency">Emergency</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </CardContent>
-                </Card>
-
-                {/* Main Content */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Attendance Records</CardTitle>
-                        <CardDescription>
-                            Showing {filteredData.length} of {attendance.length} records
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Tabs value={selectedTab} onValueChange={setSelectedTab}>
-                            <TabsList className="grid w-full grid-cols-3">
-                                <TabsTrigger value="overview">Overview</TabsTrigger>
-                            </TabsList>
-
-                            <TabsContent value="overview" className="mt-6">
-                                <div className="rounded-md border">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Patient</TableHead>
-                                                <TableHead>Visit Date</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>Follow-up</TableHead>
-                                                <TableHead className="text-right">Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredData.map((record) => (
-                                                <TableRow key={record._id}>
-                                                    <TableCell>
-                                                        <div className="flex items-center space-x-3">
-                                                            <Avatar className="w-8 h-8">
-                                                                <AvatarImage
-                                                                    src={`/placeholder.svg?height=32&width=32&text=${record.patientId.fullName.charAt(0)}`}
-                                                                />
-                                                                <AvatarFallback>{record.patientId.fullName.charAt(0)}</AvatarFallback>
-                                                            </Avatar>
-                                                            <div>
-                                                                <div className="font-medium">{record.patientId.fullName}</div>
-                                                                <div className="text-sm text-gray-500">Age: {calculateAge(record.patientId.dob)}</div>
-                                                            </div>
-                                                        </div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <div className="flex items-center space-x-2">
-                                                            <Calendar className="w-4 h-4 text-gray-400" />
-                                                            <span>{format(new Date(record.date), "MMM dd, yyyy")}</span>
-                                                        </div>
-                                                        <div className="text-sm text-gray-500">{format(new Date(record.date), "hh:mm a")}</div>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge className={getStatusColor(record.status)}>
-                                                            {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
-                                                        </Badge>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        {record.followUpDate ? (
-                                                            <div className="text-sm">{format(new Date(record.followUpDate), "MMM dd, yyyy")}</div>
-                                                        ) : (
-                                                            <span className="text-gray-400">None</span>
-                                                        )}
-                                                    </TableCell>
-                                                    <TableCell className="text-right">
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                                    <MoreHorizontal className="h-4 w-4" />
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent align="end">
-                                                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-                                                                <DropdownMenuItem onClick={() => { router.push(`/dashboard/attendance/${record._id}`); handleUpdate(record._id); }}>Attend</DropdownMenuItem>
-
-                                                                <DropdownMenuSeparator />
-                                                                <DropdownMenuItem onClick={() => handleDelete(record._id)}>Delete Record</DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </CardContent>
-                </Card>
+                <div className="py-4">
+                    <DataTable searchKey="patient" columns={columns} data={attendance} />
+                </div>
             </div>
         </div>
     )

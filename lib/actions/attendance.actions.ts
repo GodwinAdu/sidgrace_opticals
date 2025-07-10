@@ -6,6 +6,7 @@ import { connectToDB } from '../mongoose';
 import Staff from '../models/staff.models';
 import { Patient } from '../models/patient.models';
 import { deleteDocument } from './trash.actions';
+import { format } from 'date-fns';
 
 async function _createAttendance(user: User, values: Record<string, unknown>) {
 
@@ -89,8 +90,19 @@ async function _getAllAttendances(user: User) {
             .exec();
 
         if (!attendances || attendances.length === 0) return [];
+
+        const filterAttendance = attendances.map(data => ({
+            _id: data._id,
+            patient: data.patientId.fullName,
+            visitDate:format(data.date,"PPP"),
+            status: data.status,
+            ...data._doc
+        }));
+
+        console.log(filterAttendance,"filter")
+
         // Convert Mongoose documents to plain objects
-        return JSON.parse(JSON.stringify(attendances));
+        return JSON.parse(JSON.stringify(filterAttendance));
     } catch (err) {
         console.error("Failed to fetch attendances:", err);
         throw new Error("Unable to fetch attendances. Please try again later.");

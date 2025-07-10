@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState } from "react"
-import { Edit, Loader2, MoreHorizontal, View } from "lucide-react"
+import { Edit, Edit2, Eye, Loader2, MoreHorizontal } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 
 import { Button } from "@/components/ui/button"
@@ -12,32 +12,35 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
 import Link from "next/link"
-import { toast } from "sonner"
+
 import useClientRole from "@/hooks/use-client-role"
+import { toast } from "sonner"
 import { DeleteDialog } from "@/app/components/delete-dialog"
-
-
+import { deleteStaff } from "@/lib/actions/staff.actions"
 
 
 interface CellActionProps {
-    data: IDepartment
+    data: IProduct
 }
+
+
 
 export const CellAction: React.FC<CellActionProps> = ({ data }) => {
     const router = useRouter()
     const [loading, setLoading] = useState(false)
     const { isLoading, role } = useClientRole()
-
-
+    console.log(role, "testing role")
 
     const handleDelete = async (id: string) => {
         try {
             setLoading(true)
-
+            await deleteStaff(id)
             router.refresh()
+
             toast.success("Deleted successfully", {
-                description: "You've deleted the product successfully",
+                description: "You've deleted the Attendance successfully",
             })
         } catch (error) {
             console.error("Delete error:", error)
@@ -48,6 +51,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
             setLoading(false)
         }
     }
+
 
     return (
         <DropdownMenu>
@@ -67,19 +71,21 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
                     <>
 
                         <DropdownMenuItem asChild>
-                            <Link href={`/dashboard/manager-user/department/${data._id}`}>
-                                <Edit className="mr-2 h-4 w-4" /> Update
+                            <Link href={`/dashboard/manage-user/staff/${data?._id}`}>
+                                <Edit2 className="mr-2 h-4 w-4" /> Edit
                             </Link>
                         </DropdownMenuItem>
 
+                        {/* // )} */}
+                        {/* {role?.deleteRole && ( */}
                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="bg-red-500 hover:bg-red-800">
                             <DeleteDialog
-                                id={data?._id as string}
+                                id={data?._id}
                                 onContinue={handleDelete}
                                 isLoading={loading}
                             />
                         </DropdownMenuItem>
-
+                        {/* )} */}
                     </>
                 )}
             </DropdownMenuContent>

@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, ChevronLeft, ChevronRight, Loader2, Save} from "lucide-react"
+import { CalendarIcon, ChevronLeft, ChevronRight, Loader2, Save, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -19,18 +19,76 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { PasswordStrength } from "@/components/password-strength"
-import { MultiStepForm } from "@/components/multi-form-step"
 import { createStaff } from "@/lib/actions/staff.actions"
 
-// Define form schema with Zod
-const userFormSchema = z
-    .object({
+// TypeScript interfaces
+interface IDepartment {
+    _id: string
+    name: string
+}
+
+interface IRole {
+    _id: string
+    name: string
+    displayName?: string
+}
+
+interface IUser {
+    _id?: string
+    fullName: string
+    email: string
+    phone: string
+    dateOfBirth: Date
+    gender: "male" | "female" | "other" | "prefer-not-to-say"
+    address: string
+    city: string
+    state: string
+    zipCode: string
+    country: string
+    role: string
+    department?: string
+    specialization?: string
+    licenseNumber?: string
+    startDate: Date
+    bio?: string
+    username: string
+    isActive: boolean
+    requirePasswordChange: boolean
+    sendWelcomeEmail: boolean
+}
+
+
+
+// Mock components - replace with your actual implementations
+const PasswordStrength = ({ password }: { password: string }) => (
+    <div className="text-xs text-muted-foreground mt-1">Password strength: {password.length > 8 ? "Strong" : "Weak"}</div>
+)
+
+const MultiStepForm = ({
+    steps,
+    currentStep,
+    onStepChange,
+    className,
+}: {
+    steps: any[]
+    currentStep: number
+    onStepChange: (step: number) => void
+    className?: string
+}) => (
+    <div className={cn("flex space-x-2", className)}>
+        {steps.map((step, index) => (
+            <div key={step.id} className={cn("flex-1 h-2 rounded-full", index <= currentStep ? "bg-primary" : "bg-muted")} />
+        ))}
+    </div>
+)
+
+// Create dynamic schema based on mode
+const createUserFormSchema = (isUpdate = false) => {
+    const baseSchema = {
         // Personal Information
-        fullName: z.string().min(2, "First name must be at least 2 characters"),
+        fullName: z.string().min(2, "Full name must be at least 2 characters"),
         email: z.string().email("Please enter a valid email address"),
         phone: z.string().min(10, "Phone number must be at least 10 characters"),
         dateOfBirth: z.date({
@@ -39,12 +97,11 @@ const userFormSchema = z
         gender: z.enum(["male", "female", "other", "prefer-not-to-say"], {
             required_error: "Please select a gender",
         }),
-        address: z.string().min(5, "Address must be at least 5 characters"),
-        city: z.string().min(2, "City must be at least 2 characters"),
-        state: z.string().min(2, "State must be at least 2 characters"),
-        zipCode: z.string().min(5, "ZIP code must be at least 5 characters"),
-        country: z.string().min(2, "Country must be at least 2 characters"),
-
+        address: z.string().min(1, "Address is required"),
+        city: z.string().min(1, "City is required"),
+        state: z.string().min(1, "State is required"),
+        zipCode: z.string().min(1, "ZIP code is required"),
+        country: z.string().min(1, "Country is required"),
         // Professional Information
         role: z.string({
             required_error: "Please select a role",
@@ -56,28 +113,58 @@ const userFormSchema = z
             required_error: "Start date is required",
         }),
         bio: z.string().optional(),
-
         // Account Settings
         username: z.string().min(4, "Username must be at least 4 characters"),
-        password: z
-            .string()
-            .min(8, "Password must be at least 8 characters")
-            .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
-            .regex(/[a-z]/, "Password must contain at least one lowercase letter")
-            .regex(/[0-9]/, "Password must contain at least one number")
-            .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
-        confirmPassword: z.string(),
-
         isActive: z.boolean().default(true),
         requirePasswordChange: z.boolean().default(true),
         sendWelcomeEmail: z.boolean().default(true),
-    })
-    .refine((data) => data.password === data.confirmPassword, {
-        message: "Passwords do not match",
-        path: ["confirmPassword"],
+    }
+
+    // Password fields - required for create, optional for update
+    const passwordSchema = isUpdate
+        ? {
+            password: z.string().optional(),
+            confirmPassword: z.string().optional(),
+        }
+        : {
+            password: z
+                .string()
+                .min(8, "Password must be at least 8 characters")
+                .regex(/[A-Z]/, "Password must contain at least one uppercase letter")
+                .regex(/[a-z]/, "Password must contain at least one lowercase letter")
+                .regex(/[0-9]/, "Password must contain at least one number")
+                .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
+            confirmPassword: z.string(),
+        }
+
+    const schema = z.object({
+        ...baseSchema,
+        ...passwordSchema,
     })
 
-type UserFormValues = z.infer<typeof userFormSchema>
+    // Add password confirmation validation only if passwords are provided
+    if (isUpdate) {
+        return schema.refine(
+            (data) => {
+                if (data.password && data.confirmPassword) {
+                    return data.password === data.confirmPassword
+                }
+                return true
+            },
+            {
+                message: "Passwords do not match",
+                path: ["confirmPassword"],
+            },
+        )
+    } else {
+        return schema.refine((data) => data.password === data.confirmPassword, {
+            message: "Passwords do not match",
+            path: ["confirmPassword"],
+        })
+    }
+}
+
+type UserFormValues = z.infer<ReturnType<typeof createUserFormSchema>>
 
 // Define the steps for the multi-step form
 const steps = [
@@ -108,18 +195,51 @@ const steps = [
     },
 ]
 
+interface CreateUserProps {
+    departments: IDepartment[]
+    roles: IRole[]
+    type: "create" | "update"
+    initialData?: IUser
+}
 
-
-
-export default function CreateUser({ departments, roles }: { departments: IDepartment[], roles: IRole[] }) {
+export default function CreateUser({ departments, roles, type, initialData }: CreateUserProps) {
     const router = useRouter()
     const [currentStep, setCurrentStep] = React.useState(0)
-    const [isSubmitting, setIsSubmitting] = React.useState(false)
+    const isUpdate = type === "update"
 
-    // Initialize form with default values
-    const form = useForm({
-        resolver: zodResolver(userFormSchema),
-        defaultValues: {
+    // Get the appropriate schema
+    const userFormSchema = React.useMemo(() => createUserFormSchema(isUpdate), [isUpdate])
+
+    // Initialize form with default values or existing data
+    const getDefaultValues = (): Partial<UserFormValues> => {
+        if (isUpdate && initialData) {
+            return {
+                fullName: initialData.fullName,
+                email: initialData.email,
+                phone: initialData.phone,
+                dateOfBirth: new Date(initialData.dateOfBirth),
+                gender: initialData.gender,
+                address: initialData.address,
+                city: initialData.city,
+                state: initialData.state,
+                zipCode: initialData.zipCode,
+                country: initialData.country,
+                role: initialData.role,
+                department: initialData.department,
+                specialization: initialData.specialization,
+                licenseNumber: initialData.licenseNumber,
+                startDate: new Date(initialData.startDate),
+                bio: initialData.bio,
+                username: initialData.username,
+                isActive: initialData.isActive,
+                requirePasswordChange: initialData.requirePasswordChange,
+                sendWelcomeEmail: initialData.sendWelcomeEmail,
+                password: "",
+                confirmPassword: "",
+            }
+        }
+
+        return {
             fullName: "",
             email: "",
             phone: "",
@@ -129,11 +249,12 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
             city: "",
             state: "",
             zipCode: "",
-            country: "",
+            country: "Ghana",
             role: "",
             department: undefined,
             specialization: undefined,
             licenseNumber: undefined,
+            startDate: new Date(),
             bio: undefined,
             username: "",
             password: "",
@@ -141,34 +262,69 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
             isActive: true,
             requirePasswordChange: true,
             sendWelcomeEmail: true,
-        },
+        }
+    }
+
+    const form = useForm({
+        resolver: zodResolver(userFormSchema),
+        defaultValues: initialData ??  {
+            fullName: "",
+            email: "",
+            phone: "",
+            dateOfBirth: new Date(),
+            gender: undefined,
+            address: "",
+            city: "",
+            state: "",
+            zipCode: "",
+            country: "Ghana",
+            role: "",
+            department: undefined,
+            specialization: undefined,
+            licenseNumber: undefined,
+            startDate: new Date(),
+            bio: undefined,
+            username: "",
+            password: "",
+            confirmPassword: "",
+            isActive: true,
+            requirePasswordChange: true,
+            sendWelcomeEmail: true,
+        }
     })
 
     // Watch for role changes to update department options
     const role = form.watch("role")
-
+    const { isSubmitting } = form.formState
 
     // Handle form submission
     const onSubmit = async (data: UserFormValues) => {
-        setIsSubmitting(true)
-
         try {
-            await createStaff(data)
-            console.log("Form data:", data)
-
-            toast.success("User Created Successfully", {
-                description: `${data.fullName} has been added as a ${data.role}.`,
-            })
+            if (isUpdate && initialData?._id) {
+                // Remove empty password fields for update
+                const updateData = { ...data }
+                if (!updateData.password) {
+                    delete updateData.password
+                    delete updateData.confirmPassword
+                }
+                // await updateStaff(initialData._id, updateData)
+                toast.success("User Updated Successfully", {
+                    description: `${data.fullName}'s information has been updated.`,
+                })
+            } else {
+                await createStaff(data)
+                toast.success("User Created Successfully", {
+                    description: `${data.fullName} has been added as a ${data.role}.`,
+                })
+            }
 
             // Redirect to staff page
             router.push("/dashboard/staff")
         } catch (error) {
-            console.error("Error creating user:", error)
-            toast("Error Creating User", {
-                description: "There was an error creating the user. Please try again.",
+            console.error(`Error ${isUpdate ? "updating" : "creating"} user:`, error)
+            toast.error(`Error ${isUpdate ? "Updating" : "Creating"} User`, {
+                description: `There was an error ${isUpdate ? "updating" : "creating"} the user. Please try again.`,
             })
-        } finally {
-            setIsSubmitting(false)
         }
     }
 
@@ -193,10 +349,14 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                 ]
                 break
             case 1: // Professional Information
-                fieldsToValidate = ["role", "department"]
+                fieldsToValidate = ["role", "startDate"]
                 break
             case 2: // Account Settings
-                fieldsToValidate = ["username", "password", "confirmPassword"]
+                fieldsToValidate = ["username"]
+                // Only validate password for create mode or if password is provided in update mode
+                if (!isUpdate || form.getValues().password) {
+                    fieldsToValidate.push("password", "confirmPassword")
+                }
                 break
             case 3: // Permissions
                 fieldsToValidate = ["isActive"]
@@ -211,12 +371,13 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
             if (currentStep < steps.length - 1) {
                 setCurrentStep((prev) => prev + 1)
             } else {
-                // Directly call onSubmit with the form values instead of using form.handleSubmit
+                // Submit the form
+                const formValues = form.getValues()
                 onSubmit({
-                    ...form.getValues(),
-                    isActive: form.getValues().isActive ?? true,
-                    requirePasswordChange: form.getValues().requirePasswordChange ?? true,
-                    sendWelcomeEmail: form.getValues().sendWelcomeEmail ?? true,
+                    ...formValues,
+                    isActive: formValues.isActive ?? true,
+                    requirePasswordChange: formValues.requirePasswordChange ?? true,
+                    sendWelcomeEmail: formValues.sendWelcomeEmail ?? true,
                 })
             }
         }
@@ -235,21 +396,19 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
             case 0:
                 return (
                     <div className="space-y-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <FormField
-                                control={form.control}
-                                name="fullName"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>First Name</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="John" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        </div>
+                        <FormField
+                            control={form.control}
+                            name="fullName"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Full Name *</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="John Doe" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <FormField
@@ -257,7 +416,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="email"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Email</FormLabel>
+                                        <FormLabel>Email *</FormLabel>
                                         <FormControl>
                                             <Input type="email" placeholder="john.doe@hospital.com" {...field} />
                                         </FormControl>
@@ -270,7 +429,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="phone"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Phone Number</FormLabel>
+                                        <FormLabel>Phone Number *</FormLabel>
                                         <FormControl>
                                             <Input placeholder="(555) 123-4567" {...field} />
                                         </FormControl>
@@ -286,13 +445,13 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="dateOfBirth"
                                 render={({ field }) => (
                                     <FormItem className="flex flex-col">
-                                        <FormLabel>Date of Birth</FormLabel>
+                                        <FormLabel>Date of Birth *</FormLabel>
                                         <Popover>
                                             <PopoverTrigger asChild>
                                                 <FormControl>
                                                     <Button
-                                                        variant={"outline"}
-                                                        className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                                        variant="outline"
+                                                        className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
                                                     >
                                                         {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
                                                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
@@ -305,7 +464,11 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                                     selected={field.value}
                                                     onSelect={field.onChange}
                                                     disabled={(date) => date > new Date() || date < new Date("1900-01-01")}
-                                                    initialFocus
+                                                    defaultMonth={field.value || new Date(1990, 0)}
+                                                    captionLayout="dropdown"
+                                                    startMonth={new Date(1950, 0)}
+                                                    endMonth={new Date(new Date().getFullYear(), 0)}
+                                                    autoFocus
                                                 />
                                             </PopoverContent>
                                         </Popover>
@@ -318,8 +481,8 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="gender"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Gender</FormLabel>
-                                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                        <FormLabel>Gender *</FormLabel>
+                                        <Select onValueChange={field.onChange} value={field.value}>
                                             <FormControl>
                                                 <SelectTrigger>
                                                     <SelectValue placeholder="Select gender" />
@@ -343,7 +506,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                             name="address"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Address</FormLabel>
+                                    <FormLabel>Address *</FormLabel>
                                     <FormControl>
                                         <Input placeholder="123 Main St" {...field} />
                                     </FormControl>
@@ -358,7 +521,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="city"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>City</FormLabel>
+                                        <FormLabel>City *</FormLabel>
                                         <FormControl>
                                             <Input placeholder="New York" {...field} />
                                         </FormControl>
@@ -371,7 +534,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="state"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>State</FormLabel>
+                                        <FormLabel>State *</FormLabel>
                                         <FormControl>
                                             <Input placeholder="NY" {...field} />
                                         </FormControl>
@@ -384,7 +547,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="zipCode"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>ZIP Code</FormLabel>
+                                        <FormLabel>ZIP Code *</FormLabel>
                                         <FormControl>
                                             <Input placeholder="10001" {...field} />
                                         </FormControl>
@@ -399,7 +562,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                             name="country"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Country</FormLabel>
+                                    <FormLabel>Country *</FormLabel>
                                     <FormControl>
                                         <Input placeholder="United States" {...field} />
                                     </FormControl>
@@ -419,16 +582,16 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="role"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Roles</FormLabel>
+                                        <FormLabel>Role *</FormLabel>
                                         <Select onValueChange={field.onChange} value={field.value || ""}>
                                             <FormControl>
                                                 <SelectTrigger>
-                                                    <SelectValue />
+                                                    <SelectValue placeholder="Select role" />
                                                 </SelectTrigger>
                                             </FormControl>
                                             <SelectContent>
                                                 {roles.map((role) => (
-                                                    <SelectItem key={role._id} value={role.displayName ?? ""}>
+                                                    <SelectItem key={role._id} value={role.displayName ?? role.name}>
                                                         {role.name}
                                                     </SelectItem>
                                                 ))}
@@ -438,7 +601,6 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                     </FormItem>
                                 )}
                             />
-
                             <FormField
                                 control={form.control}
                                 name="department"
@@ -465,36 +627,69 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                             />
                         </div>
 
-                        {(role === "doctor" || role === "nurse") && (
-                            <FormField
-                                control={form.control}
-                                name="specialization"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Specialization</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="Cardiology, Pediatrics, etc." {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-                        )}
+                        <FormField
+                            control={form.control}
+                            name="startDate"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-col">
+                                    <FormLabel>Start Date *</FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant="outline"
+                                                    className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}
+                                                >
+                                                   {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
+                                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0" align="start">
+                                            <Calendar
+                                                mode="single"
+                                                selected={field.value}
+                                                onSelect={field.onChange}
+                                                disabled={(date) => date < new Date("1900-01-01")}
+                                                defaultMonth={field.value || new Date()}
+                                                autoFocus
+                                            />
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
 
                         {(role === "doctor" || role === "nurse") && (
-                            <FormField
-                                control={form.control}
-                                name="licenseNumber"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>License Number</FormLabel>
-                                        <FormControl>
-                                            <Input placeholder="License or certification number" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                            <>
+                                <FormField
+                                    control={form.control}
+                                    name="specialization"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Specialization</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="Cardiology, Pediatrics, etc." {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="licenseNumber"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>License Number</FormLabel>
+                                            <FormControl>
+                                                <Input placeholder="License or certification number" {...field} />
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            </>
                         )}
 
                         <FormField
@@ -522,7 +717,7 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                             name="username"
                             render={({ field }) => (
                                 <FormItem>
-                                    <FormLabel>Username</FormLabel>
+                                    <FormLabel>Username *</FormLabel>
                                     <FormControl>
                                         <Input placeholder="johndoe" {...field} />
                                     </FormControl>
@@ -538,11 +733,16 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="password"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Password</FormLabel>
+                                        <FormLabel>Password {!isUpdate && "*"}</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="••••••••" {...field} />
+                                            <Input
+                                                type="password"
+                                                placeholder={isUpdate ? "Leave blank to keep current" : "••••••••"}
+                                                {...field}
+                                            />
                                         </FormControl>
-                                        <PasswordStrength password={field.value} />
+                                        {field.value && <PasswordStrength password={field.value} />}
+                                        {isUpdate && <FormDescription>Leave blank to keep the current password.</FormDescription>}
                                         <FormMessage />
                                     </FormItem>
                                 )}
@@ -552,16 +752,15 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 name="confirmPassword"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Confirm Password</FormLabel>
+                                        <FormLabel>Confirm Password {!isUpdate && "*"}</FormLabel>
                                         <FormControl>
-                                            <Input type="password" placeholder="••••••••" {...field} />
+                                            <Input type="password" placeholder={isUpdate ? "Confirm new password" : "••••••••"} {...field} />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
                                 )}
                             />
                         </div>
-
 
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <FormField
@@ -571,7 +770,9 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                                         <div className="space-y-0.5">
                                             <FormLabel>Require Password Change</FormLabel>
-                                            <FormDescription>User will be required to change password on first login.</FormDescription>
+                                            <FormDescription>
+                                                User will be required to change password on {isUpdate ? "next" : "first"} login.
+                                            </FormDescription>
                                         </div>
                                         <FormControl>
                                             <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -585,8 +786,10 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 render={({ field }) => (
                                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                                         <div className="space-y-0.5">
-                                            <FormLabel>Send Welcome Email</FormLabel>
-                                            <FormDescription>Send an email with login instructions.</FormDescription>
+                                            <FormLabel>Send {isUpdate ? "Notification" : "Welcome"} Email</FormLabel>
+                                            <FormDescription>
+                                                Send an email with {isUpdate ? "update notification" : "login instructions"}.
+                                            </FormDescription>
                                         </div>
                                         <FormControl>
                                             <Switch checked={field.value} onCheckedChange={field.onChange} />
@@ -601,10 +804,6 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
             case 3:
                 return (
                     <div className="space-y-4">
-
-
-
-
                         <FormField
                             control={form.control}
                             name="isActive"
@@ -630,8 +829,8 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                         <div className="flex flex-col items-center justify-center space-y-2">
                             <Avatar className="h-24 w-24">
                                 <AvatarFallback>
-                                    {formValues.fullName.charAt(0)}
-                                    {formValues.fullName.charAt(1)}
+                                    {formValues.fullName?.charAt(0)?.toUpperCase()}
+                                    {formValues.fullName?.split(" ")[1]?.charAt(0)?.toUpperCase() || ""}
                                 </AvatarFallback>
                             </Avatar>
                             <div className="text-center">
@@ -693,7 +892,15 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                 </div>
                                 <div className="grid grid-cols-3 p-4">
                                     <dt className="text-sm font-medium text-muted-foreground">Department</dt>
-                                    <dd className="col-span-2 text-sm">{formValues.department || "Not assigned"}</dd>
+                                    <dd className="col-span-2 text-sm">
+                                        {departments.find((d) => d._id === formValues.department)?.name || "Not assigned"}
+                                    </dd>
+                                </div>
+                                <div className="grid grid-cols-3 p-4">
+                                    <dt className="text-sm font-medium text-muted-foreground">Start Date</dt>
+                                    <dd className="col-span-2 text-sm">
+                                        {formValues.startDate ? format(formValues.startDate, "PPP") : "Not provided"}
+                                    </dd>
                                 </div>
                                 {(formValues.role === "doctor" || formValues.role === "nurse") && (
                                     <>
@@ -706,6 +913,12 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                             <dd className="col-span-2 text-sm">{formValues.licenseNumber || "Not provided"}</dd>
                                         </div>
                                     </>
+                                )}
+                                {formValues.bio && (
+                                    <div className="grid grid-cols-3 p-4">
+                                        <dt className="text-sm font-medium text-muted-foreground">Bio</dt>
+                                        <dd className="col-span-2 text-sm">{formValues.bio}</dd>
+                                    </div>
                                 )}
                             </dl>
                         </div>
@@ -720,7 +933,6 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                     <dt className="text-sm font-medium text-muted-foreground">Username</dt>
                                     <dd className="col-span-2 text-sm">{formValues.username}</dd>
                                 </div>
-
                                 <div className="grid grid-cols-3 p-4">
                                     <dt className="text-sm font-medium text-muted-foreground">Status</dt>
                                     <dd className="col-span-2 text-sm">
@@ -736,7 +948,9 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                                     <dd className="col-span-2 text-sm">{formValues.requirePasswordChange ? "Yes" : "No"}</dd>
                                 </div>
                                 <div className="grid grid-cols-3 p-4">
-                                    <dt className="text-sm font-medium text-muted-foreground">Welcome Email</dt>
+                                    <dt className="text-sm font-medium text-muted-foreground">
+                                        {isUpdate ? "Notification" : "Welcome"} Email
+                                    </dt>
                                     <dd className="col-span-2 text-sm">
                                         {formValues.sendWelcomeEmail ? "Will be sent" : "Will not be sent"}
                                     </dd>
@@ -758,14 +972,16 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                     variant="ghost"
                     size="icon"
                     className="mr-2 rounded-full"
-                    onClick={() => router.push("/dashboard/staff")}
+                    onClick={() => router.push("/dashboard/manage-user/staff")}
                 >
                     <ChevronLeft className="h-5 w-5" />
                     <span className="sr-only">Back</span>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Create New User</h1>
-                    <p className="text-muted-foreground">Add a new user to the system</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{isUpdate ? "Update User" : "Create New User"}</h1>
+                    <p className="text-muted-foreground">
+                        {isUpdate ? `Update ${initialData?.fullName || "user"} information` : "Add a new user to the system"}
+                    </p>
                 </div>
             </div>
 
@@ -773,7 +989,9 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                 <CardHeader>
                     <CardTitle>User Information</CardTitle>
                     <CardDescription>
-                        Enter the details for the new user. All fields marked with an asterisk (*) are required.
+                        {isUpdate
+                            ? "Update the user details. Fields marked with an asterisk (*) are required."
+                            : "Enter the details for the new user. All fields marked with an asterisk (*) are required."}
                     </CardDescription>
                     <MultiStepForm steps={steps} currentStep={currentStep} onStepChange={setCurrentStep} className="mt-4" />
                 </CardHeader>
@@ -793,14 +1011,23 @@ export default function CreateUser({ departments, roles }: { departments: IDepar
                         {isSubmitting ? (
                             <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                {currentStep === steps.length - 1 ? "Creating..." : "Next..."}
+                                {currentStep === steps.length - 1 ? (isUpdate ? "Updating..." : "Creating...") : "Next..."}
                             </>
                         ) : (
                             <>
                                 {currentStep === steps.length - 1 ? (
                                     <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Create User
+                                        {isUpdate ? (
+                                            <>
+                                                <Save className="mr-2 h-4 w-4" />
+                                                Update User
+                                            </>
+                                        ) : (
+                                            <>
+                                                <UserPlus className="mr-2 h-4 w-4" />
+                                                Create User
+                                            </>
+                                        )}
                                     </>
                                 ) : (
                                     <>

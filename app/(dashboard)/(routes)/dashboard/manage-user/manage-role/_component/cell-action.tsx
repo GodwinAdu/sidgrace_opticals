@@ -29,6 +29,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const params = useParams()
   const [loading, setLoading] = useState(false)
   const { isLoading, role } = useClientRole()
+  console.log(role,"testing role")
 
   const handleDelete = async (id: string) => {
     try {
@@ -65,31 +66,29 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
           </DropdownMenuItem>
         ) : (
           <>
-            {role?.permissions.viewRole && (
+            {/* {role?.viewRole && ( */}
               <DropdownMenuItem asChild>
                 <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}`}>
                   <Eye className="mr-2 h-4 w-4" /> View
                 </Link>
               </DropdownMenuItem>
-            )}
-            {role?.permissions.editRole && (
+            {/* )} */}
+            {/* {role?.editRole && ( */}
               <DropdownMenuItem asChild>
                 <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}/edit`}>
                   <Edit className="mr-2 h-4 w-4" /> Update
                 </Link>
               </DropdownMenuItem>
-            )}
-            {role?.permissions.deleteRole && (
+            {/* // )} */}
+            {/* {role?.deleteRole && ( */}
               <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="bg-red-500 hover:bg-red-800">
                 <DeleteDialog
                   id={data?._id}
-                  title="Are you sure you want to delete this Role?"
-                  description="This action cannot be undone. Are you sure you want to proceed?"
                   onContinue={handleDelete}
                   isLoading={loading}
                 />
               </DropdownMenuItem>
-            )}
+            {/* )} */}
           </>
         )}
       </DropdownMenuContent>

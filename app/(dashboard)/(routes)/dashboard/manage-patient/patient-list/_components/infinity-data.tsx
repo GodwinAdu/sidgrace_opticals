@@ -21,6 +21,8 @@ import {
 import { calculateAge } from "@/lib/utils"
 import { toast } from "sonner"
 import { useRouter } from "next/navigation"
+import { Separator } from "@/components/ui/separator"
+import { DeleteDialog } from "@/app/components/delete-dialog"
 
 // Define the Patient type based on your data structure
 interface Patient {
@@ -123,7 +125,7 @@ const InfinityTable = () => {
         try {
             setDeleteLoading(true)
             await deletePatient(id)
-            router.refresh()
+            window.location.reload()
 
             toast.success("Patient Deleted", {
                 description: "Patient deleted successfully"
@@ -190,10 +192,10 @@ const InfinityTable = () => {
     }
 
     return (
-        <div className="w-full h-screen flex flex-col bg-white">
+        <div className="w-full h-screen flex flex-col bg-background">
             {/* Header with search */}
             <div className="flex justify-between items-center py-6 px-8 border-b">
-                <h1 className="text-2xl font-semibold text-gray-900">Patient Records</h1>
+                <h1 className="text-2xl font-semibold">Patient Records</h1>
                 <form onSubmit={handleSearch} className="relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                     <Input
@@ -205,6 +207,7 @@ const InfinityTable = () => {
                     />
                 </form>
             </div>
+            <Separator />
 
             {/* Main content */}
             <div className="flex-1 overflow-auto p-8" ref={tableRef}>
@@ -242,7 +245,7 @@ const InfinityTable = () => {
                 ) : (
                     <>
                         {/* Table header */}
-                        <div className="rounded-t-lg bg-gray-50 border border-gray-200 px-6 py-3 flex items-center font-medium text-sm text-gray-500 sticky top-0 z-10">
+                        <div className="rounded-t-lg bg-background border border-gray-200 px-6 py-3 flex items-center font-medium text-sm  sticky top-0 z-10">
                             <div className="flex-1 flex items-center gap-1">
                                 <span>Patient Name</span>
                                 <ArrowUpDown className="h-3 w-3 opacity-50" />
@@ -256,14 +259,14 @@ const InfinityTable = () => {
                         </div>
 
                         {/* Table body */}
-                        <div className="divide-y divide-gray-200 border-x border-b border-gray-200 rounded-b-lg overflow-hidden bg-white">
+                        <div className="divide-y divide-gray-200 border-x border-b border-gray-200 rounded-b-lg overflow-hidden bg-background">
                             {patients.map((patient, index) => (
                                 <div
                                     key={patient._id}
                                     className="flex items-center px-6 py-4 hover:bg-gray-50 transition-colors duration-150 ease-in-out"
                                     style={{ animationDelay: `${index * 0.05}s` }}
                                 >
-                                    <div className="flex-1 font-medium text-gray-900">
+                                    <div className="flex-1 font-medium">
                                         <Link
                                             href={`/dashboard/manage-patient/patients/${patient._id}`}
                                             className="hover:text-blue-600 transition-colors flex items-center"
@@ -310,19 +313,12 @@ const InfinityTable = () => {
                                                         Edit Details
                                                     </Link>
                                                 </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => handleDelete(patient._id)}>
-                                                    {deleteLoading ? (
-                                                        <>
-                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                            Deleting ....
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Trash className="mr-2 h-4 w-4 text-gray-500" />
-                                                            Delete Patient
-                                                        </>
-                                                    )}
-
+                                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="bg-red-500 hover:bg-red-800">
+                                                    <DeleteDialog
+                                                        id={patient?._id as string}
+                                                        onContinue={handleDelete}
+                                                        isLoading={loading}
+                                                    />
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
                                         </DropdownMenu>
