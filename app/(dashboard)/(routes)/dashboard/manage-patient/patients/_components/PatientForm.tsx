@@ -1,7 +1,8 @@
 "use client"
 
-import { useState } from "react"
-import Link from "next/link"
+import type React from "react"
+
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -12,56 +13,143 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Checkbox } from "@/components/ui/checkbox"
-import { ArrowLeft, Calendar, Check, ChevronRight, Loader2, Plus, X } from "lucide-react"
+import { Calendar, Check, ChevronRight, Loader2, Plus, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { Separator } from "@/components/ui/separator"
-import { createPatient } from "@/lib/actions/patient.actions"
+import { createPatient, updatePatient } from "@/lib/actions/patient.actions"
 
-export default function RegisterPatientPage() {
+interface PatientFormData {
+  // Personal Information
+  fullName: string
+  dob: string
+  gender: string
+  maritalStatus: string
+  occupation: string
+  email: string
+  phone: string
+  alternatePhone: string
+  address: string
+  // Medical Information
+  bloodType: string
+  allergies: string[]
+  chronicConditions: string[]
+  currentMedications: string
+  familyHistory: string
+  familyOcularHistory: string
+  medicalHistory: string[]
+  socialHistory: string[]
+  // Emergency Contact
+  emergencyContactName: string
+  emergencyContactRelationship: string
+  emergencyContactPhone: string
+  // Additional Information
+  referralSource: string
+  preferredCommunication: string
+  providerId: string
+  serviceNumber: string
+  // Consent
+  consentToTreatment: boolean
+  consentToShareInformation: boolean
+  acknowledgmentOfPrivacyPolicy: boolean
+}
+
+interface RegisterPatientPageProps {
+  type: "create" | "update"
+  initialData?: any
+}
+
+const defaultFormData: PatientFormData = {
+  // Personal Information
+  fullName: "",
+  dob: "",
+  gender: "",
+  maritalStatus: "",
+  occupation: "",
+  email: "",
+  phone: "",
+  alternatePhone: "",
+  address: "",
+  // Medical Information
+  bloodType: "",
+  allergies: [""],
+  chronicConditions: [""],
+  currentMedications: "",
+  familyHistory: "",
+  familyOcularHistory: "",
+  medicalHistory: [""],
+  socialHistory: [""],
+  // Emergency Contact
+  emergencyContactName: "",
+  emergencyContactRelationship: "",
+  emergencyContactPhone: "",
+  // Additional Information
+  referralSource: "",
+  preferredCommunication: "",
+  providerId: "",
+  serviceNumber: "",
+  // Consent
+  consentToTreatment: false,
+  consentToShareInformation: false,
+  acknowledgmentOfPrivacyPolicy: false,
+}
+
+export default function RegisterPatientPage({ type, initialData }: RegisterPatientPageProps) {
   const router = useRouter()
   const [currentStep, setCurrentStep] = useState(1)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [formData, setFormData] = useState({
-    // Personal Information
-    fullName: "",
-    dob: "",
-    gender: "",
-    maritalStatus: "",
-    occupation: "",
-    email: "",
-    phone: "",
-    alternatePhone: "",
-    address: "",
-
-    // Medical Information
-    bloodType: "",
-    allergies: [""],
-    chronicConditions: [""],
-    currentMedications: "",
-    familyHistory: "",
-    familyOcularHistory: "",
-    medicalHistory: [""],
-    socialHistory: [""],
-
-    // Emergency Contact
-    emergencyContactName: "",
-    emergencyContactRelationship: "",
-    emergencyContactPhone: "",
-
-    // Additional Information
-    referralSource: "",
-    preferredCommunication: "",
-    providerId: "",
-    serviceNumber: "",
-
-    // Consent
-    consentToTreatment: false,
-    consentToShareInformation: false,
-    acknowledgmentOfPrivacyPolicy: false,
-  })
+  const [formData, setFormData] = useState<PatientFormData>(defaultFormData)
 
   const totalSteps = 4
+
+  // Initialize form data when component mounts or initialData changes
+  useEffect(() => {
+    if (type === "update" && initialData) {
+      setFormData({
+        // Personal Information
+        fullName: initialData.fullName || "",
+        dob: initialData.dob || "",
+        gender: initialData.gender || "",
+        maritalStatus: initialData.maritalStatus || "",
+        occupation: initialData.occupation || "",
+        email: initialData.email || "",
+        phone: initialData.phone || "",
+        alternatePhone: initialData.alternatePhone || "",
+        address: initialData.address || "",
+        // Medical Information
+        bloodType: initialData.bloodType || "",
+        allergies:
+          Array.isArray(initialData.allergies) && initialData.allergies.length > 0 ? initialData.allergies : [""],
+        chronicConditions:
+          Array.isArray(initialData.chronicConditions) && initialData.chronicConditions.length > 0
+            ? initialData.chronicConditions
+            : [""],
+        currentMedications: initialData.currentMedications || "",
+        familyHistory: initialData.familyHistory || "",
+        familyOcularHistory: initialData.familyOcularHistory || "",
+        medicalHistory:
+          Array.isArray(initialData.medicalHistory) && initialData.medicalHistory.length > 0
+            ? initialData.medicalHistory
+            : [""],
+        socialHistory:
+          Array.isArray(initialData.socialHistory) && initialData.socialHistory.length > 0
+            ? initialData.socialHistory
+            : [""],
+        // Emergency Contact
+        emergencyContactName: initialData.emergencyContactName || initialData.emergencyName || "",
+        emergencyContactRelationship: initialData.emergencyContactRelationship || "",
+        emergencyContactPhone: initialData.emergencyContactPhone || initialData.emergencyPhone || "",
+        // Additional Information
+        referralSource: initialData.referralSource || "",
+        preferredCommunication: initialData.preferredCommunication || "",
+        providerId: initialData.providerId || "",
+        serviceNumber: initialData.serviceNumber || "",
+        // Consent
+        consentToTreatment: initialData.consentToTreatment || false,
+        consentToShareInformation: initialData.consentToShareInformation || false,
+        acknowledgmentOfPrivacyPolicy: initialData.acknowledgmentOfPrivacyPolicy || false,
+      })
+    }
+  }, [type, initialData])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -129,30 +217,47 @@ export default function RegisterPatientPage() {
     setIsSubmitting(true)
 
     try {
-      // Generate unique IDs
-      const patientId = `PAT-${Date.now()}`
-      const originalId = Date.now()
+      if (type === "create") {
+        // Generate unique IDs for new patient
+        const patientId = `PAT-${Date.now()}`
+        const originalId = Date.now()
 
-      const patientData = {
-        ...formData,
-        patientId,
-        originalId,
-        registeredAt: new Date().toISOString(),
-        registeredInfo: `Registered via web form on ${new Date().toLocaleDateString()}`,
-        emergencyName: formData.emergencyContactName,
-        emergencyPhone: formData.emergencyContactPhone,
+        const patientData = {
+          ...formData,
+          patientId,
+          originalId,
+          registeredAt: new Date().toISOString(),
+          registeredInfo: `Registered via web form on ${new Date().toLocaleDateString()}`,
+          emergencyName: formData.emergencyContactName,
+          emergencyPhone: formData.emergencyContactPhone,
+        }
+
+        await createPatient(patientData)
+        toast.success("Patient registered successfully", {
+          description: `Patient ID: ${patientId}`,
+        })
+      } else {
+        // Update existing patient
+        const updatedPatientData = {
+          ...formData,
+          patientId: initialData.patientId,
+          originalId: initialData.originalId,
+          updatedAt: new Date().toISOString(),
+          emergencyName: formData.emergencyContactName,
+          emergencyPhone: formData.emergencyContactPhone,
+        }
+
+        await updatePatient(initialData.patientId, updatedPatientData)
+        toast.success("Patient updated successfully", {
+          description: `Patient ID: ${initialData.patientId}`,
+        })
       }
-
-      await createPatient(patientData)
-      toast.success("Patient registered successfully", {
-        description: `Patient ID: ${patientId}`,
-      })
 
       // Redirect to the patients list
       router.push("/dashboard/manage-patient/patients")
     } catch (error) {
       console.log("Something went wrong", error)
-      toast.error("Something went wrong")
+      toast.error(type === "create" ? "Failed to register patient" : "Failed to update patient")
     } finally {
       setIsSubmitting(false)
     }
@@ -162,7 +267,16 @@ export default function RegisterPatientPage() {
     <div className="flex flex-col">
       <div className="flex-1 space-y-3">
         {/* Header */}
-       
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold">
+            {type === "create" ? "Register New Patient" : "Update Patient Information"}
+          </h1>
+          <p className="text-gray-600">
+            {type === "create"
+              ? "Fill out the form below to register a new patient"
+              : "Update the patient information below"}
+          </p>
+        </div>
 
         {/* Progress indicator */}
         <div className="w-full max-w-3xl mx-auto mb-8">
@@ -206,7 +320,7 @@ export default function RegisterPatientPage() {
             <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Personal Information</CardTitle>
-                <CardDescription>Enter the patient&#39;s personal details</CardDescription>
+                <CardDescription>Enter the patient's personal details</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-2">
@@ -241,6 +355,7 @@ export default function RegisterPatientPage() {
                       />
                     </div>
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="gender">
                       Gender <span className="text-red-500">*</span>
@@ -280,6 +395,7 @@ export default function RegisterPatientPage() {
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="occupation">Occupation</Label>
                     <Input
@@ -304,6 +420,7 @@ export default function RegisterPatientPage() {
                       placeholder="Enter email address"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="phone">
                       Phone Number <span className="text-red-500">*</span>
@@ -356,6 +473,7 @@ export default function RegisterPatientPage() {
                       placeholder="Enter provider ID"
                     />
                   </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="serviceNumber">Service Number</Label>
                     <Input
@@ -901,11 +1019,11 @@ export default function RegisterPatientPage() {
                   {isSubmitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Registering...
+                      {type === "create" ? "Registering..." : "Updating..."}
                     </>
                   ) : (
                     <>
-                      Register Patient
+                      {type === "create" ? "Register Patient" : "Update Patient"}
                       <Check className="ml-2 h-4 w-4" />
                     </>
                   )}

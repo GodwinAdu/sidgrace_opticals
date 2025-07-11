@@ -268,7 +268,7 @@ const InfinityTable = () => {
                                 >
                                     <div className="flex-1 font-medium">
                                         <Link
-                                            href={`/dashboard/manage-patient/patients/${patient._id}`}
+                                            href={`/dashboard/manage-patient/patient-list/view/${patient._id}`}
                                             className="hover:text-blue-600 transition-colors flex items-center"
                                         >
                                             {patient.fullName}
@@ -302,13 +302,13 @@ const InfinityTable = () => {
                                                 <DropdownMenuLabel>Patient Actions</DropdownMenuLabel>
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem>
-                                                    <Link href={`/dashboard/patients/${patient._id}`} className="flex items-center w-full">
+                                                    <Link href={`/dashboard/manage-patient/patient-list/view/${patient._id}`} className="flex items-center w-full">
                                                         <Eye className="mr-2 h-4 w-4 text-gray-500" />
                                                         View Details
                                                     </Link>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem>
-                                                    <Link href={`/dashboard/patients/${patient._id}`} className="flex items-center w-full">
+                                                    <Link href={`/dashboard/manage-patient/patient-list/edit/${patient._id}`} className="flex items-center w-full">
                                                         <Edit className="mr-2 h-4 w-4 text-gray-500" />
                                                         Edit Details
                                                     </Link>

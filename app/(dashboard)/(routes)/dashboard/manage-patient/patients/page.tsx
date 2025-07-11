@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, ArrowUpDown, Calendar, FileText, Eye, MoreHorizontal, UserPlus } from "lucide-react"
+import { Search, Filter, ArrowUpDown, Calendar, FileText, Eye, MoreHorizontal, UserPlus, Edit2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -89,9 +89,9 @@ export default async function PatientsPage() {
             <div className="">
               <Link href="/dashboard/manage-patient/patient-list" className={cn(buttonVariants())}>
                 <Eye className="h-4 w-4" />
-              View All Patients
+                View All Patients
               </Link>
-              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <Table>
@@ -116,7 +116,7 @@ export default async function PatientsPage() {
                   .map((patient) => (
                     <TableRow key={patient._id}>
                       <TableCell className="font-medium">
-                        <Link href={`/dashboard/patients/${patient.id}`} className="hover:text-blue-700">
+                        <Link href={`/dashboard/manage-patient/patient-list/view/${patient._id}`} className="hover:text-blue-700">
                           {patient.fullName}
                         </Link>
                       </TableCell>
@@ -151,12 +151,18 @@ export default async function PatientsPage() {
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem>
-                              <Link href={`/dashboard/patients/${patient.id}`} className="flex items-center">
+                              <Link href={`/dashboard/manage-patient/patients/view/${patient._id}`} className="flex items-center">
                                 <Eye className="mr-2 h-4 w-4" />
-                                View Details
+                                View
                               </Link>
                             </DropdownMenuItem>
                             <DropdownMenuItem>
+                              <Link href={`/dashboard/manage-patient/patients/edit/${patient._id}`} className="flex items-center">
+                                <Edit2 className="mr-2 h-4 w-4" />
+                                Edit
+                              </Link>
+                            </DropdownMenuItem>
+                            {/* <DropdownMenuItem>
                               <Link
                                 href={`/dashboard/appointments/new?patient=${patient.id}`}
                                 className="flex items-center"
@@ -164,7 +170,7 @@ export default async function PatientsPage() {
                                 <Calendar className="mr-2 h-4 w-4" />
                                 Schedule Appointment
                               </Link>
-                            </DropdownMenuItem>
+                            </DropdownMenuItem> */}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

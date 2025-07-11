@@ -6,6 +6,7 @@ import { connectToDB } from "../mongoose";
 import { withAuth, type User } from '../helpers/auth';
 import { deleteDocument } from "./trash.actions";
 
+
 interface FetchPatientsParams {
     page?: number
     limit?: number
@@ -285,93 +286,120 @@ export async function getPatientDashboardStats() {
 }
 
 
-
-
-export async function updatePatient() {
+async function _updatePatient(user: User, id: string, values: any) {
     try {
-        await connectToDB()
-        // await Patient.collection.dropIndex("id_1")
-        // await Record.updateMany({}, { $unset: { patientId: "" } });
-        const records = await Record.find();
+        if (!user) throw new Error("User not authenticated");
 
-        for (const record of records) {
-            // Match based on patient_id == patient.patientId
-            const patient = await Patient.findOne({ patientId: record.patient_id });
+        await connectToDB();
 
-            if (patient) {
-                record.patientId = patient._id;
+        const updatePatient = await Patient.findByIdAndUpdate(
+            id,
+            { $set: values },
+            { new: true, runValidators: true }
+        );
 
-                // Debug check
-                console.log(`Linking record ${record.patient_id} to patient ${patient.patientId} (${patient._id})`);
-
-                await record.save(); // MUST call save()
-            } else {
-                console.warn(`No matching patient found for patient_id: ${record.patient_id}`);
-            }
+        if (!updatePatient) {
+            console.log("Role not found");
+            return null;
         }
-        console.log("Migration complete ✅");
-        // await Patient.collection.updateMany(
-        //     {},
-        //     [
-        //         {
-        //             $set: {
-        //                 phone: {
-        //                     $cond: {
-        //                         if: { $and: [{ $ne: ["$phone", null] }, { $ne: ["$phone", ""] }] },
-        //                         then: { $concat: ["+233", { $toString: "$phone" }] },
-        //                         else: ""
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     ]
-        // );
 
-        // await Patient.collection.updateMany(
-        //     {},
-        //     [
-        //         {
-        //             $set: {
-        //                 gender: {
-        //                     $cond: {
-        //                         if: { $eq: ["$gender", "M"] },
-        //                         then: "male",
-        //                         else: {
-        //                             $cond: {
-        //                                 if: { $eq: ["$gender", "F"] },
-        //                                 then: "female",
-        //                                 else: "$gender"
-        //                             }
-        //                         }
-        //                     }
-        //                 },
-        //                 occupation: {
-        //                     $cond: { if: { $eq: ["$occupation", 0] }, then: "", else: "$occupation" }
-        //                 },
-        //                 providerId: {
-        //                     $cond: { if: { $eq: ["$providerId", 0] }, then: "", else: "$providerId" }
-        //                 },
-        //                 serviceNumber: {
-        //                     $cond: { if: { $eq: ["$serviceNumber", "N/A"] }, then: "", else: "$serviceNumber" }
-        //                 },
-        //                 emergencyName: {
-        //                     $cond: { if: { $eq: ["$emergencyName", "N/A"] }, then: "", else: "$emergencyName" }
-        //                 },
-        //                 emergencyPhone: {
-        //                     $cond: { if: { $eq: ["$emergencyPhone", "N/A"] }, then: "", else: "$emergencyPhone" }
-        //                 }
-        //             }
-        //         }
-        //     ])
-
-
+        console.log("Update successful");
 
 
     } catch (error) {
-        throw error
-
+        console.log("error while updating patient", error)
+        throw error;
     }
 }
+
+export const updatePatient = await withAuth(_updatePatient)
+
+
+// export async function updatePatient() {
+//     try {
+//         await connectToDB()
+//         // await Patient.collection.dropIndex("id_1")
+//         // await Record.updateMany({}, { $unset: { patientId: "" } });
+//         const records = await Record.find();
+
+//         for (const record of records) {
+//             // Match based on patient_id == patient.patientId
+//             const patient = await Patient.findOne({ patientId: record.patient_id });
+
+//             if (patient) {
+//                 record.patientId = patient._id;
+
+//                 // Debug check
+//                 console.log(`Linking record ${record.patient_id} to patient ${patient.patientId} (${patient._id})`);
+
+//                 await record.save(); // MUST call save()
+//             } else {
+//                 console.warn(`No matching patient found for patient_id: ${record.patient_id}`);
+//             }
+//         }
+//         console.log("Migration complete ✅");
+//         // await Patient.collection.updateMany(
+//         //     {},
+//         //     [
+//         //         {
+//         //             $set: {
+//         //                 phone: {
+//         //                     $cond: {
+//         //                         if: { $and: [{ $ne: ["$phone", null] }, { $ne: ["$phone", ""] }] },
+//         //                         then: { $concat: ["+233", { $toString: "$phone" }] },
+//         //                         else: ""
+//         //                     }
+//         //                 }
+//         //             }
+//         //         }
+//         //     ]
+//         // );
+
+//         // await Patient.collection.updateMany(
+//         //     {},
+//         //     [
+//         //         {
+//         //             $set: {
+//         //                 gender: {
+//         //                     $cond: {
+//         //                         if: { $eq: ["$gender", "M"] },
+//         //                         then: "male",
+//         //                         else: {
+//         //                             $cond: {
+//         //                                 if: { $eq: ["$gender", "F"] },
+//         //                                 then: "female",
+//         //                                 else: "$gender"
+//         //                             }
+//         //                         }
+//         //                     }
+//         //                 },
+//         //                 occupation: {
+//         //                     $cond: { if: { $eq: ["$occupation", 0] }, then: "", else: "$occupation" }
+//         //                 },
+//         //                 providerId: {
+//         //                     $cond: { if: { $eq: ["$providerId", 0] }, then: "", else: "$providerId" }
+//         //                 },
+//         //                 serviceNumber: {
+//         //                     $cond: { if: { $eq: ["$serviceNumber", "N/A"] }, then: "", else: "$serviceNumber" }
+//         //                 },
+//         //                 emergencyName: {
+//         //                     $cond: { if: { $eq: ["$emergencyName", "N/A"] }, then: "", else: "$emergencyName" }
+//         //                 },
+//         //                 emergencyPhone: {
+//         //                     $cond: { if: { $eq: ["$emergencyPhone", "N/A"] }, then: "", else: "$emergencyPhone" }
+//         //                 }
+//         //             }
+//         //         }
+//         //     ])
+
+
+
+
+//     } catch (error) {
+//         throw error
+
+//     }
+// }
 
 
 async function _deletePatient(user: User, id: string) {
