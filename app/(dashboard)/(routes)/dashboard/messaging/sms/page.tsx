@@ -1,9 +1,8 @@
 import type { Metadata } from "next"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ComposeMessage from "./_components/compose-message"
-import ContactsManager from "./contacts-manager"
-import TemplatesManager from "./templates-manager"
-import MessageHistory from "./message-history"
+import SMSTemplateCreator from "./_components/sms-template-creator"
+import { getAllRoles } from "@/lib/actions/role.actions"
 
 
 export const metadata: Metadata = {
@@ -11,7 +10,8 @@ export const metadata: Metadata = {
   description: "Advanced SMS messaging platform with modern features",
 }
 
-export default function Page() {
+export default async function Page() {
+  const roles = await getAllRoles()
   return (
     <div className="container mx-auto py-6 space-y-8">
       <div className="space-y-2">
@@ -19,29 +19,17 @@ export default function Page() {
         <p className="text-muted-foreground">Send SMS messages, manage contacts, and track message performance</p>
       </div>
 
-      <Tabs defaultValue="compose" className="w-full">
-        <TabsList className="grid grid-cols-5 w-full max-w-3xl">
+      <Tabs defaultValue="compose">
+        <TabsList className="">
           <TabsTrigger value="compose">Compose</TabsTrigger>
-          <TabsTrigger value="contacts">Contacts</TabsTrigger>
-          <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="contacts">Bulk Sms</TabsTrigger>
         </TabsList>
-        <TabsContent value="compose" className="mt-6">
-          <ComposeMessage />
+        <TabsContent value="compose" className="">
+          <ComposeMessage roles={roles} />
         </TabsContent>
-        <TabsContent value="contacts" className="mt-6">
-          <ContactsManager />
+        <TabsContent value="contacts" className="">
+          <SMSTemplateCreator  />
         </TabsContent>
-        <TabsContent value="templates" className="mt-6">
-          <TemplatesManager />
-        </TabsContent>
-        <TabsContent value="history" className="mt-6">
-          <MessageHistory />
-        </TabsContent>
-        {/* <TabsContent value="analytics" className="mt-6">
-          <AnalyticsDashboard />
-        </TabsContent> */}
       </Tabs>
     </div>
   )
