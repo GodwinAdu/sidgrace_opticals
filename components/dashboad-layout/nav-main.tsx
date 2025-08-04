@@ -142,10 +142,10 @@ export function NavMain({ role }:{role:IRole}) {
       icon: MailCheck,
       roleField:"messaging",
       items: [
-        {
-          title: "Emails",
-          url: "/dashboard/messaging/emails",
-        },
+        // {
+        //   title: "Emails",
+        //   url: "/dashboard/messaging/emails",
+        // },
         {
           title: "SMS",
           url: "/dashboard/messaging/sms",

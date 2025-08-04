@@ -5,6 +5,7 @@ import Record from "../models/record.models";
 import { connectToDB } from "../mongoose";
 import { withAuth, type User } from '../helpers/auth';
 import { deleteDocument } from "./trash.actions";
+import History from "../models/history.models";
 
 
 interface FetchPatientsParams {
@@ -19,27 +20,55 @@ interface FetchPatientsParams {
 async function _createPatient(user: User, values) {
     try {
         if (!user) throw new Error("User not authenticated")
+        await connectToDB();
+
+        const [existingUserWithEmail, existingUserWithPhone] = await Promise.all([
+            Patient.findOne({ email: values.email }),
+            Patient.findOne({ phone: values.phone })
+        ]);
+
+        if (existingUserWithEmail) {
+            throw new Error("Email is already registered");
+        }
+
+        if (existingUserWithPhone) {
+            throw new Error("Phone number is already registered");
+        }
 
         const data = {
             destination: values.phone,
             message: `Hi ${values.fullName}, welcome to SidGrace! Your account is now active. We're glad to have you with us!`
-        }
-        await connectToDB();
+        };
 
         const patient = new Patient({
             ...values,
             createdBy: user._id,
             updatedBy: user._id,
-        })
-
-        await patient.save()
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
         });
+
+        const history = new History({
+            actionType: 'PATIENT_CREATED', // Use a relevant action type
+            details: {
+                itemId: patient._id,
+                deletedAt: new Date(),
+            },
+            message: `User ${user.fullName} created patient named "${values.fullName}" (ID: ${patient._id}) on ${new Date().toLocaleString()}.`,
+            performedBy: user._id, // User who performed the action,
+            entityId: patient._id,  // The ID of the deleted unit
+            entityType: 'PATIENT',  // The type of the entity
+        });
+
+        await Promise.all([
+            patient.save(),
+            history.save(),
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data),
+            })
+        ])
 
 
         return JSON.parse(JSON.stringify(patient))

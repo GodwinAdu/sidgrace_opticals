@@ -5,6 +5,7 @@ import { withAuth, type User } from "../helpers/auth";
 import { connectToDB } from "../mongoose";
 import { Patient } from "../models/patient.models";
 import Notification from "../models/notification.models";
+import Staff from "../models/staff.models";
 
 interface NotificationInput {
     sendMode: "individual" | "bulk" | "employeeBulk";
@@ -92,7 +93,7 @@ async function _createNotification(user: User, values: NotificationInput): Promi
         let finalRecipients: Types.ObjectId[] = []
 
         if (sendMode === "individual") {
-            const ids = recipients.map((r) => new Types.ObjectId(r.recipientId))
+            const ids = recipients.map((r) => new Types.ObjectId(r))
             const existing = await Patient.find({ _id: { $in: ids } }).select("_id")
             finalRecipients = existing.map((p) => p._id)
 
@@ -105,11 +106,11 @@ async function _createNotification(user: User, values: NotificationInput): Promi
             finalRecipients = await getRecipientsForBulkMode(allContacts, selectedRole)
         }
 
-        if (sendMode === "employeeBulk") {
-            const query = allContacts ? {} : { role: { $in: selectedRole } }
-            const employees = await Staff.find(query).select("_id")
-            finalRecipients = employees.map((e) => e._id)
-        }
+        // if (sendMode === "employeeBulk") {
+        //     const query = allContacts ? {} : { role: { $in: selectedRole } }
+        //     const employees = await Staff.find(query).select("_id")
+        //     finalRecipients = employees.map((e) => e._id)
+        // }
 
         if (finalRecipients.length === 0) {
             return { success: false, message: "No recipients found", error: "NO_RECIPIENTS" }

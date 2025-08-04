@@ -29,15 +29,15 @@ interface PatientFormData {
   phone: string
   alternatePhone: string
   address: string
-  // Medical Information
-  bloodType: string
-  allergies: string[]
-  chronicConditions: string[]
-  currentMedications: string
-  familyHistory: string
-  familyOcularHistory: string
-  medicalHistory: string[]
-  socialHistory: string[]
+  // // Medical Information
+  // bloodType: string
+  // allergies: string[]
+  // chronicConditions: string[]
+  // currentMedications: string
+  // familyHistory: string
+  // familyOcularHistory: string
+  // medicalHistory: string[]
+  // socialHistory: string[]
   // Emergency Contact
   emergencyContactName: string
   emergencyContactRelationship: string
@@ -70,14 +70,14 @@ const defaultFormData: PatientFormData = {
   alternatePhone: "",
   address: "",
   // Medical Information
-  bloodType: "",
-  allergies: [""],
-  chronicConditions: [""],
-  currentMedications: "",
-  familyHistory: "",
-  familyOcularHistory: "",
-  medicalHistory: [""],
-  socialHistory: [""],
+  // bloodType: "",
+  // allergies: [""],
+  // chronicConditions: [""],
+  // currentMedications: "",
+  // familyHistory: "",
+  // familyOcularHistory: "",
+  // medicalHistory: [""],
+  // socialHistory: [""],
   // Emergency Contact
   emergencyContactName: "",
   emergencyContactRelationship: "",
@@ -99,7 +99,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState<PatientFormData>(defaultFormData)
 
-  const totalSteps = 4
+  const totalSteps = 3
 
   // Initialize form data when component mounts or initialData changes
   useEffect(() => {
@@ -116,24 +116,24 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
         alternatePhone: initialData.alternatePhone || "",
         address: initialData.address || "",
         // Medical Information
-        bloodType: initialData.bloodType || "",
-        allergies:
-          Array.isArray(initialData.allergies) && initialData.allergies.length > 0 ? initialData.allergies : [""],
-        chronicConditions:
-          Array.isArray(initialData.chronicConditions) && initialData.chronicConditions.length > 0
-            ? initialData.chronicConditions
-            : [""],
-        currentMedications: initialData.currentMedications || "",
-        familyHistory: initialData.familyHistory || "",
-        familyOcularHistory: initialData.familyOcularHistory || "",
-        medicalHistory:
-          Array.isArray(initialData.medicalHistory) && initialData.medicalHistory.length > 0
-            ? initialData.medicalHistory
-            : [""],
-        socialHistory:
-          Array.isArray(initialData.socialHistory) && initialData.socialHistory.length > 0
-            ? initialData.socialHistory
-            : [""],
+        // bloodType: initialData.bloodType || "",
+        // allergies:
+        //   Array.isArray(initialData.allergies) && initialData.allergies.length > 0 ? initialData.allergies : [""],
+        // chronicConditions:
+        //   Array.isArray(initialData.chronicConditions) && initialData.chronicConditions.length > 0
+        //     ? initialData.chronicConditions
+        //     : [""],
+        // currentMedications: initialData.currentMedications || "",
+        // familyHistory: initialData.familyHistory || "",
+        // familyOcularHistory: initialData.familyOcularHistory || "",
+        // medicalHistory:
+        //   Array.isArray(initialData.medicalHistory) && initialData.medicalHistory.length > 0
+        //     ? initialData.medicalHistory
+        //     : [""],
+        // socialHistory:
+        //   Array.isArray(initialData.socialHistory) && initialData.socialHistory.length > 0
+        //     ? initialData.socialHistory
+        //     : [""],
         // Emergency Contact
         emergencyContactName: initialData.emergencyContactName || initialData.emergencyName || "",
         emergencyContactRelationship: initialData.emergencyContactRelationship || "",
@@ -301,7 +301,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
                     currentStep === index + 1 ? "text-blue-700 font-medium" : "text-gray-500",
                   )}
                 >
-                  {index === 0 ? "Personal" : index === 1 ? "Medical" : index === 2 ? "Emergency" : "Review"}
+                  {index === 0 ? "Personal" : index === 1 ? "Emergency" : index === 2 ? "Review" : null}
                 </span>
               </div>
             ))}
@@ -542,7 +542,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
           )}
 
           {/* Step 2: Medical Information */}
-          {currentStep === 2 && (
+          {/* {currentStep === 2 && (
             <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Medical Information</CardTitle>
@@ -722,10 +722,10 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
                 </Button>
               </CardFooter>
             </Card>
-          )}
+          )} */}
 
           {/* Step 3: Emergency Contact */}
-          {currentStep === 3 && (
+          {currentStep === 2 && (
             <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Emergency Contact</CardTitle>
@@ -866,7 +866,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
           )}
 
           {/* Step 4: Review and Submit */}
-          {currentStep === 4 && (
+          {currentStep === 3 && (
             <Card className="max-w-5xl mx-auto">
               <CardHeader>
                 <CardTitle>Review Information</CardTitle>
@@ -874,9 +874,9 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
               </CardHeader>
               <CardContent className="space-y-6">
                 <Tabs defaultValue="personal" className="w-full">
-                  <TabsList className="grid grid-cols-3 mb-4">
+                  <TabsList className="grid grid-cols-2 mb-4">
                     <TabsTrigger value="personal">Personal</TabsTrigger>
-                    <TabsTrigger value="medical">Medical</TabsTrigger>
+                    {/* <TabsTrigger value="medical">Medical</TabsTrigger> */}
                     <TabsTrigger value="emergency">Emergency</TabsTrigger>
                   </TabsList>
 
@@ -924,7 +924,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="medical" className="space-y-4">
+                  {/* <TabsContent value="medical" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <h3 className="text-sm font-medium text-gray-500">Blood Type</h3>
@@ -954,7 +954,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
                         Edit Medical Information
                       </Button>
                     </div>
-                  </TabsContent>
+                  </TabsContent> */}
 
                   <TabsContent value="emergency" className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">

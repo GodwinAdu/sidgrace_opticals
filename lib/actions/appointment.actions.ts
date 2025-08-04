@@ -5,6 +5,7 @@ import Appointment from "../models/appointment.models"
 import { Patient } from "../models/patient.models"
 import { connectToDB } from "../mongoose"
 import { deleteDocument } from "./trash.actions"
+import History from "../models/history.models"
 
 
 export async function fetchBookedAppointments(date: string) {
@@ -121,7 +122,7 @@ export async function fetchAppointmentById(id: string) {
         throw error;
     }
 }
-export async function createAppointment(appointmentData: {
+export async function createAppointment(user: User, appointmentData: {
     patientId: string
     date: Date
     timeSlot: string
@@ -131,6 +132,7 @@ export async function createAppointment(appointmentData: {
     priority: string
 }) {
     try {
+        if (!user) throw new Error("User not authorized")
         await connectToDB()
 
         // Check if the time slot is already booked
@@ -157,19 +159,39 @@ export async function createAppointment(appointmentData: {
         }
 
         // Create the new appointment
-        const newAppointment = await Appointment.create({
+        const newAppointment = new Appointment({
             ...appointmentData,
             status: "scheduled",
             createdAt: new Date(),
             updatedAt: new Date(),
         });
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
+
+
+        const history = new History({
+            actionType: 'APPOINTMENT_CREATED', // Use a relevant action type
+            details: {
+                itemId: newAppointment._id,
+                deletedAt: new Date(),
             },
-            body: JSON.stringify(values),
+            message: `User ${user.fullName} created appointment for "${patient.fullName}" (ID: ${patient._id}) on ${new Date().toLocaleString()}.`,
+            performedBy: user._id, // User who performed the action,
+            entityId: newAppointment._id,  // The ID of the deleted unit
+            entityType: 'APPOINTMENT',  // The type of the entity
         });
+
+
+
+        await Promise.all([
+            newAppointment.save(),
+            history.save(),
+            fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(values),
+            }),
+        ])
 
         return {
             success: true,

@@ -12,8 +12,8 @@ export interface NotificationDocument extends Document {
   scheduledTime: string;
   selectedRole: string[];
   allContacts: boolean;
-  completed: boolean;
   status: "draft" | "published" | "pending" | "achieved";
+  completed:boolean
   createdBy: Schema.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
