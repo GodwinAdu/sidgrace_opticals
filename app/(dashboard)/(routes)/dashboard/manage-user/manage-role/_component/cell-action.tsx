@@ -18,6 +18,7 @@ import Link from "next/link"
 import useClientRole from "@/hooks/use-client-role"
 import { toast } from "sonner"
 import { DeleteDialog } from "@/app/components/delete-dialog"
+import { deleteRole } from "@/lib/actions/role.actions"
 
 
 interface CellActionProps {
@@ -34,7 +35,7 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
   const handleDelete = async (id: string) => {
     try {
       setLoading(true)
-      // await deleteRole(id)
+      await deleteRole(id)
       router.refresh()
 
       toast.success("Deleted successfully",{
@@ -66,16 +67,11 @@ export const CellAction: React.FC<CellActionProps> = ({ data }) => {
           </DropdownMenuItem>
         ) : (
           <>
-            {/* {role?.viewRole && ( */}
-              <DropdownMenuItem asChild>
-                <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}`}>
-                  <Eye className="mr-2 h-4 w-4" /> View
-                </Link>
-              </DropdownMenuItem>
+           
             {/* )} */}
             {/* {role?.editRole && ( */}
               <DropdownMenuItem asChild>
-                <Link href={`/${params.storeId}/dashboard/${params.branchId}/users/manage-role/${data?._id}/edit`}>
+                <Link href={`/dashboard/manage-user/manage-role/${data?._id}`}>
                   <Edit className="mr-2 h-4 w-4" /> Update
                 </Link>
               </DropdownMenuItem>

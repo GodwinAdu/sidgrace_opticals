@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import Role from "../models/role.models";
 import { connectToDB } from "../mongoose";
-import { currentUser } from "../helpers/current-user";
 import { deleteDocument } from "./trash.actions";
 import { type User, withAuth } from "../helpers/auth";
 
@@ -235,14 +234,14 @@ export async function fetchRole(value: string) {
 
 
 
-export async function deleteRole(id: string) {
+async function _deleteRole(user: User, id: string) {
     try {
-        const user = await currentUser();
+        if (!user) throw new Error("User not log in")
         const result = await deleteDocument({
             actionType: 'ROLE_DELETED',
             documentId: id,
             collectionName: 'Role',
-            userId: user?._id,
+            userId: user?._id as string,
             trashMessage: `Role with ID ${id} deleted by ${user.fullName}`,
             historyMessage: `Role with ID ${id} deleted by ${user.fullName}`
         });
@@ -255,3 +254,5 @@ export async function deleteRole(id: string) {
     }
 
 }
+
+export const deleteRole = await withAuth(_deleteRole)

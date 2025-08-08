@@ -34,6 +34,7 @@ import {
     Video,
     Clipboard,
     CalendarIcon,
+    Trash,
 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Calendar } from "@/components/ui/calendar"
@@ -445,7 +446,16 @@ export default function AppointmentsPage({ appointments: appointmentsData }: App
                                                                         </>
                                                                     )}
                                                                     <DropdownMenuSeparator />
-
+                                                                    <DropdownMenuItem
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation()
+                                                                            router.push(`/dashboard/appointments/${appointment.id}`)
+                                                                        }}
+                                                                        className="bg-red-500 text-white"
+                                                                    >
+                                                                        <Trash className="mr-2 h-4 w-4" />
+                                                                        Delete
+                                                                    </DropdownMenuItem>
                                                                 </DropdownMenuContent>
                                                             </DropdownMenu>
                                                         </TableCell>

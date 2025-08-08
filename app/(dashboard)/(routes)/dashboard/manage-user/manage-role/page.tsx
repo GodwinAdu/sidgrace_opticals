@@ -15,14 +15,7 @@ import { getAllRoles } from '@/lib/actions/role.actions'
 
 
 const page = async () => {
-  // Fetch the current user's profile
-  const user = await currentUser();
-
-  // Redirect to the homepage if no user is found
-  if (!user) {
-    redirect("/");
-  }
-
+ 
   // Fetch the current user's role
   const role = await currentUserRole();
 
@@ -41,13 +34,13 @@ const page = async () => {
           title="Role List"
         />
         {/* {addRole && ( */}
-          <Link
-            href={`manage-role/create-role`}
-            className={cn(buttonVariants())}
-          >
-            <PlusCircle className="w-4 h-4 mr-2" />
-            Create role
-          </Link>
+        <Link
+          href={`manage-role/create-role`}
+          className={cn(buttonVariants())}
+        >
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Create role
+        </Link>
         {/* )} */}
       </div>
       <Separator />
