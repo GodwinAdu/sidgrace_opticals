@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -26,7 +26,7 @@ export default function NewAppointmentPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [appointmentType, setAppointmentType] = useState("examination")
-  const [searchResult, setSearchResult] = useState(null)
+  const [searchResult, setSearchResult] = useState<any>(null)
   const [isSearching, setIsSearching] = useState(false)
   const [bookedSlots, setBookedSlots] = useState<string[]>([])
   const [isLoadingSlots, setIsLoadingSlots] = useState(false)
@@ -135,7 +135,7 @@ export default function NewAppointmentPage() {
 
     try {
       const appointmentData = {
-        patientId: searchResult._id,
+        patientId: searchResult?._id as string,
         date: date,
         timeSlot: selectedTimeSlot,
         appointmentType: appointmentType,

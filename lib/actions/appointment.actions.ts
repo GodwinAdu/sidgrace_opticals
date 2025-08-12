@@ -42,13 +42,15 @@ export async function fetchBookedAppointments(date: string) {
         }
     }
 }
-export async function fetchAppointments() {
+async function _fetchAppointments(user:User) {
     try {
+        if(!user) throw new Error("User not authenticated");
+
         await connectToDB()
 
         const appointments = await Appointment.find({})
             .populate([{ path: "patientId", model: Patient, select: "fullName patientId dob profilePhoto" }])
-            .sort({ date: 1, timeSlot: 1 })
+            .sort({ date: -1, timeSlot: -1 })
 
         // Transform the data to match the component's expected format
         const transformedAppointments = appointments.map((appointment) => {
@@ -122,7 +124,9 @@ export async function fetchAppointmentById(id: string) {
         throw error;
     }
 }
-export async function createAppointment(user: User, appointmentData: {
+
+
+async function _createAppointment(user: User, appointmentData: {
     patientId: string
     date: Date
     timeSlot: string
@@ -297,4 +301,7 @@ async function _deleteAppointment(user: User, id: string) {
     }
 }
 
+
+export const createAppointment = await withAuth(_createAppointment);
+export const fetchAppointments = await withAuth(_fetchAppointments);
 export const deleteAppointment = await withAuth(_deleteAppointment)

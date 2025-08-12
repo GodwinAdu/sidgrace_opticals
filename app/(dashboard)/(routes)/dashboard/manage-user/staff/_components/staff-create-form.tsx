@@ -69,7 +69,6 @@ const PasswordStrength = ({ password }: { password: string }) => (
 const MultiStepForm = ({
     steps,
     currentStep,
-    onStepChange,
     className,
 }: {
     steps: any[]
@@ -97,11 +96,11 @@ const createUserFormSchema = (isUpdate = false) => {
         gender: z.enum(["male", "female", "other", "prefer-not-to-say"], {
             required_error: "Please select a gender",
         }),
-        address: z.string().min(1, "Address is required"),
-        city: z.string().min(1, "City is required"),
-        state: z.string().min(1, "State is required"),
-        zipCode: z.string().min(1, "ZIP code is required"),
-        country: z.string().min(1, "Country is required"),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        zipCode: z.string().optional(),
+        country: z.string().optional(),
         // Professional Information
         role: z.string({
             required_error: "Please select a role",
@@ -115,9 +114,9 @@ const createUserFormSchema = (isUpdate = false) => {
         bio: z.string().optional(),
         // Account Settings
         username: z.string().min(4, "Username must be at least 4 characters"),
-        isActive: z.boolean().default(true),
-        requirePasswordChange: z.boolean().default(true),
-        sendWelcomeEmail: z.boolean().default(true),
+        isActive: z.boolean(),
+        requirePasswordChange: z.boolean(),
+        sendWelcomeEmail: z.boolean(),
     }
 
     // Password fields - required for create, optional for update
@@ -267,30 +266,7 @@ export default function CreateUser({ departments, roles, type, initialData }: Cr
 
     const form = useForm({
         resolver: zodResolver(userFormSchema),
-        defaultValues: initialData ??  {
-            fullName: "",
-            email: "",
-            phone: "",
-            dateOfBirth: new Date(),
-            gender: undefined,
-            address: "",
-            city: "",
-            state: "",
-            zipCode: "",
-            country: "Ghana",
-            role: "",
-            department: undefined,
-            specialization: undefined,
-            licenseNumber: undefined,
-            startDate: new Date(),
-            bio: undefined,
-            username: "",
-            password: "",
-            confirmPassword: "",
-            isActive: true,
-            requirePasswordChange: true,
-            sendWelcomeEmail: true,
-        }
+        defaultValues:getDefaultValues ()
     })
 
     // Watch for role changes to update department options
