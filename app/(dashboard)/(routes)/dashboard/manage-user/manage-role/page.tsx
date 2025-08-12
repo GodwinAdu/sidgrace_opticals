@@ -4,25 +4,15 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { PlusCircle } from 'lucide-react'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 import React from 'react'
 import { columns } from './_component/column'
-import { currentUser } from '@/lib/helpers/current-user'
 import { DataTable } from '@/components/table/data-table'
 import Heading from '@/app/components/Heading'
-import { currentUserRole } from '@/lib/helpers/current-role'
 import { getAllRoles } from '@/lib/actions/role.actions'
 
 
 const page = async () => {
  
-  // Fetch the current user's role
-  const role = await currentUserRole();
-
-
-  // Destructure the 'addRole' permission from the user's role
-  const { addRole } = role;
-
   // Fetch all roles, defaulting to an empty array if none are found
   const values = await getAllRoles() ?? [];
 
