@@ -23,6 +23,7 @@ const StaffSchema = new Schema<IStaff>(
             type: String,
             required: true,
         },
+        startDate: { type: Date, default: Date.now },
         department: { type: String, trim: true },
         specialization: { type: String, trim: true },
         licenseNumber: { type: String, trim: true, unique: true, sparse: true },

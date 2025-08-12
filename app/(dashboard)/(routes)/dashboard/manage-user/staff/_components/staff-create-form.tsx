@@ -213,26 +213,26 @@ export default function CreateUser({ departments, roles, type, initialData }: Cr
     const getDefaultValues = (): Partial<UserFormValues> => {
         if (isUpdate && initialData) {
             return {
-                fullName: initialData.fullName,
-                email: initialData.email,
-                phone: initialData.phone,
-                dateOfBirth: new Date(initialData.dateOfBirth),
-                gender: initialData.gender,
-                address: initialData.address,
-                city: initialData.city,
-                state: initialData.state,
-                zipCode: initialData.zipCode,
-                country: initialData.country,
-                role: initialData.role,
-                department: initialData.department,
-                specialization: initialData.specialization,
-                licenseNumber: initialData.licenseNumber,
-                startDate: new Date(initialData.startDate),
-                bio: initialData.bio,
-                username: initialData.username,
-                isActive: initialData.isActive,
-                requirePasswordChange: initialData.requirePasswordChange,
-                sendWelcomeEmail: initialData.sendWelcomeEmail,
+                fullName: initialData?.fullName,
+                email: initialData?.email,
+                phone: initialData?.phone,
+                dateOfBirth: new Date(initialData?.dateOfBirth),
+                gender: initialData?.gender,
+                address: initialData?.address,
+                city: initialData?.city,
+                state: initialData?.state,
+                zipCode: initialData?.zipCode,
+                country: initialData?.country,
+                role: initialData?.role,
+                department: initialData?.department,
+                specialization: initialData?.specialization,
+                licenseNumber: initialData?.licenseNumber,
+                startDate:new Date( initialData?.startDate),
+                bio: initialData?.bio,
+                username: initialData?.username,
+                isActive: initialData?.isActive,
+                requirePasswordChange: initialData?.requirePasswordChange,
+                sendWelcomeEmail: initialData?.sendWelcomeEmail,
                 password: "",
                 confirmPassword: "",
             }
@@ -295,7 +295,7 @@ export default function CreateUser({ departments, roles, type, initialData }: Cr
             }
 
             // Redirect to staff page
-            router.push("/dashboard/staff")
+            router.push("/dashboard/manage-user/staff")
         } catch (error) {
             console.error(`Error ${isUpdate ? "updating" : "creating"} user:`, error)
             toast.error(`Error ${isUpdate ? "Updating" : "Creating"} User`, {

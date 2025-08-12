@@ -15,6 +15,7 @@ interface IStaff extends Document {
     department?: string;
     specialization?: string;
     licenseNumber?: string;
+    startDate: Date;
     bio?: string;
     username: string;
     password: string;
