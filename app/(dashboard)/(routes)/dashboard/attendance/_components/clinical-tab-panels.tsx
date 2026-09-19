@@ -33,12 +33,14 @@ import { LabCaseManager } from "../../lab-cases/_components/LabCaseManager";
 
 import { getPlansByPatient } from "@/lib/actions/treatment-plan.actions";
 import { getAllProcedures } from "@/lib/actions/procedure.actions";
+import { fetchAllProducts } from "@/lib/actions/inventory-product.actions";
 import { getLabCasesByPatient } from "@/lib/actions/lab-case.actions";
 import { getChartByPatient } from "@/lib/actions/dental-chart.actions";
 import {
     addVisitDentalNote, saveVisitPerioExam, addVisitImaging,
     setConsultationFee, saveVisitProcedures, recordVisitPayment,
     createInvoiceFromVisit, getVisitInvoice, setVisitOtherCharges,
+    dispenseVisitProducts,
 } from "@/lib/actions/visit-clinical.actions";
 import { getClinicSettings } from "@/lib/actions/clinic-settings.actions";
 import { formatMoney } from "@/lib/utils";
@@ -543,6 +545,153 @@ export function CustomChargesPanel({
     );
 }
 
+/* ═══════════ DISPENSE PRODUCTS / DRUGS (inventory → visit bill) ═══════════ */
+interface InvProduct { _id: string; name: string; salePrice?: number; quantity?: number }
+interface DispensedRow { productId: string; name?: string; quantity?: number; unitPrice?: number; total?: number }
+export function VisitProductsPanel({
+    attendanceId,
+    dispensed = [],
+    currency = "",
+    onBillingChange,
+    readOnly,
+}: {
+    attendanceId?: string;
+    dispensed?: DispensedRow[];
+    currency?: string;
+    onBillingChange?: (billing: Record<string, unknown>) => void;
+    readOnly?: boolean;
+}) {
+    const path = usePathname();
+    const [catalog, setCatalog] = useState<InvProduct[]>([]);
+    const [rows, setRows] = useState<DispensedRow[]>(dispensed);
+    const [sel, setSel] = useState("");
+    const [qty, setQty] = useState("1");
+    const [cur, setCur] = useState(currency);
+    const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => { setRows(dispensed); }, [dispensed]);
+    useEffect(() => {
+        let active = true;
+        Promise.all([fetchAllProducts(), currency ? Promise.resolve(null) : getClinicSettings()])
+            .then(([p, s]) => {
+                if (!active) return;
+                setCatalog((p || []) as InvProduct[]);
+                if (!currency && s?.currency) setCur(s.currency);
+            })
+            .catch(() => active && setCatalog([]))
+            .finally(() => active && setLoading(false));
+        return () => { active = false; };
+    }, [currency]);
+
+    const total = rows.reduce((s, r) => s + (Number(r.total) || 0), 0);
+    // Stock remaining after what's already staged in this panel.
+    const stockLeft = (id: string) => {
+        const prod = catalog.find((c) => c._id === id);
+        const staged = rows.filter((r) => r.productId === id).reduce((s, r) => s + (Number(r.quantity) || 0), 0);
+        return (Number(prod?.quantity) || 0) - staged;
+    };
+
+    const addRow = () => {
+        const prod = catalog.find((c) => c._id === sel);
+        if (!prod) return toast.error("Select a product");
+        const q = Number(qty) || 0;
+        if (q <= 0) return toast.error("Enter a quantity");
+        if (q > stockLeft(prod._id)) return toast.error(`Only ${stockLeft(prod._id)} in stock`);
+        const unit = Number(prod.salePrice) || 0;
+        setRows((p) => [...p, { productId: prod._id, name: prod.name, quantity: q, unitPrice: unit, total: unit * q }]);
+        setSel(""); setQty("1");
+    };
+    const removeRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
+
+    const persist = async () => {
+        if (!attendanceId) return toast.error("Save the visit first");
+        const prev = dispensed; // rollback snapshot
+        try {
+            setSaving(true);
+            const billing = await dispenseVisitProducts(
+                attendanceId,
+                rows.map((r) => ({ productId: r.productId, quantity: Number(r.quantity) || 0 })),
+                path
+            );
+            if (billing) onBillingChange?.(billing);
+            toast.success("Products dispensed and added to the bill");
+        } catch (e) {
+            setRows(prev);
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally { setSaving(false); }
+    };
+
+    if (loading) return <Spinner />;
+
+    return (
+        <Card>
+            <CardContent className="space-y-4 pt-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    <Wallet className="h-4 w-4" /> Products / Drugs Dispensed
+                </h3>
+
+                {!readOnly && (
+                    <div className="flex flex-wrap items-end gap-3 rounded-lg border bg-muted/30 p-4">
+                        <div className="min-w-[220px] flex-1">
+                            <label className="mb-1 block text-xs text-muted-foreground">Product</label>
+                            <Select value={sel} onValueChange={setSel}>
+                                <SelectTrigger><SelectValue placeholder="Select from inventory" /></SelectTrigger>
+                                <SelectContent>
+                                    {catalog.length === 0 ? (
+                                        <SelectItem value="none" disabled>No products — add them in Inventory</SelectItem>
+                                    ) : catalog.map((c) => (
+                                        <SelectItem key={c._id} value={c._id} disabled={(Number(c.quantity) || 0) <= 0}>
+                                            {c.name} — {formatMoney(Number(c.salePrice) || 0, cur)} ({Number(c.quantity) || 0} in stock)
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="w-24">
+                            <label className="mb-1 block text-xs text-muted-foreground">Qty</label>
+                            <Input type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
+                        </div>
+                        <Button type="button" variant="secondary" onClick={addRow}><Plus className="mr-1 h-4 w-4" /> Add</Button>
+                    </div>
+                )}
+
+                {rows.length > 0 ? (
+                    <div className="space-y-1.5">
+                        {rows.map((r, i) => (
+                            <div key={i} className="flex items-center justify-between rounded border px-3 py-2 text-sm">
+                                <span>{r.name || "Product"} × {r.quantity}</span>
+                                <span className="flex items-center gap-3">
+                                    <span className="font-medium">{formatMoney(Number(r.total) || 0, cur)}</span>
+                                    {!readOnly && <button onClick={() => removeRow(i)} className="text-red-500"><X className="h-4 w-4" /></button>}
+                                </span>
+                            </div>
+                        ))}
+                        <div className="flex justify-end pt-2 text-sm">
+                            <span className="text-muted-foreground">Total:&nbsp;</span>
+                            <span className="font-bold">{formatMoney(total, cur)}</span>
+                        </div>
+                    </div>
+                ) : (
+                    <p className="text-sm text-muted-foreground">No products dispensed on this visit.</p>
+                )}
+
+                {!readOnly && (
+                    <div className="flex justify-end">
+                        <Button onClick={persist} disabled={saving}>
+                            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                            Dispense &amp; Add to Bill
+                        </Button>
+                    </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                    Dispensing decrements inventory stock, adds the products to the visit bill/invoice, and posts income when the patient pays.
+                </p>
+            </CardContent>
+        </Card>
+    );
+}
+
 /* ═══════════ VISIT PROCEDURES (capture from catalog → add to bill) ═══════════ */
 interface ProcLite { _id: string; code: string; name: string; price: number }
 interface VisitProc { procedureId?: string | null; procedureName?: string; tooth?: number | null; cost?: number }
@@ -687,6 +836,7 @@ interface Billing {
     consultationFee?: number;
     proceduresTotal?: number;
     otherCharges?: { label?: string; amount?: number }[];
+    dispensedProducts?: { name?: string; quantity?: number; total?: number }[];
     totalCharged?: number;
     amountPaid?: number;
     balance?: number;
@@ -737,10 +887,12 @@ export function VisitPaymentPanel({
     // roundtrip refreshes billing.proceduresTotal.
     const consultationFee = Number(billing?.consultationFee) || 0;
     const otherCharges = billing?.otherCharges || [];
+    const dispensedProducts = billing?.dispensedProducts || [];
+    const productsTotal = dispensedProducts.reduce((s, d) => s + (Number(d.total) || 0), 0);
     const proceduresTotal = procedures.reduce((s, p) => s + (Number(p.cost) || 0), 0)
         || Number(billing?.proceduresTotal) || 0;
-    const localTotal = consultationFee + proceduresTotal + otherCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-    const hasLocalCharges = consultationFee > 0 || procedures.length > 0 || otherCharges.length > 0;
+    const localTotal = consultationFee + proceduresTotal + productsTotal + otherCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    const hasLocalCharges = consultationFee > 0 || procedures.length > 0 || otherCharges.length > 0 || dispensedProducts.length > 0;
 
     // When an invoice exists it is the source of truth for money.
     const total = invoice ? Number(invoice.total) || 0 : localTotal;
@@ -842,6 +994,7 @@ export function VisitPaymentPanel({
                             {procedures.length > 0
                                 ? procedures.map((p, i) => row(`${p.procedureName || "Procedure"}${p.tooth ? ` (Tooth ${p.tooth})` : ""}`, Number(p.cost) || 0))
                                 : proceduresTotal > 0 && row("Procedures", proceduresTotal)}
+                            {dispensedProducts.map((d, i) => row(`${d.name || "Product"} × ${d.quantity || 1}`, Number(d.total) || 0))}
                             {otherCharges.map((c, i) => row(c.label || "Charge", Number(c.amount) || 0))}
                             {!hasLocalCharges && (
                                 <p className="py-2 text-sm text-muted-foreground">No charges yet. Add a consultation fee or procedures above.</p>

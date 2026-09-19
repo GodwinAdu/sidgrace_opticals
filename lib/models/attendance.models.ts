@@ -152,6 +152,14 @@ const AttendanceSchema = new Schema({
             label: { type: String, default: "" },
             amount: { type: Number, default: 0 },
         }],
+        // Inventory products / drugs dispensed to the patient this visit.
+        dispensedProducts: [{
+            productId: { type: Schema.Types.ObjectId, ref: "InventoryProduct", default: null },
+            name: { type: String, default: "" },
+            quantity: { type: Number, default: 1 },
+            unitPrice: { type: Number, default: 0 },
+            total: { type: Number, default: 0 },
+        }],
         totalCharged: { type: Number, default: 0 },
         amountPaid: { type: Number, default: 0 },
         balance: { type: Number, default: 0 },

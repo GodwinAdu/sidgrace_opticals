@@ -36,6 +36,16 @@ const InventoryPurchaseSchema: Schema<IInventoryPurchase> = new Schema({
             },
         }
     ],
+    // Monetary total of the purchase (posted to the accounting ledger as an expense).
+    total: {
+        type: Number,
+        default: 0,
+    },
+    transactionId: {
+        type: Schema.Types.ObjectId,
+        ref: "Transaction",
+        default: null,
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: "Staff",

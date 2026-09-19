@@ -224,7 +224,7 @@ interface IInventoryProduct extends Document {
 
 
 interface IPurchaseItem {
-    product: Types.ObjectId;
+    products: Types.ObjectId;
     quantity: number;
     discount: number;
 }
@@ -237,6 +237,8 @@ interface IInventoryPurchase extends Document {
     status: "Pending" | "Ordered" | "Received" | "Rejected";
     purchaseDate: Date;
     purchaseItems: IPurchaseItem[];
+    total?: number;
+    transactionId?: Types.ObjectId | null;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;
     deletedBy?: Types.ObjectId | null;

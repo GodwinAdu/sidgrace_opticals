@@ -8,6 +8,7 @@ import InventorySupplier from '../models/inventory-supplier.models';
 import InventoryStore from '../models/inventory-store.models';
 import History from '../models/history.models';
 import { withAuth, type User } from '../helpers/auth';
+import { postLedgerEntry, reverseLedgerEntry } from './transaction.actions';
 
 interface ItemsProps {
     products: string;
@@ -31,16 +32,32 @@ async function _createPurchase(user: User, values: PurchaseProps, path: string) 
 
         await connectToDB();
 
-        // Fetch and update product quantities
+        // Fetch and update product quantities, accumulating the monetary total
+        // (quantity * (purchasePrice - discount)) for the ledger.
+        let total = 0;
         for (const item of values.purchaseItems) {
             const product = await InventoryProduct.findById(item.products);
             if (product) {
                 product.quantity += item.quantity;
                 await product.save();
+                const unit = Math.max(0, (Number(product.purchasePrice) || 0) - (Number(item.discount) || 0));
+                total += unit * (Number(item.quantity) || 0);
             } else {
                 throw new Error(`Product with ID ${item.products} not found.`);
             }
         }
+
+        // Post the purchase cost to the accounting ledger as an expense.
+        const txn = total > 0
+            ? await postLedgerEntry(user, {
+                type: "expense",
+                category: "Dental Supplies",
+                amount: total,
+                accountName: "Operating Expenses",
+                source: "purchase",
+                description: "Inventory purchase",
+            })
+            : null;
 
         // Create new purchase
         const newPurchase = new InventoryPurchase({
@@ -49,6 +66,8 @@ async function _createPurchase(user: User, values: PurchaseProps, path: string) 
             status,
             purchaseDate,
             purchaseItems,
+            total,
+            transactionId: txn?._id || null,
             createdBy: user._id,
             action_type: "created"
         });
@@ -172,14 +191,20 @@ export const updatePurchase = await withAuth(_updatePurchase)
 
 
 
-export async function deletePurchase(id: string) {
+async function _deletePurchase(user: User, id: string) {
     try {
+        if (!user) throw new Error('User not logged in');
         await connectToDB();
 
-        const purchase = await InventoryPurchase.findByIdAndDelete(id)
+        const purchase = await InventoryPurchase.findById(id);
         if (!purchase) {
             console.log('Purchase not found');
-            return null; // or throw an error if you want to handle it differently
+            return null;
+        }
+
+        // Reverse the accounting expense first (if one was posted).
+        if (purchase.transactionId) {
+            await reverseLedgerEntry(user, String(purchase.transactionId));
         }
 
         // Subtract the quantity of products purchased from the respective products
@@ -188,16 +213,14 @@ export async function deletePurchase(id: string) {
             if (product) {
                 product.quantity -= item.quantity;
                 await product.save();
-            } else {
-                throw new Error(`Product with ID ${item.products} not found.`);
             }
         }
 
-        console.log('Delete successful');
-
+        await InventoryPurchase.findByIdAndDelete(id);
         return JSON.parse(JSON.stringify(purchase));
     } catch (error) {
         console.error('Error deleting purchase:', error);
         throw error;
     }
 }
+export const deletePurchase = await withAuth(_deletePurchase)

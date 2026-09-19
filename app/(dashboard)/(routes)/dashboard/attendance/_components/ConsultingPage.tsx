@@ -11,6 +11,7 @@ import {
     LabCaseTabPanel,
     ConsultationBillingPanel,
     CustomChargesPanel,
+    VisitProductsPanel,
     VisitProceduresPanel,
     VisitPaymentPanel,
 } from "./clinical-tab-panels"
@@ -162,6 +163,7 @@ interface AttendanceData {
         consultationFee?: number
         proceduresTotal?: number
         otherCharges?: { label?: string; amount?: number }[]
+        dispensedProducts?: { productId?: string; name?: string; quantity?: number; unitPrice?: number; total?: number }[]
         totalCharged?: number
         amountPaid?: number
         balance?: number
@@ -960,6 +962,12 @@ export default function PatientRecord({
                                     <CustomChargesPanel
                                         attendanceId={attendanceData._id}
                                         charges={attendanceData.billing?.otherCharges}
+                                        onBillingChange={handleBillingChange}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                    <VisitProductsPanel
+                                        attendanceId={attendanceData._id}
+                                        dispensed={attendanceData.billing?.dispensedProducts}
                                         onBillingChange={handleBillingChange}
                                         readOnly={isViewingHistorical}
                                     />

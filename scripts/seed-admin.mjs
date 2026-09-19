@@ -164,7 +164,7 @@ async function main() {
   }
 
   // 1) Create the admin staff (bcrypt password, same 10 rounds as the app)
-  const hashedPassword = await hash(password, 10)
+  const hashedPassword = await hash( password, 10)
   const admin = await Staff.create({
     fullName,
     email: email.toLowerCase(),

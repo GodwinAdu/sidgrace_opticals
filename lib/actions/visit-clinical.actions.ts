@@ -21,6 +21,7 @@ import Imaging from "../models/imaging.models";
 import { postLedgerEntry } from "./transaction.actions";
 import Invoice from "../models/invoice.models";
 import History from "../models/history.models";
+import InventoryProduct from "../models/inventory-product.models";
 
 interface DentalNoteInput {
     teeth?: number[];
@@ -213,6 +214,7 @@ interface VisitLike {
     billing?: {
         consultationFee?: number;
         otherCharges?: { label?: string; amount?: number }[];
+        dispensedProducts?: { total?: number }[];
         payments?: { amount?: number }[];
         amountPaid?: number;
     };
@@ -235,7 +237,9 @@ function recomputeVisitBilling(visit: VisitLike) {
     const proceduresTotal = (visit.dentalProcedures || []).reduce((s, p) => s + (Number(p.cost) || 0), 0);
     const otherCharges = (b.otherCharges as { amount?: number }[]) || [];
     const otherTotal = otherCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-    const totalCharged = consultationFee + proceduresTotal + otherTotal;
+    const dispensedProducts = (b.dispensedProducts as { total?: number }[]) || [];
+    const productsTotal = dispensedProducts.reduce((s, p) => s + (Number(p.total) || 0), 0);
+    const totalCharged = consultationFee + proceduresTotal + otherTotal + productsTotal;
     const amountPaid = Number(b.amountPaid) || 0;
     const balance = Math.max(0, totalCharged - amountPaid);
 
@@ -246,6 +250,7 @@ function recomputeVisitBilling(visit: VisitLike) {
         ...b,
         consultationFee,
         proceduresTotal,
+        productsTotal,
         otherCharges,
         totalCharged,
         amountPaid,
@@ -344,6 +349,94 @@ async function _setVisitOtherCharges(user: User, attendanceId: string, charges: 
 }
 export const setVisitOtherCharges = await withAuth(_setVisitOtherCharges);
 
+/* ─────────────── DISPENSE PRODUCTS / DRUGS (inventory → visit bill) ─────────────── */
+interface DispenseItemInput {
+    productId: string;
+    quantity: number;
+}
+
+/**
+ * Dispense inventory products/drugs to the patient on this visit. Sets the
+ * visit's dispensedProducts to the given list (full replace), reconciles
+ * InventoryProduct stock by the DELTA vs what was previously dispensed on this
+ * visit (so editing quantities doesn't double-decrement), prices each line at
+ * the product's salePrice, then rebuilds the bill + syncs the invoice.
+ * Guards against dispensing more than available stock.
+ */
+async function _dispenseVisitProducts(user: User, attendanceId: string, items: DispenseItemInput[], path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+        const visit = await loadVisit(attendanceId);
+
+        const prevRaw = visit.billing?.dispensedProducts;
+        const prev: { productId?: unknown; quantity?: number }[] = prevRaw
+            ? (typeof (prevRaw as { toObject?: () => unknown }).toObject === "function"
+                ? (prevRaw as unknown as { toObject: () => { productId?: unknown; quantity?: number }[] }).toObject()
+                : (prevRaw as { productId?: unknown; quantity?: number }[]))
+            : [];
+
+        // Map previously-dispensed quantity per product.
+        const prevQty = new Map<string, number>();
+        for (const p of prev) {
+            if (p.productId) prevQty.set(String(p.productId), (prevQty.get(String(p.productId)) || 0) + (Number(p.quantity) || 0));
+        }
+
+        const dispensed: { productId: string; name: string; quantity: number; unitPrice: number; total: number }[] = [];
+        // Validate stock (delta) and build the priced list.
+        for (const it of (items || [])) {
+            const qty = Number(it.quantity) || 0;
+            if (qty <= 0) continue;
+            const product = await InventoryProduct.findById(it.productId);
+            if (!product) throw new Error("Product not found");
+            const already = prevQty.get(String(it.productId)) || 0;
+            const delta = qty - already; // positive = take more stock, negative = return
+            if (delta > 0 && (Number(product.quantity) || 0) < delta) {
+                throw new Error(`Not enough stock for ${product.name}. Available: ${product.quantity}`);
+            }
+            const unitPrice = Number(product.salePrice) || 0;
+            dispensed.push({
+                productId: String(it.productId),
+                name: product.name,
+                quantity: qty,
+                unitPrice,
+                total: unitPrice * qty,
+            });
+        }
+
+        // Apply stock deltas: decrement for increases, restore for decreases/removals.
+        const newQty = new Map<string, number>();
+        for (const d of dispensed) newQty.set(d.productId, (newQty.get(d.productId) || 0) + d.quantity);
+        const allIds = new Set<string>([...prevQty.keys(), ...newQty.keys()]);
+        for (const id of allIds) {
+            const delta = (newQty.get(id) || 0) - (prevQty.get(id) || 0);
+            if (delta !== 0) {
+                const product = await InventoryProduct.findById(id);
+                if (product) {
+                    product.quantity = Math.max(0, (Number(product.quantity) || 0) - delta);
+                    await product.save();
+                }
+            }
+        }
+
+        visit.set("billing", {
+            ...(visit.billing?.toObject?.() ?? visit.billing ?? {}),
+            dispensedProducts: dispensed,
+        });
+        recomputeVisitBilling(visit as unknown as VisitLike);
+        await syncInvoiceIfExists(user, visit as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
+        await visit.save();
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/inventory/products");
+        return JSON.parse(JSON.stringify(visit.billing ?? {}));
+    } catch (error) {
+        console.error("Error dispensing products:", error);
+        throw error;
+    }
+}
+export const dispenseVisitProducts = await withAuth(_dispenseVisitProducts);
+
 /* ─────────────── GENERATE INVOICE FROM VISIT ─────────────── */
 async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
@@ -354,7 +447,11 @@ async function generateInvoiceNumber(): Promise<string> {
 
 /** Build invoice line items + total from a visit's current charges. */
 function buildVisitInvoiceItems(visit: {
-    billing?: { consultationFee?: number; otherCharges?: { label?: string; amount?: number }[] };
+    billing?: {
+        consultationFee?: number;
+        otherCharges?: { label?: string; amount?: number }[];
+        dispensedProducts?: { name?: string; quantity?: number; unitPrice?: number; total?: number }[];
+    };
     dentalProcedures?: { procedureId?: unknown; procedureName?: string; tooth?: number | null; cost?: number }[];
 }) {
     // Typed loosely: Mongoose coerces string procedureId -> ObjectId on save.
@@ -374,6 +471,12 @@ function buildVisitInvoiceItems(visit: {
             amount: cost,
         });
     }
+    for (const d of (visit.billing?.dispensedProducts || [])) {
+        const qty = Number(d.quantity) || 0;
+        const unit = Number(d.unitPrice) || 0;
+        const amt = Number(d.total) || unit * qty;
+        items.push({ description: d.name || "Product", procedureId: null, tooth: null, quantity: qty || 1, unitPrice: unit, amount: amt });
+    }
     for (const c of (visit.billing?.otherCharges || [])) {
         const amt = Number(c.amount) || 0;
         items.push({ description: c.label || "Charge", procedureId: null, tooth: null, quantity: 1, unitPrice: amt, amount: amt });
@@ -390,7 +493,12 @@ function buildVisitInvoiceItems(visit: {
  * NOTE: caller is responsible for saving the visit doc.
  */
 async function syncInvoiceIfExists(user: User, visit: {
-    billing?: { invoiceId?: unknown; consultationFee?: number; otherCharges?: { label?: string; amount?: number }[] };
+    billing?: {
+        invoiceId?: unknown;
+        consultationFee?: number;
+        otherCharges?: { label?: string; amount?: number }[];
+        dispensedProducts?: { name?: string; quantity?: number; unitPrice?: number; total?: number }[];
+    };
     dentalProcedures?: { procedureId?: unknown; procedureName?: string; tooth?: number | null; cost?: number }[];
     set: (path: string, val: unknown) => void;
 }) {
