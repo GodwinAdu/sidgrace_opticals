@@ -22,7 +22,7 @@ interface ProceduresTabProps {
 }
 
 export default function ProceduresTab({ initialData, onSave, readOnly = false }: ProceduresTabProps) {
-    const [procedures, setProcedures] = useState<Procedure[]>(initialData || [])
+    const [procedures, setProcedures] = useState<Procedure[]>(Array.isArray(initialData) ? initialData : [])
     const [newProcedure, setNewProcedure] = useState<Procedure>({
         name: "",
         date: new Date().toISOString().split("T")[0],

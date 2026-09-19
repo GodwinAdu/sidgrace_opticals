@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, Settings2Icon, Sparkles, ThermometerIcon, Trash, UploadCloudIcon, Users, } from "lucide-react"
+import { BarChart3, BellRing, CalendarClock, ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, ReceiptText, Settings2Icon, Sparkles, Stethoscope, ThermometerIcon, Trash, UploadCloudIcon, Users, Wallet, } from "lucide-react"
 
 import {
   Collapsible,
@@ -113,6 +113,120 @@ export function NavMain({ role }:{role:IRole}) {
       isActive: false,
       roleField:"appointmentManagement"
     },
+    {
+      title: "Accounting",
+      url: "#",
+      icon: Wallet,
+      roleField: "accountManagement",
+      items: [
+        {
+          title: "Accounts",
+          url: "/dashboard/account/account-list",
+          roleField: "accountManagement",
+        },
+        {
+          title: "Income Statement",
+          url: "/dashboard/account/income-statement",
+          roleField: "AccountReport",
+        },
+        {
+          title: "Trial Balance",
+          url: "/dashboard/account/trial-balance",
+          roleField: "AccountReport",
+        },
+        {
+          title: "Balance Sheet",
+          url: "/dashboard/account/balance-sheet",
+          roleField: "AccountReport",
+        },
+        {
+          title: "Expenses",
+          url: "/dashboard/account/expenses",
+          roleField: "accountManagement",
+        },
+        {
+          title: "Transactions",
+          url: "/dashboard/account/transactions",
+          roleField: "accountManagement",
+        },
+      ],
+    },
+    {
+      title: "Billing",
+      url: "#",
+      icon: ReceiptText,
+      items: [
+        {
+          title: "Invoices",
+          url: "/dashboard/billing/invoices",
+          roleField: "billingManagement",
+        },
+        {
+          title: "Insurance",
+          url: "/dashboard/billing/insurance",
+          roleField: "insuranceManagement",
+        },
+        {
+          title: "Claims",
+          url: "/dashboard/billing/claims",
+          roleField: "insuranceManagement",
+        },
+      ],
+    },
+    {
+      title: "Patient Care",
+      url: "#",
+      icon: BellRing,
+      items: [
+        {
+          title: "Recalls & Reminders",
+          url: "/dashboard/recalls",
+          roleField: "recallManagement",
+        },
+        {
+          title: "Waitlist & No-Shows",
+          url: "/dashboard/waitlist",
+          roleField: "recallManagement",
+        },
+        {
+          title: "Consent Forms",
+          url: "/dashboard/consent",
+          roleField: "clinicalManagement",
+        },
+        {
+          title: "Patient 360 Portal",
+          url: "/dashboard/portal",
+          roleField: "portalAccess",
+        },
+      ],
+    },
+    {
+      title: "Clinical",
+      url: "#",
+      icon: Stethoscope,
+      items: [
+        {
+          title: "Clinical Records",
+          url: "/dashboard/clinical",
+          roleField: "dentalChartManagement",
+        },
+        {
+          title: "Treatment Plans",
+          url: "/dashboard/treatment-plans",
+          roleField: "treatmentPlanManagement",
+        },
+        {
+          title: "Procedure Catalog",
+          url: "/dashboard/procedures",
+          roleField: "procedureManagement",
+        },
+        {
+          title: "Lab Cases",
+          url: "/dashboard/lab-cases",
+          roleField: "labManagement",
+        },
+      ],
+    },
     // {
     //   title: "Sales",
     //   url: "#",
@@ -180,6 +294,41 @@ export function NavMain({ role }:{role:IRole}) {
       ],
     },
     {
+      title: "Operations",
+      url: "#",
+      icon: CalendarClock,
+      items: [
+        {
+          title: "Staff Roster",
+          url: "/dashboard/roster",
+          roleField: "rosterManagement",
+        },
+        {
+          title: "Audit Log",
+          url: "/dashboard/audit-log",
+          roleField: "history",
+        },
+        {
+          title: "Branches",
+          url: "/dashboard/branches",
+          roleField: "branchManagement",
+        },
+      ],
+    },
+    {
+      title: "Reports",
+      url: `/dashboard/reports`,
+      icon: BarChart3,
+      isActive: false,
+      roleField: "reportManagement"
+    },
+    {
+      title: "Settings",
+      url: `/dashboard/settings`,
+      icon: Settings2Icon,
+      isActive: false,
+    },
+    {
       title: "History",
       url: `/dashboard/history`,
       icon: History,
@@ -221,7 +370,7 @@ export function NavMain({ role }:{role:IRole}) {
 
   return (
     <SidebarGroup className="scrollbar-hide">
-      <SidebarGroupLabel>Nav links</SidebarGroupLabel>
+      <SidebarGroupLabel className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">Menu</SidebarGroupLabel>
       <SidebarMenu >
         {navMain
           .filter((item): item is NavItem => item !== false)
@@ -239,8 +388,8 @@ export function NavMain({ role }:{role:IRole}) {
                     <SidebarMenuButton
                       tooltip={item.title}
                       className={cn(
-                        "transition-colors hover:bg-primary/10 hover:text-primary",
-                        item.items?.some((subItem) => isActive(subItem.url)) && "bg-primary text-white font-medium",
+                        "rounded-lg transition-all hover:bg-primary/10 hover:text-primary",
+                        item.items?.some((subItem) => isActive(subItem.url)) && "bg-primary/10 text-primary font-semibold",
                       )}
                     >
                       {item.icon && <item.icon />}
@@ -279,8 +428,8 @@ export function NavMain({ role }:{role:IRole}) {
                   asChild
                   tooltip={item.title}
                   className={cn(
-                    "transition-colors hover:bg-primary/10 hover:text-primary",
-                    isActive(item.url) && "bg-primary text-white font-medium",
+                    "rounded-lg transition-all hover:bg-primary/10 hover:text-primary",
+                    isActive(item.url) && "bg-gradient-to-r from-teal-500 to-cyan-600 text-white font-semibold shadow-sm shadow-teal-500/30 hover:from-teal-600 hover:to-cyan-700 hover:text-white",
                   )}
                 >
                   <Link href={item.url}>

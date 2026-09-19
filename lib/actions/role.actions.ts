@@ -68,6 +68,19 @@ interface CreateRoleProps {
     AccountReport: boolean
     inventoryReport: boolean
     attendanceReport: boolean
+    // dental clinic feature permissions
+    procedureManagement?: boolean
+    dentalChartManagement?: boolean
+    treatmentPlanManagement?: boolean
+    clinicalManagement?: boolean
+    billingManagement?: boolean
+    insuranceManagement?: boolean
+    recallManagement?: boolean
+    labManagement?: boolean
+    rosterManagement?: boolean
+    reportManagement?: boolean
+    branchManagement?: boolean
+    portalAccess?: boolean
 }
 async function _createRole(user: User, values: CreateRoleProps, path: string) {
     const {

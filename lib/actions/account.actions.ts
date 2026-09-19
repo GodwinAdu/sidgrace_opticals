@@ -66,13 +66,13 @@ export const createAccount = await withAuth(_createAccount)
 
 async function _getAllAccounts(user: User) {
     try {
-        const schoolId = user.schoolId;
-
+        if (!user) throw new Error("User not authenticated");
         await connectToDB();
 
-        const accounts = await Account.find({ schoolId });
-        if (accounts.length === 0) {
-            return []; // or throw an error if you want to handle it differently
+        // Note: the Account schema has no schoolId field, so we filter by soft-delete flag only.
+        const accounts = await Account.find({ del_flag: { $ne: true } }).sort({ createdAt: -1 });
+        if (!accounts || accounts.length === 0) {
+            return [];
         }
 
         return JSON.parse(JSON.stringify(accounts));
@@ -84,6 +84,37 @@ async function _getAllAccounts(user: User) {
 }
 
 export const getAllAccounts = await withAuth(_getAllAccounts)
+
+/**
+ * Gets an account by name, creating it if it doesn't exist.
+ * Used to lazily provision core ledger accounts (e.g. "Clinic Revenue").
+ * `userId` is the staff performing the action.
+ */
+export async function getOrCreateAccount(accountName: string, userId?: string) {
+    await connectToDB();
+    let account = await Account.findOne({ accountName, del_flag: { $ne: true } });
+    if (!account) {
+        account = await Account.create({
+            accountName,
+            balance: 0,
+            createdBy: userId || null,
+            action_type: "created",
+        });
+    }
+    return account;
+}
+
+/**
+ * Adjusts an account's balance by a signed delta (positive = deposit, negative = withdrawal).
+ */
+export async function adjustAccountBalance(accountId: string, delta: number) {
+    await connectToDB();
+    const account = await Account.findById(accountId);
+    if (!account) return null;
+    account.balance = Math.max(0, Number(account.balance || 0) + delta);
+    await account.save();
+    return account;
+}
 
 
 async function _getAccountById(user: User, accountId: string) {

@@ -228,6 +228,21 @@ const RoleSchema: Schema<IRole> = new Schema({
         type: Boolean,
         default: false
     },
+
+    // ── Dental clinic feature permissions ──────────────────────
+    procedureManagement: { type: Boolean, default: false },
+    dentalChartManagement: { type: Boolean, default: false },
+    treatmentPlanManagement: { type: Boolean, default: false },
+    clinicalManagement: { type: Boolean, default: false },
+    billingManagement: { type: Boolean, default: false },
+    insuranceManagement: { type: Boolean, default: false },
+    recallManagement: { type: Boolean, default: false },
+    labManagement: { type: Boolean, default: false },
+    rosterManagement: { type: Boolean, default: false },
+    reportManagement: { type: Boolean, default: false },
+    branchManagement: { type: Boolean, default: false },
+    portalAccess: { type: Boolean, default: false },
+
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: "Staff",

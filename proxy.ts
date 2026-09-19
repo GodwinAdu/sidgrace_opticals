@@ -50,7 +50,7 @@ async function createNewAccessToken(payload: Record<string, unknown>): Promise<s
         .sign(accessTokenEncoder);
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Check if the requested path is public

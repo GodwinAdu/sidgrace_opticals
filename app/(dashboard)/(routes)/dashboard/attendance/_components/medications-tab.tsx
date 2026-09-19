@@ -22,7 +22,7 @@ interface MedicationsTabProps {
 }
 
 export default function MedicationsTab({ initialData, onSave, readOnly = false }: MedicationsTabProps) {
-    const [medications, setMedications] = useState<Drug[]>(initialData || [])
+    const [medications, setMedications] = useState<Drug[]>(Array.isArray(initialData) ? initialData : [])
     const [newMedication, setNewMedication] = useState<Drug>({
         name: "",
         dosage: "",

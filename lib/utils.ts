@@ -6,7 +6,8 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 
-export function calculateAge(dob: string): number {
+export function calculateAge(dob: string | undefined | null): number {
+  if (!dob) return 0;
   const birthDate = new Date(dob);
   const today = new Date();
 
@@ -36,6 +37,28 @@ export function isSameDay(date1: Date | string, date2: Date | string): boolean {
 export function truncateMessage(message: string, maxLength: number): string {
     if (message.length <= maxLength) return message;
     return message.slice(0, maxLength).trimEnd() + '...';
+}
+
+/**
+ * Formats a monetary amount with an optional currency label (e.g. "GHS", "$").
+ * The currency is prefixed. Falls back to plain number formatting when no
+ * currency is configured. Shared across the accounting/billing UI.
+ */
+export function formatMoney(
+    amount: number | null | undefined,
+    currency = "",
+    fractionDigits = 2
+): string {
+    const n = Number(amount) || 0;
+    const formatted = n.toLocaleString(undefined, {
+        minimumFractionDigits: fractionDigits,
+        maximumFractionDigits: fractionDigits,
+    });
+    const cur = (currency || "").trim();
+    if (!cur) return formatted;
+    // Symbol-like labels sit tight against the number; codes get a space.
+    const isSymbol = /^[^A-Za-z0-9]+$/.test(cur);
+    return isSymbol ? `${cur}${formatted}` : `${cur} ${formatted}`;
 }
 
 

@@ -278,6 +278,19 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
     AccountReport: z.boolean(),
     inventoryReport: z.boolean(),
     attendanceReport: z.boolean(),
+    // Dental clinic feature permissions
+    procedureManagement: z.boolean().optional(),
+    dentalChartManagement: z.boolean().optional(),
+    treatmentPlanManagement: z.boolean().optional(),
+    clinicalManagement: z.boolean().optional(),
+    billingManagement: z.boolean().optional(),
+    insuranceManagement: z.boolean().optional(),
+    recallManagement: z.boolean().optional(),
+    labManagement: z.boolean().optional(),
+    rosterManagement: z.boolean().optional(),
+    reportManagement: z.boolean().optional(),
+    branchManagement: z.boolean().optional(),
+    portalAccess: z.boolean().optional(),
   })
 
   const defaultValues: Record<string, string | boolean> = Object.fromEntries(
@@ -1254,6 +1267,43 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
                         </FormItem>
                       )}
                     />
+                  </div>
+
+                  {/* Dental clinic feature permissions */}
+                  <div className="py-5">
+                    <h1 className="font-semibold text-lg capitalize">Dental Clinic Features</h1>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { name: "procedureManagement", label: "Procedure Catalog" },
+                      { name: "dentalChartManagement", label: "Dental Chart" },
+                      { name: "treatmentPlanManagement", label: "Treatment Plans" },
+                      { name: "clinicalManagement", label: "Clinical Notes & Perio" },
+                      { name: "billingManagement", label: "Billing (Invoices & Payments)" },
+                      { name: "insuranceManagement", label: "Insurance & Claims" },
+                      { name: "recallManagement", label: "Recalls & Waitlist" },
+                      { name: "labManagement", label: "Lab Cases" },
+                      { name: "rosterManagement", label: "Staff Roster" },
+                      { name: "reportManagement", label: "Reports & Analytics" },
+                      { name: "branchManagement", label: "Branches" },
+                      { name: "portalAccess", label: "Patient Portal Access" },
+                    ].map((perm) => (
+                      <FormField
+                        key={perm.name}
+                        control={form.control}
+                        name={perm.name as keyof z.infer<typeof CreateRoleSchema>}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                            <FormControl>
+                              <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>{perm.label}</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
                   </div>
                 </div>
               </CardContent>

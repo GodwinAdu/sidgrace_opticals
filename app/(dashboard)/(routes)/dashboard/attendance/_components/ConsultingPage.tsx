@@ -1,6 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import Link from "next/link"
+import {
+    VisitDentalNotesPanel,
+    VisitPerioPanel,
+    VisitImagingPanel,
+    DentalChartTabPanel,
+    DentalPlanTabPanel,
+    LabCaseTabPanel,
+    ConsultationBillingPanel,
+    CustomChargesPanel,
+    VisitProceduresPanel,
+    VisitPaymentPanel,
+} from "./clinical-tab-panels"
+import { formatMoney } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -44,7 +58,13 @@ import { useRouter } from "next/navigation"
 
 // Define the attendance data structure based on the Mongoose schema
 interface AttendanceData {
-    patientId: string
+    patientId: {
+        _id?: string
+        patientId?: string
+        fullName?: string
+        gender?: string
+        dob?: string
+    } & Record<string, unknown>
     eyeTest: {
         visualAcuity: string
         colorVision: string
@@ -97,10 +117,60 @@ interface AttendanceData {
         date: string
         notes: string
     }[]
+    // Embedded per-visit dental clinical records
+    dentalNotes?: {
+        _id?: string
+        teeth?: number[]
+        subjective?: string
+        objective?: string
+        assessment?: string
+        plan?: string
+        noteId?: string
+        createdAt?: string
+    }[]
+    perioExam?: {
+        measurements?: { tooth: number; pocketDepth?: number[]; bleeding?: boolean; recession?: number; mobility?: number }[]
+        note?: string
+        chartId?: string
+        recordedAt?: string | null
+    }
+    dentalImaging?: {
+        _id?: string
+        tooth?: number | null
+        type?: string
+        title?: string
+        fileUrl?: string
+        note?: string
+        imagingId?: string
+        takenAt?: string
+    }[]
+    dentalProcedures?: {
+        procedureId?: string | null
+        procedureName?: string
+        tooth?: number | null
+        surface?: string
+        cost?: number
+        note?: string
+        performedAt?: string
+    }[]
+    chartId?: string | null
+    linkedTreatmentPlans?: string[]
+    linkedLabCases?: string[]
+    billing?: {
+        invoiceId?: string | null
+        invoiceNumber?: string
+        consultationFee?: number
+        proceduresTotal?: number
+        otherCharges?: { label?: string; amount?: number }[]
+        totalCharged?: number
+        amountPaid?: number
+        balance?: number
+    }
     status: "pending" | "ongoing" | "completed" | "cancelled"
     visitType: "outpatient" | "inpatient" | "emergency"
     _id?: string
     date?: Date
+    appointmentId?: string
 }
 
 interface PreviousVisit {
@@ -123,7 +193,7 @@ interface PatientRecordProps {
 
 // Default empty attendance data
 const defaultAttendanceData: AttendanceData = {
-    patientId: "",
+    patientId: {},
     eyeTest: {
         visualAcuity: "",
         colorVision: "",
@@ -167,6 +237,14 @@ const defaultAttendanceData: AttendanceData = {
     },
     surgicalNote: "",
     procedures: [],
+    dentalNotes: [],
+    perioExam: { measurements: [], note: "", chartId: undefined, recordedAt: null },
+    dentalImaging: [],
+    dentalProcedures: [],
+    chartId: null,
+    linkedTreatmentPlans: [],
+    linkedLabCases: [],
+    billing: { invoiceId: null, invoiceNumber: "", consultationFee: 0, proceduresTotal: 0, otherCharges: [], totalCharged: 0, amountPaid: 0, balance: 0 },
     status: "pending",
     visitType: "outpatient",
 }
@@ -202,6 +280,11 @@ export default function PatientRecord({
                 physicExam: { ...defaultAttendanceData.physicExam, ...attendance.physicExam },
                 diagnosis: { ...defaultAttendanceData.diagnosis, ...attendance.diagnosis },
                 plan: { ...defaultAttendanceData.plan, ...attendance.plan },
+                perioExam: { ...defaultAttendanceData.perioExam, ...attendance.perioExam },
+                billing: { ...defaultAttendanceData.billing, ...attendance.billing },
+                dentalNotes: attendance.dentalNotes ?? [],
+                dentalImaging: attendance.dentalImaging ?? [],
+                dentalProcedures: attendance.dentalProcedures ?? [],
             })
             // Set the current attendance as active
             setActiveVisitId(attendance._id || null)
@@ -209,6 +292,16 @@ export default function PatientRecord({
             setDataKey((prev) => prev + 1)
         }
     }, [attendance])
+
+    // Billing is shared across the consultation/procedures/custom-charges/payment
+    // panels. They update this single source of truth optimistically and then
+    // reconcile with the value returned by the server action.
+    const handleBillingChange = (billing: AttendanceData["billing"]) => {
+        setAttendanceData((prev) => ({ ...prev, billing: { ...prev.billing, ...billing } }))
+    }
+    const handleProceduresChange = (dentalProcedures: AttendanceData["dentalProcedures"]) => {
+        setAttendanceData((prev) => ({ ...prev, dentalProcedures: dentalProcedures || [] }))
+    }
 
     // Handler functions for each tab's data
     const handleEyeTestSave = async (data: any) => {
@@ -311,15 +404,26 @@ export default function PatientRecord({
                             </Badge>
                         )}
                     </div>
-                    {isViewingHistorical && onReturnToCurrent && (
-                        <Button
-                            onClick={onReturnToCurrent}
-                            variant="outline"
-                            className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
-                        >
-                            ← Return to Current Visit
-                        </Button>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {attendanceData.patientId?._id && (
+                            <Link
+                                href={`/dashboard/clinical/${attendanceData.patientId._id}`}
+                                className="inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-teal-500 to-cyan-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:from-teal-600 hover:to-cyan-700"
+                            >
+                                <Stethoscope className="h-4 w-4" />
+                                Dental Chart & Records
+                            </Link>
+                        )}
+                        {isViewingHistorical && onReturnToCurrent && (
+                            <Button
+                                onClick={onReturnToCurrent}
+                                variant="outline"
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-300"
+                            >
+                                ← Return to Current Visit
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -408,14 +512,14 @@ export default function PatientRecord({
                                             </Select>
                                         </div>
                                         <div>
-                                            <Label htmlFor="balance" className="dark:text-gray-300">
-                                                BALANCE
+                                            <Label className="dark:text-gray-300">
+                                                BALANCE DUE
                                             </Label>
-                                            <Input
-                                                id="balance"
-                                                className="w-32 bg-white dark:bg-gray-700 dark:text-gray-300"
-                                                disabled={isViewingHistorical}
-                                            />
+                                            <div
+                                                className={`mt-1 flex h-9 w-32 items-center justify-end rounded-md border bg-white px-3 text-sm font-bold dark:bg-gray-700 ${(attendanceData.billing?.balance || 0) > 0 ? "text-red-600" : "text-green-600"}`}
+                                            >
+                                                {formatMoney(attendanceData.billing?.balance || 0)}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -574,8 +678,8 @@ export default function PatientRecord({
                                             className="data-[state=active]:bg-blue-200 dark:data-[state=active]:bg-blue-900"
                                         >
                                             <ClipboardList className="h-4 w-4 mr-2" />
-                                            <span className="hidden sm:inline">Treatment Plan</span>
-                                            <span className="inline sm:hidden">Plan</span>
+                                            <span className="hidden sm:inline">Plan &amp; Follow-up</span>
+                                            <span className="inline sm:hidden">Follow-up</span>
                                         </TabsTrigger>
                                         <TabsTrigger
                                             value="surgical-notes"
@@ -593,6 +697,62 @@ export default function PatientRecord({
                                             <span className="hidden sm:inline">Eye Test</span>
                                             <span className="inline sm:hidden">Eye</span>
                                         </TabsTrigger>
+                                        <TabsTrigger
+                                            value="dental-chart"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <Stethoscope className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Dental Chart</span>
+                                            <span className="inline sm:hidden">Chart</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="clinical-notes"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <FileText className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Dental Notes</span>
+                                            <span className="inline sm:hidden">SOAP</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="perio"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <Activity className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Perio</span>
+                                            <span className="inline sm:hidden">Perio</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="imaging"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <ImageIcon className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Imaging</span>
+                                            <span className="inline sm:hidden">Imaging</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="dental-plan"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <Stethoscope className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Treatment Plan</span>
+                                            <span className="inline sm:hidden">Tx Plan</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="lab-case"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <Microscope className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Lab Case</span>
+                                            <span className="inline sm:hidden">Lab</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
+                                            value="billing"
+                                            className="data-[state=active]:bg-emerald-200 dark:data-[state=active]:bg-emerald-900"
+                                        >
+                                            <ClipboardList className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Consultation Fee</span>
+                                            <span className="inline sm:hidden">Fee</span>
+                                        </TabsTrigger>
                                     </TabsList>
                                 </div>
                             </div>
@@ -603,7 +763,7 @@ export default function PatientRecord({
                                     key={`history-${dataKey}`}
                                     initialData={attendanceData.history}
                                     onSave={handleHistorySave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -612,7 +772,7 @@ export default function PatientRecord({
                                     key={`physic-exam-${dataKey}`}
                                     initialData={attendanceData.physicExam}
                                     onSave={handlePhysicalExamSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -621,7 +781,7 @@ export default function PatientRecord({
                                     key={`diagnosis-${dataKey}`}
                                     initialData={attendanceData.diagnosis}
                                     onSave={handleDiagnosisSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -630,7 +790,7 @@ export default function PatientRecord({
                                     key={`lab-report-${dataKey}`}
                                     initialData={attendanceData.labReport}
                                     onSave={handleLabReportSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -639,7 +799,7 @@ export default function PatientRecord({
                                     key={`scan-${dataKey}`}
                                     initialData={attendanceData.scan}
                                     onSave={handleScanSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -648,7 +808,7 @@ export default function PatientRecord({
                                     key={`dr-notes-${dataKey}`}
                                     initialData={{ doctorNote: attendanceData.doctorNote || "" }}
                                     onSave={handleDoctorNotesSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -657,7 +817,7 @@ export default function PatientRecord({
                                     key={`nurse-notes-${dataKey}`}
                                     initialData={{ nurseNote: attendanceData.nurseNote || "" }}
                                     onSave={handleNurseNotesSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -666,7 +826,7 @@ export default function PatientRecord({
                                     key={`vitals-${dataKey}`}
                                     initialData={attendanceData.vitals}
                                     onSave={handleVitalsSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -675,7 +835,7 @@ export default function PatientRecord({
                                     key={`medications-${dataKey}`}
                                     initialData={attendanceData.drugs}
                                     onSave={handleMedicationsSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -684,7 +844,7 @@ export default function PatientRecord({
                                     key={`treatment-plan-${dataKey}`}
                                     initialData={attendanceData.plan}
                                     onSave={handleTreatmentPlanSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -693,7 +853,7 @@ export default function PatientRecord({
                                     key={`surgical-notes-${dataKey}`}
                                     initialData={{ surgicalNote: attendanceData.surgicalNote }}
                                     onSave={handleSurgicalNotesSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -702,7 +862,7 @@ export default function PatientRecord({
                                     key={`procedures-${dataKey}`}
                                     initialData={attendanceData.procedures}
                                     onSave={handleProceduresSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
                             </TabsContent>
 
@@ -711,8 +871,106 @@ export default function PatientRecord({
                                     key={`eye-test-${dataKey}`}
                                     initialData={attendanceData.eyeTest}
                                     onSave={handleEyeTestSave}
-                                    disabled={isViewingHistorical}
+                                    readOnly={isViewingHistorical}
                                 />
+                            </TabsContent>
+
+                            {/* Dental clinical modules — create & edit inline for this patient */}
+                            <TabsContent value="dental-chart" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <DentalChartTabPanel patientId={String(attendanceData.patientId._id)} />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="clinical-notes" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <VisitDentalNotesPanel
+                                        attendanceId={attendanceData._id}
+                                        patientId={String(attendanceData.patientId._id)}
+                                        notes={attendanceData.dentalNotes || []}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="perio" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <VisitPerioPanel
+                                        attendanceId={attendanceData._id}
+                                        patientId={String(attendanceData.patientId._id)}
+                                        perioExam={attendanceData.perioExam}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="imaging" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <VisitImagingPanel
+                                        attendanceId={attendanceData._id}
+                                        patientId={String(attendanceData.patientId._id)}
+                                        images={attendanceData.dentalImaging || []}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="dental-plan" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <DentalPlanTabPanel patientId={String(attendanceData.patientId._id)} />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="lab-case" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <LabCaseTabPanel
+                                        patientId={String(attendanceData.patientId._id)}
+                                        patientName={attendanceData.patientId?.fullName}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="billing" className="mt-4 px-0">
+                                <div className="space-y-6">
+                                    <ConsultationBillingPanel
+                                        attendanceId={attendanceData._id}
+                                        consultation={{ amount: attendanceData.billing?.consultationFee }}
+                                        onBillingChange={handleBillingChange}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                    <VisitProceduresPanel
+                                        attendanceId={attendanceData._id}
+                                        procedures={attendanceData.dentalProcedures}
+                                        onBillingChange={handleBillingChange}
+                                        onProceduresChange={handleProceduresChange}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                    <CustomChargesPanel
+                                        attendanceId={attendanceData._id}
+                                        charges={attendanceData.billing?.otherCharges}
+                                        onBillingChange={handleBillingChange}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                    <VisitPaymentPanel
+                                        attendanceId={attendanceData._id}
+                                        billing={attendanceData.billing}
+                                        procedures={attendanceData.dentalProcedures}
+                                        onBillingChange={handleBillingChange}
+                                        readOnly={isViewingHistorical}
+                                    />
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </div>

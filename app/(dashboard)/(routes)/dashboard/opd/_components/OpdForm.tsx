@@ -60,6 +60,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 import { toast } from "sonner"
+import { useRouter } from "next/navigation"
 import { fetchPatientBySearch } from "@/lib/actions/patient.actions"
 import { calculateAge } from "@/lib/utils"
 import { createAttendance } from "@/lib/actions/attendance.actions"
@@ -73,6 +74,7 @@ type VitalSigns = {
     temperature: number
     respiratoryRate: number
     oxygenSaturation: number
+    timestamp?: Date | string
 }
 
 type EyeTest = {
@@ -90,7 +92,20 @@ type EyeTest = {
     posteriorSegment: string
 }
 
-type AttendancePatient = IPatient & {
+// Minimal patient shape used by the OPD screen (from fetchPatientBySearch).
+type Patient = {
+    _id: string
+    fullName?: string
+    dob?: string
+    gender?: string
+    phone?: string
+    patientId?: string
+    priority?: string
+    vitals?: VitalSigns | null
+    assignedDoctor?: { name: string; avatar?: string } | null
+}
+
+type AttendancePatient = Patient & {
     visitType: string
     vitals: VitalSigns | null
     eyeTest: EyeTest | null
@@ -235,6 +250,7 @@ const getTrendIndicator = (value: number, normalMin: number, normalMax: number) 
 
 export function OpdPatientManagement() {
 
+    const router = useRouter()
     const [searchQuery, setSearchQuery] = useState("")
     const [searchResults, setSearchResults] = useState<Patient[]>([])
     const [attendanceList, setAttendanceList] = useState<AttendancePatient[]>([])
@@ -252,7 +268,9 @@ export function OpdPatientManagement() {
 
     // Form for vital signs
     const vitalsForm = useForm<z.infer<typeof vitalsFormSchema>>({
-        resolver: zodResolver(vitalsFormSchema),
+        // z.coerce.number() makes the resolver input type `unknown`; cast to
+        // satisfy RHF's generic without changing runtime behavior.
+        resolver: zodResolver(vitalsFormSchema) as never,
         defaultValues: {
             bloodPressure: "",
             systolic: 0,
@@ -266,7 +284,7 @@ export function OpdPatientManagement() {
 
     // Form for eye test
     const eyeTestForm = useForm<z.infer<typeof eyeTestFormSchema>>({
-        resolver: zodResolver(eyeTestFormSchema),
+        resolver: zodResolver(eyeTestFormSchema) as never,
         defaultValues: {
             visualAcuityRight: "",
             visualAcuityLeft: "",
@@ -437,13 +455,13 @@ export function OpdPatientManagement() {
             await createAttendance(patientAttendanceData)
 
             // Update the patient in the attendance list
-            const updatedList = attendanceList.map((p) =>
+            const updatedList: AttendancePatient[] = attendanceList.map((p) =>
                 p._id === selectedPatient._id
                     ? {
                         ...p,
                         vitals,
                         eyeTest,
-                        status: "completed",
+                        status: "completed" as const,
                     }
                     : p,
             )
@@ -453,7 +471,7 @@ export function OpdPatientManagement() {
             // Update the selected patient
             setSelectedPatient((prev) => (prev ? { ...prev, vitals, eyeTest, status: "completed" } : null))
 
-            window.location.reload()
+            router.refresh()
 
             toast.success("Patient data recorded", {
                 description: `Vital signs and eye test results for ${selectedPatient.fullName} have been saved.`,
@@ -492,7 +510,8 @@ export function OpdPatientManagement() {
                     ? a.checkInTime.getTime() - b.checkInTime.getTime()
                     : b.checkInTime.getTime() - a.checkInTime.getTime()
             } else if (sortBy === "name") {
-                return sortDirection === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+                const an = a.fullName || "", bn = b.fullName || ""
+                return sortDirection === "asc" ? an.localeCompare(bn) : bn.localeCompare(an)
             } else if (sortBy === "waitTime") {
                 return sortDirection === "asc"
                     ? a.estimatedWaitTime - b.estimatedWaitTime
@@ -505,7 +524,7 @@ export function OpdPatientManagement() {
     const [localPriority, setLocalPriority] = useState("")
 
     const PatientSelect = useCallback(
-        ({ patient }) => {
+        ({ patient }: { patient: Patient }) => {
             return (
                 <TableRow key={patient._id}>
                     <TableCell>{patient.fullName}</TableCell>
@@ -692,7 +711,7 @@ export function OpdPatientManagement() {
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-muted-foreground">{format(patient.checkInTime, "h:mm a")}</span>
                                                 <div className="flex items-center gap-1">
-                                                    {getPriorityBadge(patient.priority)}
+                                                    {getPriorityBadge(patient.priority || "normal")}
                                                     {patient.status === "waiting" && (
                                                         <span className="text-xs text-muted-foreground">{patient.estimatedWaitTime} min wait</span>
                                                     )}
@@ -765,631 +784,269 @@ export function OpdPatientManagement() {
                             <p>Select a patient from the attendance list to record vitals and eye test</p>
                         </CardContent>
                     ) : (
-                        // <Tabs defaultValue="">
-                        //     <TabsList className="grid grid-cols-2 mx-6 mt-4">
-                        //         {/* <TabsTrigger value="vitals">
-                        //             <Activity className="h-4 w-4 mr-2" />
-                        //             Vital Signs
-                        //             {selectedPatient.vitals && <Check className="h-3 w-3 ml-2 text-green-500" />}
-                        //         </TabsTrigger>
-                        //         <TabsTrigger value="eyetest">
-                        //             <Eye className="h-4 w-4 mr-2" />
-                        //             Eye Test
-                        //             {selectedPatient.eyeTest && <Check className="h-3 w-3 ml-2 text-green-500" />}
-                        //         </TabsTrigger> */}
-                        //     </TabsList>
+                        <Tabs defaultValue="vitals">
+                            <TabsList className="grid grid-cols-1 mx-6 mt-4">
+                                <TabsTrigger value="vitals">
+                                    <Activity className="h-4 w-4 mr-2" />
+                                    Vital Signs
+                                    {selectedPatient.vitals && <Check className="h-3 w-3 ml-2 text-green-500" />}
+                                </TabsTrigger>
+                                {/* <TabsTrigger value="eyetest">
+                                    <Eye className="h-4 w-4 mr-2" />
+                                    Eye Test
+                                    {selectedPatient.eyeTest && <Check className="h-3 w-3 ml-2 text-green-500" />}
+                                </TabsTrigger> */}
+                            </TabsList>
 
-                        //     {/* Vital Signs Tab */}
-                        //     <TabsContent value="vitals" className="hidden">
-                        //         <CardContent className="pt-6">
-                        //             <div className="flex justify-between items-center mb-4">
-                        //                 <h3 className="text-lg font-medium">Vital Signs Assessment</h3>
-                        //                 <Button variant="outline" size="sm" onClick={() => setShowVitalHistory(!showVitalHistory)}>
-                        //                     {showVitalHistory ? "Hide History" : "Show History"}
-                        //                 </Button>
-                        //             </div>
+                            {/* Vital Signs Tab */}
+                            <TabsContent value="vitals" >
+                                <CardContent className="pt-6">
+                                    <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-lg font-medium">Vital Signs Assessment</h3>
+                                        <Button variant="outline" size="sm" onClick={() => setShowVitalHistory(!showVitalHistory)}>
+                                            {showVitalHistory ? "Hide History" : "Show History"}
+                                        </Button>
+                                    </div>
 
-                        //             {showVitalHistory && vitalHistory.length > 0 && (
-                        //                 <div className="mb-6 border rounded-md p-4 bg-muted/20">
-                        //                     <h4 className="font-medium mb-2">Previous Vital Signs</h4>
-                        //                     <Table>
-                        //                         <TableHeader>
-                        //                             <TableRow>
-                        //                                 <TableHead>Date</TableHead>
-                        //                                 <TableHead>BP</TableHead>
-                        //                                 <TableHead>Pulse</TableHead>
-                        //                                 <TableHead>Temp</TableHead>
-                        //                                 <TableHead>SpO2</TableHead>
-                        //                             </TableRow>
-                        //                         </TableHeader>
-                        //                         <TableBody>
-                        //                             {vitalHistory.map((vital, index) => (
-                        //                                 <TableRow key={index}>
-                        //                                     <TableCell>{format(vital.timestamp, "MMM d, yyyy")}</TableCell>
-                        //                                     <TableCell>{vital.bloodPressure}</TableCell>
-                        //                                     <TableCell>{vital.pulse}</TableCell>
-                        //                                     <TableCell>{vital.temperature}°F</TableCell>
-                        //                                     <TableCell>{vital.oxygenSaturation}%</TableCell>
-                        //                                 </TableRow>
-                        //                             ))}
-                        //                         </TableBody>
-                        //                     </Table>
-                        //                 </div>
-                        //             )}
+                                    {showVitalHistory && vitalHistory.length > 0 && (
+                                        <div className="mb-6 border rounded-md p-4 bg-muted/20">
+                                            <h4 className="font-medium mb-2">Previous Vital Signs</h4>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>Date</TableHead>
+                                                        <TableHead>BP</TableHead>
+                                                        <TableHead>Pulse</TableHead>
+                                                        <TableHead>Temp</TableHead>
+                                                        <TableHead>SpO2</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {vitalHistory.map((vital, index) => (
+                                                        <TableRow key={index}>
+                                                            <TableCell>{vital.timestamp ? format(new Date(vital.timestamp), "MMM d, yyyy") : "—"}</TableCell>
+                                                            <TableCell>{vital.bloodPressure}</TableCell>
+                                                            <TableCell>{vital.pulse}</TableCell>
+                                                            <TableCell>{vital.temperature}°F</TableCell>
+                                                            <TableCell>{vital.oxygenSaturation}%</TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
+                                    )}
 
-                        //             <Form {...vitalsForm}>
-                        //                 <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                        //                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        //                         {/* Blood Pressure */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Gauge className="h-4 w-4 mr-2" />
-                        //                                     Blood Pressure
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <FormField
-                        //                                         control={vitalsForm.control}
-                        //                                         name="systolic"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Systolic (mmHg)</FormLabel>
-                        //                                                 <div className="flex items-center gap-2">
-                        //                                                     <FormControl>
-                        //                                                         <Input type="number" {...field} />
-                        //                                                     </FormControl>
-                        //                                                     {field.value && getTrendIndicator(field.value, 90, 140)}
-                        //                                                 </div>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                     <FormField
-                        //                                         control={vitalsForm.control}
-                        //                                         name="diastolic"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Diastolic (mmHg)</FormLabel>
-                        //                                                 <div className="flex items-center gap-2">
-                        //                                                     <FormControl>
-                        //                                                         <Input type="number" {...field} />
-                        //                                                     </FormControl>
-                        //                                                     {field.value && getTrendIndicator(field.value, 60, 90)}
-                        //                                                 </div>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                 </div>
-                        //                                 <div className="mt-2">
-                        //                                     <FormField
-                        //                                         control={vitalsForm.control}
-                        //                                         name="bloodPressure"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem className="hidden">
-                        //                                                 <FormControl>
-                        //                                                     <Input {...field} />
-                        //                                                 </FormControl>
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                     <div className="text-sm text-muted-foreground mt-2">Normal range: 90-140/60-90 mmHg</div>
-                        //                                 </div>
-                        //                             </CardContent>
-                        //                         </Card>
+                                    <Form {...vitalsForm}>
+                                        <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                {/* Blood Pressure */}
+                                                <Card>
+                                                    <CardHeader className="p-4 pb-2">
+                                                        <CardTitle className="text-base flex items-center">
+                                                            <Gauge className="h-4 w-4 mr-2" />
+                                                            Blood Pressure
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 pt-0">
+                                                        <div className="grid grid-cols-2 gap-4">
+                                                            <FormField
+                                                                control={vitalsForm.control}
+                                                                name="systolic"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Systolic (mmHg)</FormLabel>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <FormControl>
+                                                                                <Input type="number" {...field} />
+                                                                            </FormControl>
+                                                                            {field.value && getTrendIndicator(field.value, 90, 140)}
+                                                                        </div>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                            <FormField
+                                                                control={vitalsForm.control}
+                                                                name="diastolic"
+                                                                render={({ field }) => (
+                                                                    <FormItem>
+                                                                        <FormLabel>Diastolic (mmHg)</FormLabel>
+                                                                        <div className="flex items-center gap-2">
+                                                                            <FormControl>
+                                                                                <Input type="number" {...field} />
+                                                                            </FormControl>
+                                                                            {field.value && getTrendIndicator(field.value, 60, 90)}
+                                                                        </div>
+                                                                        <FormMessage />
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                        </div>
+                                                        <div className="mt-2">
+                                                            <FormField
+                                                                control={vitalsForm.control}
+                                                                name="bloodPressure"
+                                                                render={({ field }) => (
+                                                                    <FormItem className="hidden">
+                                                                        <FormControl>
+                                                                            <Input {...field} />
+                                                                        </FormControl>
+                                                                    </FormItem>
+                                                                )}
+                                                            />
+                                                            <div className="text-sm text-muted-foreground mt-2">Normal range: 90-140/60-90 mmHg</div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
 
-                        //                         {/* Pulse */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Heart className="h-4 w-4 mr-2" />
-                        //                                     Pulse Rate
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <FormField
-                        //                                     control={vitalsForm.control}
-                        //                                     name="pulse"
-                        //                                     render={({ field }) => (
-                        //                                         <FormItem>
-                        //                                             <FormLabel>Pulse Rate (bpm)</FormLabel>
-                        //                                             <div className="flex items-center gap-2">
-                        //                                                 <FormControl>
-                        //                                                     <Input type="number" {...field} />
-                        //                                                 </FormControl>
-                        //                                                 {field.value && getTrendIndicator(field.value, 60, 100)}
-                        //                                             </div>
-                        //                                             <FormMessage />
-                        //                                             <div className="text-sm text-muted-foreground mt-2">Normal range: 60-100 bpm</div>
-                        //                                         </FormItem>
-                        //                                     )}
-                        //                                 />
-                        //                             </CardContent>
-                        //                         </Card>
+                                                {/* Pulse */}
+                                                <Card>
+                                                    <CardHeader className="p-4 pb-2">
+                                                        <CardTitle className="text-base flex items-center">
+                                                            <Heart className="h-4 w-4 mr-2" />
+                                                            Pulse Rate
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 pt-0">
+                                                        <FormField
+                                                            control={vitalsForm.control}
+                                                            name="pulse"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Pulse Rate (bpm)</FormLabel>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FormControl>
+                                                                            <Input type="number" {...field} />
+                                                                        </FormControl>
+                                                                        {field.value && getTrendIndicator(field.value, 60, 100)}
+                                                                    </div>
+                                                                    <FormMessage />
+                                                                    <div className="text-sm text-muted-foreground mt-2">Normal range: 60-100 bpm</div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </CardContent>
+                                                </Card>
 
-                        //                         {/* Temperature */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Thermometer className="h-4 w-4 mr-2" />
-                        //                                     Temperature
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <FormField
-                        //                                     control={vitalsForm.control}
-                        //                                     name="temperature"
-                        //                                     render={({ field }) => (
-                        //                                         <FormItem>
-                        //                                             <FormLabel>Temperature (°F)</FormLabel>
-                        //                                             <div className="flex items-center gap-2">
-                        //                                                 <FormControl>
-                        //                                                     <Input type="number" step="0.1" {...field} />
-                        //                                                 </FormControl>
-                        //                                                 {field.value && getTrendIndicator(field.value, 97, 99)}
-                        //                                             </div>
-                        //                                             <FormMessage />
-                        //                                             <div className="text-sm text-muted-foreground mt-2">Normal range: 97.0-99.0 °F</div>
-                        //                                         </FormItem>
-                        //                                     )}
-                        //                                 />
-                        //                             </CardContent>
-                        //                         </Card>
+                                                {/* Temperature */}
+                                                <Card>
+                                                    <CardHeader className="p-4 pb-2">
+                                                        <CardTitle className="text-base flex items-center">
+                                                            <Thermometer className="h-4 w-4 mr-2" />
+                                                            Temperature
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 pt-0">
+                                                        <FormField
+                                                            control={vitalsForm.control}
+                                                            name="temperature"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Temperature (°F)</FormLabel>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FormControl>
+                                                                            <Input type="number" step="0.1" {...field} />
+                                                                        </FormControl>
+                                                                        {field.value && getTrendIndicator(field.value, 97, 99)}
+                                                                    </div>
+                                                                    <FormMessage />
+                                                                    <div className="text-sm text-muted-foreground mt-2">Normal range: 97.0-99.0 °F</div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </CardContent>
+                                                </Card>
 
-                        //                         {/* Respiratory Rate */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Lungs className="h-4 w-4 mr-2" />
-                        //                                     Respiratory Rate
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <FormField
-                        //                                     control={vitalsForm.control}
-                        //                                     name="respiratoryRate"
-                        //                                     render={({ field }) => (
-                        //                                         <FormItem>
-                        //                                             <FormLabel>Respiratory Rate (breaths/min)</FormLabel>
-                        //                                             <div className="flex items-center gap-2">
-                        //                                                 <FormControl>
-                        //                                                     <Input type="number" {...field} />
-                        //                                                 </FormControl>
-                        //                                                 {field.value && getTrendIndicator(field.value, 12, 20)}
-                        //                                             </div>
-                        //                                             <FormMessage />
-                        //                                             <div className="text-sm text-muted-foreground mt-2">
-                        //                                                 Normal range: 12-20 breaths/min
-                        //                                             </div>
-                        //                                         </FormItem>
-                        //                                     )}
-                        //                                 />
-                        //                             </CardContent>
-                        //                         </Card>
+                                                {/* Respiratory Rate */}
+                                                <Card>
+                                                    <CardHeader className="p-4 pb-2">
+                                                        <CardTitle className="text-base flex items-center">
+                                                            <Lungs className="h-4 w-4 mr-2" />
+                                                            Respiratory Rate
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 pt-0">
+                                                        <FormField
+                                                            control={vitalsForm.control}
+                                                            name="respiratoryRate"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>Respiratory Rate (breaths/min)</FormLabel>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <FormControl>
+                                                                            <Input type="number" {...field} />
+                                                                        </FormControl>
+                                                                        {field.value && getTrendIndicator(field.value, 12, 20)}
+                                                                    </div>
+                                                                    <FormMessage />
+                                                                    <div className="text-sm text-muted-foreground mt-2">
+                                                                        Normal range: 12-20 breaths/min
+                                                                    </div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </CardContent>
+                                                </Card>
 
-                        //                         {/* Oxygen Saturation */}
-                        //                         <Card className="md:col-span-2">
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Droplets className="h-4 w-4 mr-2" />
-                        //                                     Oxygen Saturation
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <FormField
-                        //                                     control={vitalsForm.control}
-                        //                                     name="oxygenSaturation"
-                        //                                     render={({ field }) => (
-                        //                                         <FormItem>
-                        //                                             <FormLabel>SpO2 (%)</FormLabel>
-                        //                                             <div className="space-y-2">
-                        //                                                 <FormControl>
-                        //                                                     <Slider
-                        //                                                         defaultValue={[field.value]}
-                        //                                                         min={70}
-                        //                                                         max={100}
-                        //                                                         step={1}
-                        //                                                         onValueChange={(vals) => field.onChange(vals[0])}
-                        //                                                     />
-                        //                                                 </FormControl>
-                        //                                                 <div className="flex justify-between items-center">
-                        //                                                     <div className="text-sm font-medium">{field.value}%</div>
-                        //                                                     <div className="flex items-center gap-2">
-                        //                                                         {field.value < 95 ? (
-                        //                                                             <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                        //                                                                 Low
-                        //                                                             </Badge>
-                        //                                                         ) : (
-                        //                                                             <Badge
-                        //                                                                 variant="outline"
-                        //                                                                 className="bg-green-50 text-green-700 border-green-200"
-                        //                                                             >
-                        //                                                                 Normal
-                        //                                                             </Badge>
-                        //                                                         )}
-                        //                                                     </div>
-                        //                                                 </div>
-                        //                                             </div>
-                        //                                             <FormMessage />
-                        //                                             <div className="text-sm text-muted-foreground mt-2">Normal range: 95-100%</div>
-                        //                                         </FormItem>
-                        //                                     )}
-                        //                                 />
-                        //                             </CardContent>
-                        //                         </Card>
+                                                {/* Oxygen Saturation */}
+                                                <Card className="md:col-span-2">
+                                                    <CardHeader className="p-4 pb-2">
+                                                        <CardTitle className="text-base flex items-center">
+                                                            <Droplets className="h-4 w-4 mr-2" />
+                                                            Oxygen Saturation
+                                                        </CardTitle>
+                                                    </CardHeader>
+                                                    <CardContent className="p-4 pt-0">
+                                                        <FormField
+                                                            control={vitalsForm.control}
+                                                            name="oxygenSaturation"
+                                                            render={({ field }) => (
+                                                                <FormItem>
+                                                                    <FormLabel>SpO2 (%)</FormLabel>
+                                                                    <div className="space-y-2">
+                                                                        <FormControl>
+                                                                            <Slider
+                                                                                defaultValue={[field.value]}
+                                                                                min={70}
+                                                                                max={100}
+                                                                                step={1}
+                                                                                onValueChange={(vals) => field.onChange(vals[0])}
+                                                                            />
+                                                                        </FormControl>
+                                                                        <div className="flex justify-between items-center">
+                                                                            <div className="text-sm font-medium">{field.value}%</div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                {field.value < 95 ? (
+                                                                                    <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                                                                                        Low
+                                                                                    </Badge>
+                                                                                ) : (
+                                                                                    <Badge
+                                                                                        variant="outline"
+                                                                                        className="bg-green-50 text-green-700 border-green-200"
+                                                                                    >
+                                                                                        Normal
+                                                                                    </Badge>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <FormMessage />
+                                                                    <div className="text-sm text-muted-foreground mt-2">Normal range: 95-100%</div>
+                                                                </FormItem>
+                                                            )}
+                                                        />
+                                                    </CardContent>
+                                                </Card>
 
 
-                        //                     </div>
-                        //                 </form>
-                        //             </Form>
-                        //         </CardContent>
-                        //     </TabsContent>
-
-                        //     {/* Eye Test Tab */}
-                        //     <TabsContent value="eyetest">
-                        //         <CardContent className="pt-6">
-                        //             <h3 className="text-lg font-medium mb-4">Eye Examination</h3>
-
-                        //             <Form {...eyeTestForm}>
-                        //                 <form onSubmit={(e) => e.preventDefault()} className="space-y-6">
-                        //                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        //                         {/* Visual Acuity */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Eye className="h-4 w-4 mr-2" />
-                        //                                     Visual Acuity
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <div className="space-y-4">
-                        //                                         <FormField
-                        //                                             control={eyeTestForm.control}
-                        //                                             name="visualAcuityRight"
-                        //                                             render={({ field }) => (
-                        //                                                 <FormItem>
-                        //                                                     <FormLabel>Right Eye (VA)</FormLabel>
-                        //                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                         <FormControl>
-                        //                                                             <SelectTrigger>
-                        //                                                                 <SelectValue placeholder="Select visual acuity" />
-                        //                                                             </SelectTrigger>
-                        //                                                         </FormControl>
-                        //                                                         <SelectContent>
-                        //                                                             <SelectItem value="20/20">20/20</SelectItem>
-                        //                                                             <SelectItem value="20/25">20/25</SelectItem>
-                        //                                                             <SelectItem value="20/30">20/30</SelectItem>
-                        //                                                             <SelectItem value="20/40">20/40</SelectItem>
-                        //                                                             <SelectItem value="20/50">20/50</SelectItem>
-                        //                                                             <SelectItem value="20/70">20/70</SelectItem>
-                        //                                                             <SelectItem value="20/100">20/100</SelectItem>
-                        //                                                             <SelectItem value="20/200">20/200</SelectItem>
-                        //                                                             <SelectItem value="CF">Counting Fingers</SelectItem>
-                        //                                                             <SelectItem value="HM">Hand Motion</SelectItem>
-                        //                                                             <SelectItem value="LP">Light Perception</SelectItem>
-                        //                                                             <SelectItem value="NLP">No Light Perception</SelectItem>
-                        //                                                         </SelectContent>
-                        //                                                     </Select>
-                        //                                                     <FormMessage />
-                        //                                                 </FormItem>
-                        //                                             )}
-                        //                                         />
-
-                        //                                         <FormField
-                        //                                             control={eyeTestForm.control}
-                        //                                             name="visualAcuityRightPinhole"
-                        //                                             render={({ field }) => (
-                        //                                                 <FormItem>
-                        //                                                     <FormLabel>Right Eye (Pinhole)</FormLabel>
-                        //                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                         <FormControl>
-                        //                                                             <SelectTrigger>
-                        //                                                                 <SelectValue placeholder="Select visual acuity" />
-                        //                                                             </SelectTrigger>
-                        //                                                         </FormControl>
-                        //                                                         <SelectContent>
-                        //                                                             <SelectItem value="not-tested">Not Tested</SelectItem>
-                        //                                                             <SelectItem value="20/20">20/20</SelectItem>
-                        //                                                             <SelectItem value="20/25">20/25</SelectItem>
-                        //                                                             <SelectItem value="20/30">20/30</SelectItem>
-                        //                                                             <SelectItem value="20/40">20/40</SelectItem>
-                        //                                                             <SelectItem value="20/50">20/50</SelectItem>
-                        //                                                             <SelectItem value="20/70">20/70</SelectItem>
-                        //                                                             <SelectItem value="20/100">20/100</SelectItem>
-                        //                                                             <SelectItem value="20/200">20/200</SelectItem>
-                        //                                                         </SelectContent>
-                        //                                                     </Select>
-                        //                                                     <FormMessage />
-                        //                                                 </FormItem>
-                        //                                             )}
-                        //                                         />
-                        //                                     </div>
-
-                        //                                     <div className="space-y-4">
-                        //                                         <FormField
-                        //                                             control={eyeTestForm.control}
-                        //                                             name="visualAcuityLeft"
-                        //                                             render={({ field }) => (
-                        //                                                 <FormItem>
-                        //                                                     <FormLabel>Left Eye (VA)</FormLabel>
-                        //                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                         <FormControl>
-                        //                                                             <SelectTrigger>
-                        //                                                                 <SelectValue placeholder="Select visual acuity" />
-                        //                                                             </SelectTrigger>
-                        //                                                         </FormControl>
-                        //                                                         <SelectContent>
-                        //                                                             <SelectItem value="20/20">20/20</SelectItem>
-                        //                                                             <SelectItem value="20/25">20/25</SelectItem>
-                        //                                                             <SelectItem value="20/30">20/30</SelectItem>
-                        //                                                             <SelectItem value="20/40">20/40</SelectItem>
-                        //                                                             <SelectItem value="20/50">20/50</SelectItem>
-                        //                                                             <SelectItem value="20/70">20/70</SelectItem>
-                        //                                                             <SelectItem value="20/100">20/100</SelectItem>
-                        //                                                             <SelectItem value="20/200">20/200</SelectItem>
-                        //                                                             <SelectItem value="CF">Counting Fingers</SelectItem>
-                        //                                                             <SelectItem value="HM">Hand Motion</SelectItem>
-                        //                                                             <SelectItem value="LP">Light Perception</SelectItem>
-                        //                                                             <SelectItem value="NLP">No Light Perception</SelectItem>
-                        //                                                         </SelectContent>
-                        //                                                     </Select>
-                        //                                                     <FormMessage />
-                        //                                                 </FormItem>
-                        //                                             )}
-                        //                                         />
-
-                        //                                         <FormField
-                        //                                             control={eyeTestForm.control}
-                        //                                             name="visualAcuityLeftPinhole"
-                        //                                             render={({ field }) => (
-                        //                                                 <FormItem>
-                        //                                                     <FormLabel>Left Eye (Pinhole)</FormLabel>
-                        //                                                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                         <FormControl>
-                        //                                                             <SelectTrigger>
-                        //                                                                 <SelectValue placeholder="Select visual acuity" />
-                        //                                                             </SelectTrigger>
-                        //                                                         </FormControl>
-                        //                                                         <SelectContent>
-                        //                                                             <SelectItem value="not-tested">Not Tested</SelectItem>
-                        //                                                             <SelectItem value="20/20">20/20</SelectItem>
-                        //                                                             <SelectItem value="20/25">20/25</SelectItem>
-                        //                                                             <SelectItem value="20/30">20/30</SelectItem>
-                        //                                                             <SelectItem value="20/40">20/40</SelectItem>
-                        //                                                             <SelectItem value="20/50">20/50</SelectItem>
-                        //                                                             <SelectItem value="20/70">20/70</SelectItem>
-                        //                                                             <SelectItem value="20/100">20/100</SelectItem>
-                        //                                                             <SelectItem value="20/200">20/200</SelectItem>
-                        //                                                         </SelectContent>
-                        //                                                     </Select>
-                        //                                                     <FormMessage />
-                        //                                                 </FormItem>
-                        //                                             )}
-                        //                                         />
-                        //                                     </div>
-                        //                                 </div>
-                        //                             </CardContent>
-                        //                         </Card>
-
-                        //                         {/* Intraocular Pressure */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Gauge className="h-4 w-4 mr-2" />
-                        //                                     Intraocular Pressure
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="iopRight"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Right Eye (mmHg)</FormLabel>
-                        //                                                 <div className="flex items-center gap-2">
-                        //                                                     <FormControl>
-                        //                                                         <Input type="number" {...field} />
-                        //                                                     </FormControl>
-                        //                                                     {field.value && getTrendIndicator(field.value, 10, 21)}
-                        //                                                 </div>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="iopLeft"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Left Eye (mmHg)</FormLabel>
-                        //                                                 <div className="flex items-center gap-2">
-                        //                                                     <FormControl>
-                        //                                                         <Input type="number" {...field} />
-                        //                                                     </FormControl>
-                        //                                                     {field.value && getTrendIndicator(field.value, 10, 21)}
-                        //                                                 </div>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                 </div>
-                        //                                 <div className="text-sm text-muted-foreground mt-2">Normal range: 10-21 mmHg</div>
-                        //                             </CardContent>
-                        //                         </Card>
-
-                        //                         {/* Additional Tests */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Microscope className="h-4 w-4 mr-2" />
-                        //                                     Additional Tests
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="colorVision"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Color Vision</FormLabel>
-                        //                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                     <FormControl>
-                        //                                                         <SelectTrigger>
-                        //                                                             <SelectValue />
-                        //                                                         </SelectTrigger>
-                        //                                                     </FormControl>
-                        //                                                     <SelectContent>
-                        //                                                         <SelectItem value="normal">Normal</SelectItem>
-                        //                                                         <SelectItem value="deficient">Deficient</SelectItem>
-                        //                                                         <SelectItem value="not-tested">Not Tested</SelectItem>
-                        //                                                     </SelectContent>
-                        //                                                 </Select>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="contrastSensitivity"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Contrast Sensitivity</FormLabel>
-                        //                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                     <FormControl>
-                        //                                                         <SelectTrigger>
-                        //                                                             <SelectValue />
-                        //                                                         </SelectTrigger>
-                        //                                                     </FormControl>
-                        //                                                     <SelectContent>
-                        //                                                         <SelectItem value="normal">Normal</SelectItem>
-                        //                                                         <SelectItem value="reduced">Reduced</SelectItem>
-                        //                                                         <SelectItem value="severely-reduced">Severely Reduced</SelectItem>
-                        //                                                         <SelectItem value="not-tested">Not Tested</SelectItem>
-                        //                                                     </SelectContent>
-                        //                                                 </Select>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                 </div>
-                        //                             </CardContent>
-                        //                         </Card>
-
-                        //                         {/* Pupil & Movements */}
-                        //                         <Card>
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Ruler className="h-4 w-4 mr-2" />
-                        //                                     Pupil & Movements
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="pupilReaction"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Pupil Reaction</FormLabel>
-                        //                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                     <FormControl>
-                        //                                                         <SelectTrigger>
-                        //                                                             <SelectValue />
-                        //                                                         </SelectTrigger>
-                        //                                                     </FormControl>
-                        //                                                     <SelectContent>
-                        //                                                         <SelectItem value="PERRLA">PERRLA</SelectItem>
-                        //                                                         <SelectItem value="sluggish">Sluggish</SelectItem>
-                        //                                                         <SelectItem value="fixed">Fixed</SelectItem>
-                        //                                                         <SelectItem value="RAPD">RAPD</SelectItem>
-                        //                                                     </SelectContent>
-                        //                                                 </Select>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="extraocularMovements"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Extraocular Movements</FormLabel>
-                        //                                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        //                                                     <FormControl>
-                        //                                                         <SelectTrigger>
-                        //                                                             <SelectValue />
-                        //                                                         </SelectTrigger>
-                        //                                                     </FormControl>
-                        //                                                     <SelectContent>
-                        //                                                         <SelectItem value="Full">Full</SelectItem>
-                        //                                                         <SelectItem value="Limited">Limited</SelectItem>
-                        //                                                         <SelectItem value="Restricted">Restricted</SelectItem>
-                        //                                                     </SelectContent>
-                        //                                                 </Select>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                 </div>
-                        //                             </CardContent>
-                        //                         </Card>
-
-                        //                         {/* Segment Examination */}
-                        //                         <Card className="md:col-span-2">
-                        //                             <CardHeader className="p-4 pb-2">
-                        //                                 <CardTitle className="text-base flex items-center">
-                        //                                     <Stethoscope className="h-4 w-4 mr-2" />
-                        //                                     Segment Examination
-                        //                                 </CardTitle>
-                        //                             </CardHeader>
-                        //                             <CardContent className="p-4 pt-0">
-                        //                                 <div className="grid grid-cols-2 gap-4">
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="anteriorSegment"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Anterior Segment</FormLabel>
-                        //                                                 <FormControl>
-                        //                                                     <Textarea placeholder="Anterior segment findings" {...field} />
-                        //                                                 </FormControl>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-
-                        //                                     <FormField
-                        //                                         control={eyeTestForm.control}
-                        //                                         name="posteriorSegment"
-                        //                                         render={({ field }) => (
-                        //                                             <FormItem>
-                        //                                                 <FormLabel>Posterior Segment</FormLabel>
-                        //                                                 <FormControl>
-                        //                                                     <Textarea placeholder="Posterior segment findings" {...field} />
-                        //                                                 </FormControl>
-                        //                                                 <FormMessage />
-                        //                                             </FormItem>
-                        //                                         )}
-                        //                                     />
-                        //                                 </div>
-                        //                             </CardContent>
-                        //                         </Card>
-
-                        //                     </div>
-                        //                 </form>
-                        //             </Form>
-                        //         </CardContent>
-                        //     </TabsContent>
-                        // </Tabs>
-                        null
+                                            </div>
+                                        </form>
+                                    </Form>
+                                </CardContent>
+                            </TabsContent>
+                           
+                        </Tabs>
                     )}
                     {selectedPatient && (
                         <div className="px-6 pb-6">

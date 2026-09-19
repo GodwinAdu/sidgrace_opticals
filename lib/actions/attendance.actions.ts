@@ -26,7 +26,8 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
             createdBy: user._id,
         });
         await attendance.save();
-
+        // Return the created doc (id) so callers can navigate to the visit.
+        return JSON.parse(JSON.stringify(attendance));
     } catch (error) {
         console.error("Error creating attendance", error);
         throw error;

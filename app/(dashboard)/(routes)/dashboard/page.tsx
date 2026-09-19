@@ -1,30 +1,47 @@
-import { AnalyticsDashboard } from '@/components/dashboard-page/analytics-dashboard'
-import { patientAnalytics } from '@/lib/actions/analytics.actions'
-import { Metadata } from 'next'
-import React, { Suspense } from 'react'
+import { Metadata } from "next";
+import { DashboardOverview } from "@/components/dashboard-page/dashboard-overview";
+import { RecentPanels } from "@/components/dashboard-page/recent-panels";
+import { getReportData } from "@/lib/actions/reports.actions";
+import { getIncomeStatement } from "@/lib/actions/accounting-reports.actions";
+import { fetchAllHistories } from "@/lib/actions/history.actions";
+import { getRecentPatients, getRecentAppointments } from "@/lib/actions/portal.actions";
+import { currentUser } from "@/lib/helpers/current-user";
 
 export const metadata: Metadata = {
-  title: "Dashboard | Sid Grace Optical",
-  description: "Dashboard for Sid Grace Optical",
-}
+    title: "Dashboard | SidGrace Dental",
+    description: "Dashboard for SidGrace Dental",
+};
 
 const page = async () => {
-  const patientData = await patientAnalytics()
+    const now = new Date();
+    const yearStart = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const today = now.toISOString().slice(0, 10);
 
+    const [report, incomeStatement, activity, recentPatients, recentAppointments, user] = await Promise.all([
+        getReportData(),
+        getIncomeStatement(yearStart, today),
+        fetchAllHistories(null, 10),
+        getRecentPatients(6),
+        getRecentAppointments(6),
+        currentUser().catch(() => null),
+    ]);
 
+    const userName = user?.fullName || "there";
+    const accounting = {
+        totalRevenue: incomeStatement.totalRevenue,
+        totalExpenses: incomeStatement.totalExpenses,
+        netProfit: incomeStatement.netProfit,
+        margin: incomeStatement.margin,
+    };
 
-  return (
-    <main className="flex-1 overflow-auto">
-      <div className="flex-1 space-y-4 ">
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        </div>
-        <Suspense fallback={<div>Loading analytics...</div>}>
-          <AnalyticsDashboard patientData={patientData} />
-        </Suspense>
-      </div>
-    </main>
-  )
-}
+    return (
+        <main className="flex-1 overflow-auto py-4">
+            <div className="space-y-6">
+                <DashboardOverview userName={userName} report={report} activity={activity || []} accounting={accounting} />
+                <RecentPanels patients={recentPatients || []} appointments={recentAppointments || []} />
+            </div>
+        </main>
+    );
+};
 
-export default page
+export default page;

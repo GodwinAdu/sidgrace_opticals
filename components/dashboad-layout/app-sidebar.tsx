@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/sidebar"
 import { NavMain } from "./nav-main"
 import { NavUser } from "./nav-user"
+import { SidebarBrand } from "./sidebar-brand"
 
 interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
     user: IStaff; // Replace `any` with the appropriate type for `user` if known
@@ -21,7 +22,7 @@ export async function AppSidebar({ user, userRole, ...props }: AppSidebarProps) 
     return (
         <Sidebar collapsible="icon" {...props}>
             <SidebarHeader>
-                {/* <TeamSwitcher teams={data.teams} /> */}
+                <SidebarBrand />
             </SidebarHeader>
             <SidebarContent>
                 <NavMain role={userRole} />

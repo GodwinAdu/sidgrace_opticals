@@ -20,12 +20,10 @@ interface DiagnosisTabProps {
 }
 
 export default function DiagnosisTab({ initialData, onSave, readOnly = false }: DiagnosisTabProps) {
-    const [diagnosisData, setDiagnosisData] = useState<DiagnosisData>(
-        initialData || {
-            primary: "",
-            secondary: [],
-        },
-    )
+    const [diagnosisData, setDiagnosisData] = useState<DiagnosisData>({
+        primary: initialData?.primary ?? "",
+        secondary: Array.isArray(initialData?.secondary) ? initialData.secondary : [],
+    })
     const [newSecondary, setNewSecondary] = useState("")
 
     const handlePrimaryChange = (value: string) => {

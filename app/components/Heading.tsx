@@ -1,4 +1,3 @@
-
 interface HeadingProps {
     title: string;
     description?: string;
@@ -9,9 +8,12 @@ const Heading: React.FC<HeadingProps> = ({
     description
 }) => {
     return (
-        <div className="px-2 py-2">
-            <h2 className="text-3xl font-bold tracking-tight pb-2">{title}</h2>
-            <p className='text-sm text-muted-foreground'>{description}</p>
+        <div className="flex items-start gap-3 py-2">
+            <span className="mt-1 h-9 w-1.5 shrink-0 rounded-full bg-gradient-to-b from-teal-500 to-cyan-600" />
+            <div>
+                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">{title}</h2>
+                {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
+            </div>
         </div>
     )
 }

@@ -16,19 +16,23 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { calculateAge, cn } from "@/lib/utils"
 import { fetchPatientThisMonth, getPatientDashboardStats } from "@/lib/actions/patient.actions"
+import { getRecentPatients, getRecentAppointments } from "@/lib/actions/portal.actions"
+import { RecentPanels } from "@/components/dashboard-page/recent-panels"
 
 export default async function PatientsPage() {
-  const [statistics, patients] = await Promise.all([
+  const [statistics, patients, recentPatients, recentAppointments] = await Promise.all([
     getPatientDashboardStats(),
-    fetchPatientThisMonth()
+    fetchPatientThisMonth(),
+    getRecentPatients(5),
+    getRecentAppointments(5),
   ])
   return (
     <div className="flex flex-col">
       <div className="flex-1 space-y-6 ">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-blue-900">Patients</h1>
-            <p className="text-gray-500">Manage patient records and medical information</p>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Patients</h1>
+            <p className="text-muted-foreground">Manage patient records and medical information</p>
           </div>
           <div className="flex gap-2">
             <Link href={'/dashboard/manage-patient/patients/new'} className={cn(buttonVariants())}>
@@ -181,68 +185,8 @@ export default async function PatientsPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Patients */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Patients</CardTitle>
-              <CardDescription>Patients seen in the last 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: "Sarah Williams", date: "Today, 10:30 AM", reason: "Eye Examination" },
-                  { name: "Michael Brown", date: "Yesterday, 2:15 PM", reason: "Post-Surgery Follow-up" },
-                  { name: "Emily Johnson", date: "Apr 27, 11:00 AM", reason: "Contact Lens Fitting" },
-                  { name: "Robert Davis", date: "Apr 25, 9:45 AM", reason: "Glaucoma Check-up" },
-                ].map((patient, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                        {patient.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{patient.name}</p>
-                        <p className="text-sm text-gray-500">{patient.reason}</p>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500">{patient.date}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming Appointments</CardTitle>
-              <CardDescription>Scheduled for the next 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[
-                  { name: "Jennifer Lee", date: "Today, 3:00 PM", reason: "Cataract Consultation" },
-                  { name: "John Smith", date: "Tomorrow, 10:00 AM", reason: "Follow-up" },
-                  { name: "Alice Cooper", date: "May 2, 11:30 AM", reason: "Vision Test" },
-                  { name: "David Martinez", date: "May 3, 2:45 PM", reason: "Prescription Renewal" },
-                ].map((appointment, index) => (
-                  <div key={index} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                        {appointment.name.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-medium">{appointment.name}</p>
-                        <p className="text-sm text-gray-500">{appointment.reason}</p>
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500">{appointment.date}</div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        {/* Recent patients & appointments (real data) */}
+        <RecentPanels patients={recentPatients || []} appointments={recentAppointments || []} />
       </div>
     </div>
   )

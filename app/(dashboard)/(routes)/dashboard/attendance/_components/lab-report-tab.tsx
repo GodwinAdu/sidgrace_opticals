@@ -34,16 +34,14 @@ interface LabReportTabProps {
 }
 
 export default function LabReportTab({ initialData, onSave, readOnly = false }: LabReportTabProps) {
-    const [labData, setLabData] = useState<LabReportData>(
-        initialData || {
-            testName: "",
-            testDate: new Date().toISOString().split("T")[0],
-            results: "",
-            interpretation: "",
-            fileUrl: "",
-            labTests: [],
-        },
-    )
+    const [labData, setLabData] = useState<LabReportData>({
+        testName: initialData?.testName ?? "",
+        testDate: initialData?.testDate ?? new Date().toISOString().split("T")[0],
+        results: initialData?.results ?? "",
+        interpretation: initialData?.interpretation ?? "",
+        fileUrl: initialData?.fileUrl ?? "",
+        labTests: Array.isArray(initialData?.labTests) ? initialData.labTests : [],
+    })
 
     const [newTest, setNewTest] = useState<LabTest>({
         name: "",

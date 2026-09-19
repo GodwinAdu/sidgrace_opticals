@@ -40,7 +40,12 @@ export function LoginForm() {
     // 2. Define a submit handler.
     async function onSubmit(values: z.infer<typeof formSchema>) {
         try {
-            await loginStaff(values)
+            // Trim to avoid stray whitespace (e.g. autofill/paste) breaking auth
+            await loginStaff({
+                ...values,
+                username: values.username.trim(),
+                password: values.password.trim(),
+            })
             router.push("/dashboard")
             toast.success("Login in success", {
                 description: "you've login successfully"

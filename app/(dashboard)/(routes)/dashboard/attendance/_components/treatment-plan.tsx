@@ -43,7 +43,7 @@ export default function TreatmentPlanTab({ initialData, onSave, readOnly = false
                 <div className="flex justify-between items-center">
                     <CardTitle className="text-lg font-bold text-blue-800 dark:text-blue-300">
                         <ClipboardList className="h-5 w-5 inline mr-2" />
-                        Treatment Plan
+                        Plan &amp; Follow-up
                     </CardTitle>
                     {!readOnly && (
                         <Button size="sm" onClick={handleSave}>
@@ -56,10 +56,10 @@ export default function TreatmentPlanTab({ initialData, onSave, readOnly = false
             <CardContent className="p-4">
                 <div className="space-y-6">
                     <div>
-                        <Label className="dark:text-gray-300 font-medium">Treatment Plan</Label>
+                        <Label className="dark:text-gray-300 font-medium">Treatment Given / Summary</Label>
                         <Textarea
                             disabled={readOnly}
-                            placeholder="Enter detailed treatment plan"
+                            placeholder="Summary of treatment given this visit and follow-up notes"
                             className="mt-2 min-h-[200px] dark:bg-gray-700 dark:text-gray-300"
                             value={planData.treatment}
                             onChange={(e) => handleChange("treatment", e.target.value)}
