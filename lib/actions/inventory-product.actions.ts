@@ -14,6 +14,13 @@ interface ProductProps {
     purchasePrice: number;
     salePrice: number;
     quantity: number;
+    // Optional drug / pharmacy fields
+    isDrug?: boolean;
+    strength?: string;
+    form?: string;
+    unit?: string;
+    reorderLevel?: number;
+    prescriptionRequired?: boolean;
 }
 
 async function _createProduct(user: User, values: ProductProps, path: string) {
@@ -46,6 +53,12 @@ async function _createProduct(user: User, values: ProductProps, path: string) {
             purchasePrice,
             salePrice,
             quantity,
+            isDrug: values.isDrug ?? false,
+            strength: values.strength ?? "",
+            form: values.form ?? "",
+            unit: values.unit ?? "",
+            reorderLevel: values.reorderLevel ?? 0,
+            prescriptionRequired: values.prescriptionRequired ?? false,
             createdBy: user._id,
             action_type: "created",
         });
@@ -212,3 +225,20 @@ export async function deleteProduct(id: string) {
         throw error; // throw the error to handle it at a higher level if needed
     }
 }
+
+
+async function _fetchDrugProducts(user: User) {
+    try {
+        if (!user) throw new Error("User not logged in");
+        await connectToDB();
+        const products = await InventoryProduct.find({ isDrug: true, del_flag: { $ne: true } })
+            .populate("categoryId", "name")
+            .sort({ name: 1 });
+        if (!products || products.length === 0) return [];
+        return JSON.parse(JSON.stringify(products));
+    } catch (error) {
+        console.error("Error fetching drug products:", error);
+        return [];
+    }
+}
+export const fetchDrugProducts = await withAuth(_fetchDrugProducts)

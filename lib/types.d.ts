@@ -79,6 +79,7 @@ interface IRole {
     salesManagement?: boolean;
     messaging?: boolean;
     inventoryManagement?: boolean;
+    pharmacyManagement?: boolean;
     report?: boolean;
     trash?: boolean;
     history?: boolean;
@@ -206,12 +207,20 @@ interface IInventoryIssue extends Document {
 
 
 interface IInventoryProduct extends Document {
+    _id?: string;
     schoolId: Types.ObjectId;
     name: string;
     categoryId?: Types.ObjectId;
     purchasePrice: number;
     salePrice: number;
     quantity: number;
+    // Drug / pharmacy fields (optional; set when the product is a medication)
+    isDrug?: boolean;
+    strength?: string;
+    form?: string;
+    unit?: string;
+    reorderLevel?: number;
+    prescriptionRequired?: boolean;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;
     deletedBy?: Types.ObjectId | null;
@@ -271,6 +280,37 @@ interface IInventoryStore extends Document {
 // ═══════════════════════════════════════════════════════════════
 //  DENTAL CLINIC FEATURE INTERFACES
 // ═══════════════════════════════════════════════════════════════
+
+interface IPrescriptionItem {
+    productId?: Types.ObjectId | null;
+    drugName: string;
+    dosage?: string;
+    frequency?: string;
+    duration?: string;
+    quantity: number;
+    dispensedQuantity?: number;
+    instructions?: string;
+}
+
+interface IPrescription extends Document {
+    _id?: string;
+    patientId: Types.ObjectId;
+    appointmentId?: Types.ObjectId | null;
+    prescribedBy?: Types.ObjectId | null;
+    status: "pending" | "partially-dispensed" | "dispensed" | "cancelled";
+    items: IPrescriptionItem[];
+    notes?: string;
+    dispensedBy?: Types.ObjectId | null;
+    dispensedAt?: Date | null;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag: boolean;
+    del_flag: boolean;
+    action_type?: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+}
 
 // Shared audit fields most dental models carry
 // (declared inline per interface to keep them self-contained)

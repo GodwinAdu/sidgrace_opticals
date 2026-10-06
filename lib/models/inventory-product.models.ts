@@ -21,6 +21,31 @@ const InventoryProductSchema: Schema<IInventoryProduct> = new Schema({
         type: Number,
         required: true,
     },
+    // ─────────── Drug / pharmacy fields (optional) ───────────
+    isDrug: {
+        type: Boolean,
+        default: false,
+    },
+    strength: {
+        type: String,
+        default: "",
+    },
+    form: {
+        type: String,
+        default: "",
+    },
+    unit: {
+        type: String,
+        default: "",
+    },
+    reorderLevel: {
+        type: Number,
+        default: 0,
+    },
+    prescriptionRequired: {
+        type: Boolean,
+        default: false,
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: "Staff",

@@ -15,6 +15,7 @@ import {
     VisitProceduresPanel,
     VisitPaymentPanel,
 } from "./clinical-tab-panels"
+import { PrescriptionPanel } from "./prescription-panel"
 import { formatMoney } from "@/lib/utils"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -748,6 +749,14 @@ export default function PatientRecord({
                                             <span className="inline sm:hidden">Lab</span>
                                         </TabsTrigger>
                                         <TabsTrigger
+                                            value="prescribe"
+                                            className="data-[state=active]:bg-teal-200 dark:data-[state=active]:bg-teal-900"
+                                        >
+                                            <Pill className="h-4 w-4 mr-2" />
+                                            <span className="hidden sm:inline">Prescribe</span>
+                                            <span className="inline sm:hidden">Rx</span>
+                                        </TabsTrigger>
+                                        <TabsTrigger
                                             value="billing"
                                             className="data-[state=active]:bg-emerald-200 dark:data-[state=active]:bg-emerald-900"
                                         >
@@ -938,6 +947,18 @@ export default function PatientRecord({
                                     <LabCaseTabPanel
                                         patientId={String(attendanceData.patientId._id)}
                                         patientName={attendanceData.patientId?.fullName}
+                                    />
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>
+                                )}
+                            </TabsContent>
+
+                            <TabsContent value="prescribe" className="mt-4 px-0">
+                                {attendanceData.patientId?._id ? (
+                                    <PrescriptionPanel
+                                        attendanceId={attendanceData._id}
+                                        patientId={String(attendanceData.patientId._id)}
+                                        readOnly={isViewingHistorical}
                                     />
                                 ) : (
                                     <p className="text-sm text-muted-foreground">No patient linked to this visit.</p>

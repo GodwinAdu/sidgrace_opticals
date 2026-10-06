@@ -20,6 +20,7 @@ import {
     SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
 import { useParams, usePathname, useRouter } from "next/navigation"
 import { createProduct, updateProduct } from "@/lib/actions/inventory-product.actions"
 import { Card, CardContent } from "@/components/ui/card"
@@ -34,6 +35,13 @@ const formSchema = z.object({
     purchasePrice: z.coerce.number(),
     salePrice: z.coerce.number(),
     quantity: z.coerce.number(),
+    // Pharmacy / drug fields
+    isDrug: z.boolean().optional(),
+    strength: z.string().optional(),
+    form: z.string().optional(),
+    unit: z.string().optional(),
+    reorderLevel: z.coerce.number().optional(),
+    prescriptionRequired: z.boolean().optional(),
 })
 
 
@@ -52,15 +60,37 @@ const ProductForm = ({
 
     // 1. Define your form.
     const form = useForm<z.infer<typeof formSchema>>({
-        resolver: zodResolver(formSchema),
-        defaultValues: initialData ?? {
-            name: "",
-            categoryId: "",
-            purchasePrice: 0,
-            salePrice: 0,
-            quantity: 0
-        },
+        resolver: zodResolver(formSchema) as never,
+        defaultValues: initialData
+            ? {
+                name: initialData.name ?? "",
+                categoryId: String(initialData.categoryId ?? ""),
+                purchasePrice: initialData.purchasePrice ?? 0,
+                salePrice: initialData.salePrice ?? 0,
+                quantity: initialData.quantity ?? 0,
+                isDrug: initialData.isDrug ?? false,
+                strength: initialData.strength ?? "",
+                form: initialData.form ?? "",
+                unit: initialData.unit ?? "",
+                reorderLevel: initialData.reorderLevel ?? 0,
+                prescriptionRequired: initialData.prescriptionRequired ?? false,
+            }
+            : {
+                name: "",
+                categoryId: "",
+                purchasePrice: 0,
+                salePrice: 0,
+                quantity: 0,
+                isDrug: false,
+                strength: "",
+                form: "",
+                unit: "",
+                reorderLevel: 0,
+                prescriptionRequired: false,
+            },
     })
+
+    const isDrug = form.watch("isDrug")
 
     const { isSubmitting } = form.formState;
     const submit = initialData ? "Update product" : "Create product";
@@ -173,6 +203,93 @@ const ProductForm = ({
                                 )}
                             />
 
+                        </div>
+
+                        {/* Pharmacy / drug settings */}
+                        <div className="rounded-lg border p-4">
+                            <FormField
+                                control={form.control}
+                                name="isDrug"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                                        <FormControl>
+                                            <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                                        </FormControl>
+                                        <FormLabel className="!mt-0 cursor-pointer">
+                                            This product is a drug / medication (makes it available to the Pharmacy)
+                                        </FormLabel>
+                                    </FormItem>
+                                )}
+                            />
+
+                            {isDrug && (
+                                <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                                    <FormField
+                                        control={form.control}
+                                        name="strength"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Strength</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g. 500mg" {...field} value={field.value ?? ""} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="form"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Form</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g. Tablet, Syrup, Capsule" {...field} value={field.value ?? ""} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="unit"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Dispense Unit</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="e.g. tablet, bottle, pack" {...field} value={field.value ?? ""} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="reorderLevel"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Reorder Level</FormLabel>
+                                                <FormControl>
+                                                    <Input type="number" placeholder="0" {...field} value={field.value ?? 0} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="prescriptionRequired"
+                                        render={({ field }) => (
+                                            <FormItem className="flex flex-row items-center gap-3 space-y-0 pt-7">
+                                                <FormControl>
+                                                    <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                                                </FormControl>
+                                                <FormLabel className="!mt-0 cursor-pointer">Prescription required</FormLabel>
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         <Button disabled={isSubmitting} type="submit">

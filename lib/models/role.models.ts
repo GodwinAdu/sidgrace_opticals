@@ -44,6 +44,10 @@ const RoleSchema: Schema<IRole> = new Schema({
         type: Boolean,
         default: false
     },
+    pharmacyManagement: {
+        type: Boolean,
+        default: false
+    },
     report: {
         type: Boolean,
         default: false

@@ -547,7 +547,7 @@ export function CustomChargesPanel({
 
 /* ═══════════ DISPENSE PRODUCTS / DRUGS (inventory → visit bill) ═══════════ */
 interface InvProduct { _id: string; name: string; salePrice?: number; quantity?: number }
-interface DispensedRow { productId: string; name?: string; quantity?: number; unitPrice?: number; total?: number }
+interface DispensedRow { productId?: string; name?: string; quantity?: number; unitPrice?: number; total?: number }
 export function VisitProductsPanel({
     attendanceId,
     dispensed = [],
@@ -611,7 +611,7 @@ export function VisitProductsPanel({
             setSaving(true);
             const billing = await dispenseVisitProducts(
                 attendanceId,
-                rows.map((r) => ({ productId: r.productId, quantity: Number(r.quantity) || 0 })),
+                rows.filter((r) => r.productId).map((r) => ({ productId: String(r.productId), quantity: Number(r.quantity) || 0 })),
                 path
             );
             if (billing) onBillingChange?.(billing);

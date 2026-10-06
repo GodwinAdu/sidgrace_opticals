@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, BellRing, CalendarClock, ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, ReceiptText, Settings2Icon, Sparkles, Stethoscope, ThermometerIcon, Trash, UploadCloudIcon, Users, Wallet, } from "lucide-react"
+import { BarChart3, BellRing, CalendarClock, ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, Pill, ReceiptText, Settings2Icon, Sparkles, Stethoscope, ThermometerIcon, Trash, UploadCloudIcon, Users, Wallet, } from "lucide-react"
 
 import {
   Collapsible,
@@ -290,6 +290,24 @@ export function NavMain({ role }:{role:IRole}) {
         {
           title: "Suppliers",
           url: "/dashboard/inventory/suppliers",
+        },
+      ],
+    },
+    {
+      title: "Pharmacy",
+      url: "#",
+      icon: Pill,
+      roleField: "pharmacyManagement",
+      items: [
+        {
+          title: "Prescription Queue",
+          url: "/dashboard/pharmacy",
+          roleField: "pharmacyManagement",
+        },
+        {
+          title: "Drug Inventory",
+          url: "/dashboard/pharmacy/drugs",
+          roleField: "pharmacyManagement",
         },
       ],
     },
