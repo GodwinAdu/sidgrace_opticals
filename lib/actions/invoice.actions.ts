@@ -200,3 +200,29 @@ async function _deleteInvoice(user: User, id: string) {
     }
 }
 export const deleteInvoice = await withAuth(_deleteInvoice);
+
+
+/**
+ * Sum the patient's outstanding invoice balances (unpaid/partial), optionally
+ * excluding one invoice (e.g. the current visit's own invoice) so the caller
+ * can show "previous outstanding" separately from the current visit balance.
+ */
+async function _getPatientOutstanding(user: User, patientId: string, excludeInvoiceId?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+        const query: Record<string, unknown> = {
+            patientId,
+            del_flag: false,
+            status: { $in: ["unpaid", "partial"] },
+        };
+        if (excludeInvoiceId) query._id = { $ne: excludeInvoiceId };
+        const invoices = await Invoice.find(query).select("balance invoiceNumber");
+        const total = invoices.reduce((s, inv) => s + (Number(inv.balance) || 0), 0);
+        return { total, count: invoices.length };
+    } catch (error) {
+        console.error("Error computing patient outstanding:", error);
+        return { total: 0, count: 0 };
+    }
+}
+export const getPatientOutstanding = await withAuth(_getPatientOutstanding);

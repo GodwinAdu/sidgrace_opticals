@@ -121,3 +121,97 @@ async function _getPaymentsByPatient(user: User, patientId: string) {
     }
 }
 export const getPaymentsByPatient = await withAuth(_getPaymentsByPatient);
+
+
+/**
+ * Settle a patient's PREVIOUS outstanding invoices with a single amount,
+ * allocated oldest-first. Creates a Payment per invoice touched, recomputes
+ * each invoice's balance/status, and posts income to the ledger once per
+ * payment. Excludes the current visit's invoice (excludeInvoiceId). Partial
+ * coverage is allowed — it pays down as far as the amount reaches.
+ */
+async function _settlePatientOutstanding(
+    user: User,
+    patientId: string,
+    amount: number,
+    method: PaymentValues["method"],
+    excludeInvoiceId?: string,
+    path?: string
+) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+
+        let remaining = Number(amount) || 0;
+        if (remaining <= 0) throw new Error("Enter an amount greater than zero");
+
+        const query: Record<string, unknown> = {
+            patientId,
+            del_flag: false,
+            status: { $in: ["unpaid", "partial"] },
+        };
+        if (excludeInvoiceId) query._id = { $ne: excludeInvoiceId };
+
+        // Oldest first so the longest-standing debt is cleared first.
+        const invoices = await Invoice.find(query).sort({ createdAt: 1 });
+        if (!invoices || invoices.length === 0) throw new Error("No previous outstanding invoices to settle");
+
+        let settledCount = 0;
+        let appliedTotal = 0;
+
+        for (const invoice of invoices) {
+            if (remaining <= 0) break;
+            const balance = Number(invoice.balance) || 0;
+            if (balance <= 0) continue;
+
+            const pay = Math.min(remaining, balance);
+
+            const payment = new Payment({
+                patientId,
+                invoiceId: invoice._id,
+                amount: pay,
+                method,
+                note: "Settlement of previous outstanding",
+                receivedBy: user._id,
+                createdBy: user._id,
+                action_type: "created",
+            });
+            await payment.save();
+
+            await recomputeInvoice(String(invoice._id));
+
+            await postLedgerEntry(user, {
+                type: "income",
+                category: method === "insurance" ? "Insurance Reimbursement" : "Procedure",
+                amount: pay,
+                accountName: "Clinic Revenue",
+                method,
+                source: "payment",
+                sourceId: payment._id ? String(payment._id) : null,
+                patientId,
+                description: `Settlement for invoice ${invoice.invoiceNumber}`,
+            });
+
+            remaining -= pay;
+            appliedTotal += pay;
+            settledCount += 1;
+        }
+
+        await History.create({
+            actionType: "OUTSTANDING_SETTLED",
+            details: { itemId: null, deletedAt: new Date() },
+            message: `${user.fullName} settled ${appliedTotal} across ${settledCount} invoice(s) on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityType: "PAYMENT",
+        });
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/billing/invoices");
+        revalidatePath("/dashboard/account/transactions");
+        return { applied: appliedTotal, settledCount, unallocated: remaining };
+    } catch (error) {
+        console.error("Error settling patient outstanding:", error);
+        throw error;
+    }
+}
+export const settlePatientOutstanding = await withAuth(_settlePatientOutstanding);

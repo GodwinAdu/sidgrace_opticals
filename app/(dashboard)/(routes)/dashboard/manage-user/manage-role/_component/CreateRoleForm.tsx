@@ -89,6 +89,7 @@ const rolePresets = {
     salesManagement: true,
     messaging: true,
     inventoryManagement: true,
+    pharmacyManagement: true,
     report: true,
     trash: true,
     history: true,
@@ -152,6 +153,7 @@ interface IRole {
   salesManagement: boolean
   messaging: boolean
   inventoryManagement: boolean
+  pharmacyManagement?: boolean
   report: boolean
   trash: boolean
   history: boolean
@@ -278,6 +280,8 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
     AccountReport: z.boolean(),
     inventoryReport: z.boolean(),
     attendanceReport: z.boolean(),
+    // Pharmacy
+    pharmacyManagement: z.boolean().optional(),
     // Dental clinic feature permissions
     procedureManagement: z.boolean().optional(),
     dentalChartManagement: z.boolean().optional(),
@@ -339,7 +343,7 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
   }
 
   // Inside the CreateRoleForm component, add this function after the onSubmit function
-  function applyRolePreset(preset: "doctor" | "nurse" | "receptionist") {
+  function applyRolePreset(preset: "doctor" | "nurse" | "receptionist" | "admin") {
     // Create a new object with all permissions set to false
     const baseValues = Object.keys(CreateRoleSchema.shape).reduce((acc, key) => {
       if (key === "name" || key === "displayName" || key === "description") {
@@ -583,6 +587,20 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
                           </FormControl>
                           <div className="space-y-1 leading-none">
                             <FormLabel>Inventory Management</FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pharmacyManagement"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                          <FormControl>
+                            <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Pharmacy Management</FormLabel>
                           </div>
                         </FormItem>
                       )}

@@ -52,7 +52,6 @@ import DoctorNotesTab from "./doctor-note-tab"
 import NurseNotesTab from "./nurses-note-tab"
 import VitalsTab from "./vitals-tab"
 import TreatmentPlanTab from "./treatment-plan"
-import MedicationsTab from "./medications-tab"
 import SurgicalNotesTab from "./surgical-notes-tab"
 import ProceduresTab from "./procedures-tab"
 import EyeTestTab from "./eye-test-tab"
@@ -340,10 +339,6 @@ export default function PatientRecord({
 
     const handleNurseNotesSave = (data: any) => {
         setAttendanceData((prev) => ({ ...prev, nurseNote: data.nurseNote }))
-    }
-
-    const handleMedicationsSave = (data: any) => {
-        setAttendanceData((prev) => ({ ...prev, drugs: data }))
     }
 
     const handleLabReportSave = (data: any) => {
@@ -668,14 +663,7 @@ export default function PatientRecord({
                                             <span className="hidden sm:inline">Vitals</span>
                                             <span className="inline sm:hidden">Vitals</span>
                                         </TabsTrigger>
-                                        <TabsTrigger
-                                            value="medications"
-                                            className="data-[state=active]:bg-blue-200 dark:data-[state=active]:bg-blue-900"
-                                        >
-                                            <Pill className="h-4 w-4 mr-2" />
-                                            <span className="hidden sm:inline">Medications</span>
-                                            <span className="inline sm:hidden">Meds</span>
-                                        </TabsTrigger>
+
                                         <TabsTrigger
                                             value="treatment-plan"
                                             className="data-[state=active]:bg-blue-200 dark:data-[state=active]:bg-blue-900"
@@ -841,15 +829,6 @@ export default function PatientRecord({
                                 />
                             </TabsContent>
 
-                            <TabsContent value="medications" className="mt-4 px-0">
-                                <MedicationsTab
-                                    key={`medications-${dataKey}`}
-                                    initialData={attendanceData.drugs}
-                                    onSave={handleMedicationsSave}
-                                    readOnly={isViewingHistorical}
-                                />
-                            </TabsContent>
-
                             <TabsContent value="treatment-plan" className="mt-4 px-0">
                                 <TreatmentPlanTab
                                     key={`treatment-plan-${dataKey}`}
@@ -994,6 +973,7 @@ export default function PatientRecord({
                                     />
                                     <VisitPaymentPanel
                                         attendanceId={attendanceData._id}
+                                        patientId={attendanceData.patientId?._id ? String(attendanceData.patientId._id) : undefined}
                                         billing={attendanceData.billing}
                                         procedures={attendanceData.dentalProcedures}
                                         onBillingChange={handleBillingChange}

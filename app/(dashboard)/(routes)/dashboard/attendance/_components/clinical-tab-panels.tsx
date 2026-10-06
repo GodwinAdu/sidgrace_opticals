@@ -42,6 +42,8 @@ import {
     createInvoiceFromVisit, getVisitInvoice, setVisitOtherCharges,
     dispenseVisitProducts,
 } from "@/lib/actions/visit-clinical.actions";
+import { getPatientOutstanding } from "@/lib/actions/invoice.actions";
+import { settlePatientOutstanding } from "@/lib/actions/payment.actions";
 import { getClinicSettings } from "@/lib/actions/clinic-settings.actions";
 import { formatMoney } from "@/lib/utils";
 
@@ -859,6 +861,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 export function VisitPaymentPanel({
     attendanceId,
+    patientId,
     billing,
     procedures = [],
     currency = "",
@@ -866,6 +869,7 @@ export function VisitPaymentPanel({
     readOnly,
 }: {
     attendanceId?: string;
+    patientId?: string;
     billing?: Billing;
     procedures?: VisitProc[];
     currency?: string;
@@ -875,11 +879,16 @@ export function VisitPaymentPanel({
     const path = usePathname();
     const [cur, setCur] = useState(currency);
     const [invoice, setInvoice] = useState<InvoiceLite | null>(null);
+    const [prevOutstanding, setPrevOutstanding] = useState(0);
+    const [prevCount, setPrevCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [amount, setAmount] = useState("");
     const [method, setMethod] = useState("cash");
     const [paying, setPaying] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [settleAmount, setSettleAmount] = useState("");
+    const [settleMethod, setSettleMethod] = useState("cash");
+    const [settling, setSettling] = useState(false);
 
     // Local (pre-invoice) charge summary — computed from the SAME data the
     // panel displays (consultation fee + the procedures list + other charges),
@@ -898,14 +907,25 @@ export function VisitPaymentPanel({
     const total = invoice ? Number(invoice.total) || 0 : localTotal;
     const amountPaid = invoice ? Number(invoice.amountPaid) || 0 : 0;
     const balance = invoice ? Number(invoice.balance) || 0 : localTotal;
+    // Grand total the patient owes = this visit balance + prior unpaid invoices.
+    const grandTotal = balance + prevOutstanding;
 
     const load = () => {
         if (!attendanceId) { setLoading(false); return; }
         setLoading(true);
-        Promise.all([getVisitInvoice(attendanceId), currency ? Promise.resolve(null) : getClinicSettings()])
-            .then(([inv, s]) => {
+        getVisitInvoice(attendanceId)
+            .then(async (inv) => {
                 setInvoice(inv || null);
-                if (!currency && s?.currency) setCur(s.currency);
+                if (!currency) {
+                    const s = await getClinicSettings().catch(() => null);
+                    if (s?.currency) setCur(s.currency);
+                }
+                // Previous outstanding = unpaid balances on OTHER invoices.
+                if (patientId) {
+                    const out = await getPatientOutstanding(patientId, inv?._id).catch(() => null);
+                    setPrevOutstanding(Number(out?.total) || 0);
+                    setPrevCount(Number(out?.count) || 0);
+                }
             })
             .catch(() => setInvoice(null))
             .finally(() => setLoading(false));
@@ -915,6 +935,7 @@ export function VisitPaymentPanel({
     useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [attendanceId, billing?.totalCharged, billing?.consultationFee, billing?.proceduresTotal]);
 
     useEffect(() => { setAmount(balance > 0 ? String(balance) : ""); }, [balance]);
+    useEffect(() => { setSettleAmount(prevOutstanding > 0 ? String(prevOutstanding) : ""); }, [prevOutstanding]);
 
     const generate = async () => {
         if (!attendanceId) return toast.error("Save the visit first");
@@ -939,6 +960,18 @@ export function VisitPaymentPanel({
             if (res?.billing) onBillingChange?.(res.billing);
             toast.success("Payment recorded");
         } catch (e) { toast.error(e instanceof Error ? e.message : "Something went wrong"); } finally { setPaying(false); }
+    };
+
+    const settle = async () => {
+        if (!patientId) return toast.error("No patient linked to this visit");
+        const amt = Number(settleAmount);
+        if (!amt || amt <= 0) return toast.error("Enter an amount");
+        try {
+            setSettling(true);
+            const res = await settlePatientOutstanding(patientId, amt, settleMethod as never, invoice?._id, path);
+            toast.success(`Settled ${res?.settledCount || 0} invoice(s)`);
+            load(); // refresh previous outstanding
+        } catch (e) { toast.error(e instanceof Error ? e.message : "Something went wrong"); } finally { setSettling(false); }
     };
 
     const row = (label: string, value: number, bold = false) => (
@@ -1004,9 +1037,19 @@ export function VisitPaymentPanel({
                     <div className="mt-2 border-t pt-2">
                         {row("Total", total, true)}
                         {row("Paid", amountPaid)}
-                        <div className="flex items-center justify-between border-t pt-2 text-base font-bold">
-                            <span>Balance Due</span>
+                        <div className="flex items-center justify-between py-1.5 text-sm">
+                            <span>This Visit Balance</span>
                             <span className={balance > 0 ? "text-red-600" : "text-green-600"}>{formatMoney(balance, cur)}</span>
+                        </div>
+                        {prevOutstanding > 0 && (
+                            <div className="flex items-center justify-between py-1.5 text-sm">
+                                <span className="text-amber-700">Previous Outstanding{prevCount > 0 ? ` (${prevCount} invoice${prevCount === 1 ? "" : "s"})` : ""}</span>
+                                <span className="text-amber-700">{formatMoney(prevOutstanding, cur)}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between border-t pt-2 text-base font-bold">
+                            <span>{prevOutstanding > 0 ? "Grand Total Due" : "Balance Due"}</span>
+                            <span className={grandTotal > 0 ? "text-red-600" : "text-green-600"}>{formatMoney(grandTotal, cur)}</span>
                         </div>
                     </div>
                 </div>
@@ -1029,6 +1072,32 @@ export function VisitPaymentPanel({
                             {paying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
                             Record Payment
                         </Button>
+                        <span className="w-full text-xs text-muted-foreground">Pays this visit&#39;s invoice.</span>
+                    </div>
+                )}
+
+                {/* Settle previous outstanding (prior unpaid invoices, oldest first) */}
+                {!readOnly && prevOutstanding > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:bg-amber-900/10">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Settle Previous Outstanding</p>
+                        <div className="flex flex-wrap items-end gap-3">
+                            <div className="w-40">
+                                <label className="mb-1 block text-xs text-muted-foreground">Amount</label>
+                                <Input type="number" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} />
+                            </div>
+                            <div className="w-44">
+                                <label className="mb-1 block text-xs text-muted-foreground">Method</label>
+                                <Select value={settleMethod} onValueChange={setSettleMethod}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>{PAY_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <Button variant="secondary" onClick={settle} disabled={settling}>
+                                {settling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
+                                Settle Outstanding
+                            </Button>
+                            <span className="w-full text-xs text-muted-foreground">Applied oldest-first across prior unpaid invoices.</span>
+                        </div>
                     </div>
                 )}
 
