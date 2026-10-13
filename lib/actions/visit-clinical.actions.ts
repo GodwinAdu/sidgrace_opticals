@@ -22,6 +22,20 @@ import { postLedgerEntry } from "./transaction.actions";
 import Invoice from "../models/invoice.models";
 import History from "../models/history.models";
 import InventoryProduct from "../models/inventory-product.models";
+import { nextSequence } from "../models/counter.models";
+import { makeVersion } from "../clinical/attribution";
+import { writeVisitAuditEntry } from "../helpers/clinical-audit";
+
+/**
+ * Derive the denormalised `authoredByName` / `authoredByRole` snapshots from the
+ * authenticated `user`, reusing the exact precedence encoded by the pure
+ * `makeVersion` helper (name = fullName; role = specialization || role) so every
+ * attributed write stamps identical attribution for the same user.
+ */
+function authorSnapshot(user: User) {
+    const version = makeVersion(null, user as never, new Date());
+    return { authoredByName: version.authoredByName, authoredByRole: version.authoredByRole };
+}
 
 interface DentalNoteInput {
     teeth?: number[];
@@ -89,6 +103,7 @@ async function _addVisitDentalNote(user: User, attendanceId: string, patientId: 
         });
 
         // Embed a snapshot on the visit.
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalNotes = visit.dentalNotes || [];
         visit.dentalNotes.push({
             teeth: values.teeth || [],
@@ -97,10 +112,20 @@ async function _addVisitDentalNote(user: User, attendanceId: string, patientId: 
             assessment: values.assessment || "",
             plan: values.plan || "",
             authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             noteId: note._id,
             createdAt: new Date(),
         });
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalNotes", noteId: String(note._id) },
+            message: `${authoredByName || "A staff member"} recorded a dental note.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ note, dentalNotes: visit.dentalNotes }));
@@ -127,13 +152,25 @@ async function _saveVisitPerioExam(user: User, attendanceId: string, patientId: 
             createdBy: user._id,
         });
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.perioExam = {
             measurements: measurements || [],
             note: note || "",
             chartId: chart._id,
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             recordedAt: new Date(),
         };
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "perioExam", chartId: String(chart._id) },
+            message: `${authoredByName || "A staff member"} recorded a periodontal exam.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ chart, perioExam: visit.perioExam }));
@@ -164,6 +201,7 @@ async function _addVisitImaging(user: User, attendanceId: string, patientId: str
             createdBy: user._id,
         });
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalImaging = visit.dentalImaging || [];
         visit.dentalImaging.push({
             tooth: values.tooth ?? null,
@@ -171,10 +209,21 @@ async function _addVisitImaging(user: User, attendanceId: string, patientId: str
             title: values.title || "Untitled",
             fileUrl: values.fileUrl,
             note: values.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             imagingId: image._id,
             takenAt: new Date(),
         });
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalImaging", imagingId: String(image._id) },
+            message: `${authoredByName || "A staff member"} added a dental imaging record.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ image, dentalImaging: visit.dentalImaging }));
@@ -305,6 +354,7 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
         await connectToDB();
         const visit = await loadVisit(attendanceId);
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalProcedures = (procedures || []).map((p) => ({
             procedureId: p.procedureId || null,
             procedureName: p.procedureName || "",
@@ -312,11 +362,22 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
             surface: p.surface || "",
             cost: Number(p.cost) || 0,
             note: p.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             performedAt: new Date(),
         }));
         recomputeVisitBilling(visit as unknown as VisitLike);
         await syncInvoiceIfExists(user, visit as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalProcedures", count: (procedures || []).length },
+            message: `${authoredByName || "A staff member"} recorded ${(procedures || []).length} dental procedure(s).`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ dentalProcedures: visit.dentalProcedures, billing: visit.billing }));
@@ -326,6 +387,77 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
     }
 }
 export const saveVisitProcedures = await withAuth(_saveVisitProcedures);
+
+/**
+ * APPEND procedures to the visit (does not replace existing ones) and rebuild
+ * the bill. Used when sending items from a treatment plan to the current visit
+ * bill. Ensures an invoice exists first so the charge is reflected even on
+ * visits created before auto-invoicing. No ledger post.
+ */
+async function _addProceduresToVisit(user: User, attendanceId: string, procedures: VisitProcedureInput[], path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!procedures || procedures.length === 0) throw new Error("No procedures to add");
+        await connectToDB();
+        const visit = await loadVisit(attendanceId);
+
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
+        const existing = (visit.dentalProcedures || []) as unknown[];
+        const appended = (procedures || []).map((p) => ({
+            procedureId: p.procedureId || null,
+            procedureName: p.procedureName || "",
+            tooth: p.tooth ?? null,
+            surface: p.surface || "",
+            cost: Number(p.cost) || 0,
+            note: p.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
+            performedAt: new Date(),
+        }));
+        visit.dentalProcedures = [...existing, ...appended] as never;
+
+        recomputeVisitBilling(visit as unknown as VisitLike);
+
+        // Guarantee an invoice exists so the bill reflects the new charges.
+        if (!visit.billing?.invoiceId) {
+            await _ensureVisitInvoice(user, attendanceId);
+            // reload to pick up the invoiceId written by ensureVisitInvoice
+            const refreshed = await loadVisit(attendanceId);
+            refreshed.dentalProcedures = visit.dentalProcedures;
+            recomputeVisitBilling(refreshed as unknown as VisitLike);
+            await syncInvoiceIfExists(user, refreshed as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
+            await refreshed.save();
+            // Best-effort audit AFTER the clinical save (R7.3).
+            await writeVisitAuditEntry({
+                attendanceId,
+                performedBy: String(user._id ?? user.id),
+                details: { field: "dentalProcedures", count: appended.length },
+                message: `${authoredByName || "A staff member"} added ${appended.length} dental procedure(s) to the visit.`,
+            });
+            if (path) revalidatePath(path);
+            return JSON.parse(JSON.stringify({ dentalProcedures: refreshed.dentalProcedures, billing: refreshed.billing }));
+        }
+
+        await syncInvoiceIfExists(user, visit as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
+        await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalProcedures", count: appended.length },
+            message: `${authoredByName || "A staff member"} added ${appended.length} dental procedure(s) to the visit.`,
+        });
+
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify({ dentalProcedures: visit.dentalProcedures, billing: visit.billing }));
+    } catch (error) {
+        console.error("Error adding procedures to visit:", error);
+        throw error;
+    }
+}
+export const addProceduresToVisit = await withAuth(_addProceduresToVisit);
 
 /* ─────────────── OTHER CHARGES (manual line items) ─────────────── */
 async function _setVisitOtherCharges(user: User, attendanceId: string, charges: { label: string; amount: number }[], path?: string) {
@@ -440,9 +572,10 @@ export const dispenseVisitProducts = await withAuth(_dispenseVisitProducts);
 /* ─────────────── GENERATE INVOICE FROM VISIT ─────────────── */
 async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await Invoice.countDocuments({});
-    const seq = String(count + 1).padStart(5, "0");
-    return `INV-${year}-${seq}`;
+    // Shares the same atomic sequence as invoice.actions so visit-generated and
+    // manual invoices never collide.
+    const seq = await nextSequence(`invoice-${year}`);
+    return `INV-${year}-${String(seq).padStart(5, "0")}`;
 }
 
 /** Build invoice line items + total from a visit's current charges. */
@@ -493,6 +626,7 @@ function buildVisitInvoiceItems(visit: {
  * NOTE: caller is responsible for saving the visit doc.
  */
 async function syncInvoiceIfExists(user: User, visit: {
+    _id?: unknown;
     billing?: {
         invoiceId?: unknown;
         consultationFee?: number;
@@ -516,6 +650,9 @@ async function syncInvoiceIfExists(user: User, visit: {
     invoice.status = invoice.status === "cancelled"
         ? "cancelled"
         : amountPaid <= 0 ? "unpaid" : invoice.balance <= 0 ? "paid" : "partial";
+    // Self-heal the visit link on invoices created before these fields existed.
+    if (!invoice.attendanceId && visit._id) invoice.attendanceId = visit._id as never;
+    if (!invoice.source || invoice.source === "manual") invoice.source = "visit";
     invoice.mod_flag = true;
     invoice.modifiedBy = user._id;
     await invoice.save();
@@ -567,6 +704,8 @@ async function _createInvoiceFromVisit(user: User, attendanceId: string, path?: 
             invoice = await Invoice.create({
                 invoiceNumber,
                 patientId,
+                attendanceId: visit._id,
+                source: "visit",
                 items: items as never,
                 subtotal: total,
                 tax: 0,
@@ -605,6 +744,75 @@ async function _createInvoiceFromVisit(user: User, attendanceId: string, path?: 
     }
 }
 export const createInvoiceFromVisit = await withAuth(_createInvoiceFromVisit);
+
+/**
+ * Ensure a visit has a linked invoice, creating one from current charges if it
+ * does not. Unlike createInvoiceFromVisit this NEVER throws on "no charges" —
+ * it creates an empty draft so the billing page always has a target to manage.
+ * Idempotent: returns the existing invoice when one is already linked.
+ * Intended to be called at OPD check-in (after the attendance is saved).
+ */
+async function _ensureVisitInvoice(user: User, attendanceId: string, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+        const visit = await loadVisit(attendanceId);
+
+        const existingId = visit.billing?.invoiceId ? String(visit.billing.invoiceId) : null;
+        if (existingId) {
+            const existing = await Invoice.findById(existingId);
+            if (existing) return JSON.parse(JSON.stringify(existing));
+        }
+
+        const patientId = visit.patientId ? String(visit.patientId) : null;
+        if (!patientId) throw new Error("Visit has no linked patient");
+
+        recomputeVisitBilling(visit as unknown as VisitLike);
+        const { items, total } = buildVisitInvoiceItems(visit as unknown as Parameters<typeof buildVisitInvoiceItems>[0]);
+
+        const invoiceNumber = await generateInvoiceNumber();
+        const invoice = await Invoice.create({
+            invoiceNumber,
+            patientId,
+            attendanceId: visit._id,
+            source: "visit",
+            items: items as never,
+            subtotal: total,
+            tax: 0,
+            discount: 0,
+            total,
+            amountPaid: 0,
+            balance: total,
+            status: total > 0 ? "unpaid" : "draft",
+            notes: "Generated at check-in",
+            createdBy: user._id,
+            action_type: "created",
+        });
+
+        await History.create({
+            actionType: "INVOICE_CREATED",
+            details: { itemId: invoice._id, deletedAt: new Date() },
+            message: `${user.fullName} opened invoice ${invoiceNumber} at check-in on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: invoice._id,
+            entityType: "INVOICE",
+        });
+
+        visit.set("billing.invoiceId", invoice._id);
+        visit.set("billing.invoiceNumber", invoice.invoiceNumber);
+        visit.set("billing.amountPaid", 0);
+        visit.set("billing.balance", Number(invoice.balance) || 0);
+        await visit.save();
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/billing/invoices");
+        return JSON.parse(JSON.stringify(invoice));
+    } catch (error) {
+        console.error("Error ensuring visit invoice:", error);
+        throw error;
+    }
+}
+export const ensureVisitInvoice = await withAuth(_ensureVisitInvoice);
 
 /** Fetch the invoice linked to a visit (or null). */
 async function _getVisitInvoice(user: User, attendanceId: string) {

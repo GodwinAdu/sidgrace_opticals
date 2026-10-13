@@ -223,7 +223,7 @@ async function _dispensePrescription(user: User, prescriptionId: string, path?: 
         throw error;
     }
 }
-export const dispensePrescription = await withAuth(_dispensePrescription);
+export const dispensePrescription = await withAuth(_dispensePrescription, "pharmacyManagement");
 
 /* ─────────────── CANCEL / DELETE ─────────────── */
 async function _cancelPrescription(user: User, prescriptionId: string, path?: string) {

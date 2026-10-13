@@ -1,87 +1,42 @@
-"use client"
+﻿"use client";
 
-import { useState } from "react"
-import PatientRecord from "./ConsultingPage"
-import { getAttendanceById, updateAttendance } from "@/lib/actions/attendance.actions"
-import { toast } from "sonner"
+/**
+ * ConsultingPageWrapper — thin cutover shim (Task 12).
+ *
+ * The legacy ~1,500-line `ConsultingPage.tsx` monolith and this wrapper's old
+ * current/historical/save state have been replaced by the rebuilt
+ * `EncounterWorkspace`, which owns all encounter state, historical mode,
+ * section/billing patching, and the save/complete lifecycle internally via
+ * `EncounterProvider`.
+ *
+ * The wrapper keeps the exact same public prop contract the route page passes
+ * (`initialAttendance`, `previousVisits`, `role`, `admission`), so the route
+ * (`[attendantId]/page.tsx`) is unchanged (Req 6.4). It simply forwards those
+ * inputs to the workspace.
+ */
 
-interface PreviousVisit {
-    _id: string
-    date: Date
-    status: "waiting" | "ongoing" | "completed" | "cancelled"
-    visitType: "outpatient" | "inpatient" | "emergency"
-}
+import EncounterWorkspace from "./encounter/EncounterWorkspace";
+import type { AttendanceData, PreviousVisit, AdmissionContext } from "./encounter/types";
 
 interface ConsultingPageWrapperProps {
-    initialAttendance: any
-    previousVisits: PreviousVisit[]
+    initialAttendance: AttendanceData;
+    previousVisits: PreviousVisit[];
+    role?: IRole | null;
+    admission?: AdmissionContext | null;
 }
 
-export default function ConsultingPageWrapper({ initialAttendance, previousVisits }: ConsultingPageWrapperProps) {
-    const [currentAttendance, setCurrentAttendance] = useState(initialAttendance)
-    const [loading, setLoading] = useState(false)
-    const [saving, setSaving] = useState(false)
-    const [isViewingHistorical, setIsViewingHistorical] = useState(false)
-    const [originalAttendance] = useState(initialAttendance) // Keep reference to original
-
-    const handleLoadPreviousVisit = async (visitId: string) => {
-        setLoading(true)
-        try {
-            const response = await getAttendanceById(visitId)
-
-            setCurrentAttendance(response)
-            // Optionally, you can also update the previous visits list if needed
-            // const updatedPreviousVisits = previousVisits.filter(visit => visit._id !== visitId)
-            // setPreviousVisits(updatedPreviousVisits)
-            // Or you can fetch the updated list of previous visits if needed
-            // const updatedPreviousVisits = await getPreviousVisitsByPatientId(response.patientId._id || response.patientId)
-        } catch (error) {
-            console.error("Error loading previous visit:", error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-
-    const handleSaveAttendance = async (attendanceData: any): Promise<{ success: boolean; error?: string }> => {
-        setSaving(true)
-        try {
-            const response = await updateAttendance(currentAttendance._id, attendanceData)
-            setCurrentAttendance(response)
-            toast.success("Attendance record saved successfully", {
-                description: "Attendance record saved successfully",
-            })
-            return { success: true }
-        } catch (error) {
-            console.error("Error saving attendance:", error)
-            toast.error("An error occurred while saving", {
-                description: "An error occurred while saving",
-            })
-            return { success: false, error: "Network error" }
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    const handleReturnToCurrent = () => {
-        setCurrentAttendance(originalAttendance)
-        setIsViewingHistorical(false)
-        toast.success( "Current Visit",{
-            description: "Returned to current visit",
-        })
-    }
-
-
+export default function ConsultingPageWrapper({
+    initialAttendance,
+    previousVisits,
+    role,
+    admission,
+}: ConsultingPageWrapperProps) {
     return (
-        <PatientRecord
-            attendance={currentAttendance}
-            previousVisits={isViewingHistorical ? [] : previousVisits} // Hide previous visits when viewing historical
-            onLoadPreviousVisit={handleLoadPreviousVisit}
-            onSaveAttendance={handleSaveAttendance}
-            // onSaveSection={handleSaveSection}
-            onReturnToCurrent={isViewingHistorical ? handleReturnToCurrent : undefined}
-            isViewingHistorical={isViewingHistorical}
-            saving={saving}
+        <EncounterWorkspace
+            initialAttendance={initialAttendance}
+            previousVisits={previousVisits}
+            role={role}
+            admission={admission}
         />
-    )
+    );
 }

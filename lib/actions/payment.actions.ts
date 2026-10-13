@@ -88,7 +88,7 @@ async function _recordPayment(user: User, values: PaymentValues, path: string) {
         throw error;
     }
 }
-export const recordPayment = await withAuth(_recordPayment);
+export const recordPayment = await withAuth(_recordPayment, "billingManagement");
 
 async function _getPaymentsByInvoice(user: User, invoiceId: string) {
     try {
@@ -214,4 +214,4 @@ async function _settlePatientOutstanding(
         throw error;
     }
 }
-export const settlePatientOutstanding = await withAuth(_settlePatientOutstanding);
+export const settlePatientOutstanding = await withAuth(_settlePatientOutstanding, "billingManagement");

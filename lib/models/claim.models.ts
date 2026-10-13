@@ -8,6 +8,9 @@ const ClaimSchema = new Schema<IClaim>(
         claimNumber: { type: String, required: true, unique: true },
         amountClaimed: { type: Number, default: 0 },
         amountApproved: { type: Number, default: 0 },
+        // Set true once the insurer's approved amount has been posted as a
+        // payment against the linked invoice, so it is never posted twice.
+        insurerPaid: { type: Boolean, default: false },
         status: {
             type: String,
             enum: ["draft", "submitted", "pre-authorized", "approved", "partially-approved", "rejected", "paid"],

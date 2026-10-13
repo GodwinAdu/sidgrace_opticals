@@ -5,6 +5,7 @@ import Role from "../models/role.models";
 import { connectToDB } from "../mongoose";
 import { deleteDocument } from "./trash.actions";
 import { type User, withAuth } from "../helpers/auth";
+import { clearAllUserCache } from "../helpers/user.actions";
 
 
 
@@ -125,7 +126,7 @@ async function _createRole(user: User, values: CreateRoleProps, path: string) {
     }
 }
 
-export const createRole = await withAuth(_createRole)
+export const createRole = await withAuth(_createRole, "staffManagement")
 
 
 async function _fetchRoleById(user: User, id: string) {
@@ -215,6 +216,10 @@ async function _updateRole(user: User, roleId: string, values: Partial<CreateRol
 
         console.log("Update successful");
 
+        // Permissions may have changed for everyone holding this role — drop the
+        // cached user sessions so new permissions take effect immediately.
+        await clearAllUserCache();
+
         revalidatePath(path)
 
         return JSON.parse(JSON.stringify(updatedRole));
@@ -224,7 +229,7 @@ async function _updateRole(user: User, roleId: string, values: Partial<CreateRol
     }
 }
 
-export const updateRole = await withAuth(_updateRole)
+export const updateRole = await withAuth(_updateRole, "staffManagement")
 
 export async function fetchRole(value: string) {
     try {
@@ -268,4 +273,4 @@ async function _deleteRole(user: User, id: string) {
 
 }
 
-export const deleteRole = await withAuth(_deleteRole)
+export const deleteRole = await withAuth(_deleteRole, "staffManagement")

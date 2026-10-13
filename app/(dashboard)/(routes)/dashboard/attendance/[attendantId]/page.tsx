@@ -1,11 +1,18 @@
 import ConsultingPageWrapper from "../_components/consulting-page-wrapper"
 import { getAttendanceById, getPreviousVisitsByPatientId } from "@/lib/actions/attendance.actions"
+import { getAdmissionByAttendance } from "@/lib/actions/admission.actions"
+import { currentUserRole } from "@/lib/helpers/current-role"
 
 const page = async ({ params }: { params: Promise<{ attendantId: string }> }) => {
   const { attendantId } = await params
 
-  // Fetch current attendance data
-  const patient = await getAttendanceById(attendantId)
+  // Fetch current attendance data + the current user's role (for tab permissions)
+  // + the active admission (inpatient header context), in parallel.
+  const [patient, role, admission] = await Promise.all([
+    getAttendanceById(attendantId),
+    currentUserRole(),
+    getAdmissionByAttendance(attendantId),
+  ])
 
   // Fetch previous visits for the same patient
   const previousVisits = patient?.patientId
@@ -14,7 +21,7 @@ const page = async ({ params }: { params: Promise<{ attendantId: string }> }) =>
 
   return (
     <div>
-      <ConsultingPageWrapper initialAttendance={patient} previousVisits={previousVisits} />
+      <ConsultingPageWrapper initialAttendance={patient} previousVisits={previousVisits} role={JSON.parse(JSON.stringify(role || null))} admission={JSON.parse(JSON.stringify(admission || null))} />
     </div>
   )
 }

@@ -69,6 +69,12 @@ async function getAuthenticatedUser(): Promise<User | null> {
 
         const user = await fetchStaffById(id)
 
+        // Reject revoked accounts at the gate — do not cache or return them.
+        if (user && ((user as { isBanned?: boolean }).isBanned === true || (user as { isActive?: boolean }).isActive === false)) {
+            delete sessionCache[id];
+            return null;
+        }
+
         // Cache the user data if found
         if (user) {
             sessionCache[id] = {

@@ -33,7 +33,7 @@ interface Payment {
     createdAt?: string;
 }
 
-const CLINIC_NAME = "SidGrace Dental";
+const CLINIC_NAME = "Medira";
 
 const STATUS: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700",
@@ -47,18 +47,21 @@ export function InvoiceView({
     invoice,
     payments = [],
     currency = "",
+    clinicName,
 }: {
     invoice: Invoice;
     payments?: Payment[];
     currency?: string;
+    clinicName?: string;
 }) {
+    const CLINIC = clinicName || CLINIC_NAME;
     const patient = typeof invoice.patientId === "object" ? invoice.patientId : null;
     const m = (n: number) => formatMoney(n, currency);
 
     const exportPdf = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text(CLINIC_NAME, 14, 20);
+        doc.text(CLINIC, 14, 20);
         doc.setFontSize(11);
         doc.text(`Invoice: ${invoice.invoiceNumber}`, 14, 30);
         doc.text(`Date: ${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : ""}`, 14, 36);
@@ -98,8 +101,8 @@ export function InvoiceView({
                 {/* Clinic header */}
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-teal-700">{CLINIC_NAME}</h1>
-                        <p className="text-sm text-muted-foreground">Dental Clinic • Invoice / Receipt</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-teal-700">{CLINIC}</h1>
+                        <p className="text-sm text-muted-foreground">Invoice / Receipt</p>
                     </div>
                     <div className="text-right">
                         <h2 className="text-lg font-bold">{invoice.invoiceNumber}</h2>
@@ -198,7 +201,7 @@ export function InvoiceView({
                 {invoice.notes && <p className="mt-4 text-sm text-muted-foreground">Notes: {invoice.notes}</p>}
 
                 <p className="mt-8 text-center text-xs text-muted-foreground print:mt-16">
-                    Thank you for choosing {CLINIC_NAME}.
+                    Thank you for choosing {CLINIC}.
                 </p>
 
                 {/* Actions — hidden when printing */}

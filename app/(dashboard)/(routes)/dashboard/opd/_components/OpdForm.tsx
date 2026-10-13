@@ -537,10 +537,12 @@ export function OpdPatientManagement() {
                                 <SelectValue placeholder="Select type" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="outpatient">Outpatient</SelectItem>
                                 <SelectItem value="new">New Visit</SelectItem>
                                 <SelectItem value="follow-up">Follow-up</SelectItem>
                                 <SelectItem value="emergency">Emergency</SelectItem>
                                 <SelectItem value="procedure">Procedure</SelectItem>
+                                <SelectItem value="inpatient">Inpatient (planned)</SelectItem>
                             </SelectContent>
                         </Select>
                     </TableCell>

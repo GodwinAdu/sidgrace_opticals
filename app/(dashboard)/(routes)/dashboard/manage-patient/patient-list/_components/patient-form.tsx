@@ -848,7 +848,7 @@ export default function RegisterPatientPage({ type, initialData }: RegisterPatie
                                             </label>
                                         </div>
                                         <p className="text-xs text-gray-500 ml-6">
-                                            I acknowledge that I have received a copy of SidGrace Opticals' Notice of Privacy Practices.
+                                            I acknowledge that I have received a copy of Medira's Notice of Privacy Practices.
                                         </p>
                                     </div>
                                 </div>

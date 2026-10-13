@@ -92,7 +92,7 @@ async function _createStaff(user: User, values: CreateStaffValues) {
     }
 }
 
-export const createStaff = await withAuth(_createStaff)
+export const createStaff = await withAuth(_createStaff, "staffManagement")
 
 
 
@@ -242,4 +242,4 @@ async function _deleteStaff(user: User, id: string) {
     }
 }
 
-export const deleteStaff = await withAuth(_deleteStaff)
+export const deleteStaff = await withAuth(_deleteStaff, "staffManagement")

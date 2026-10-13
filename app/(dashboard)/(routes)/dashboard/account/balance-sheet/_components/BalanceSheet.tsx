@@ -26,7 +26,7 @@ export default function BalanceSheet({ data, currency = "" }: { data: BalanceShe
     const exportPdf = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text("SidGrace Dental", 14, 20);
+        doc.text("Medira", 14, 20);
         doc.setFontSize(13);
         doc.text("Balance Sheet", 14, 29);
         doc.setFontSize(10);

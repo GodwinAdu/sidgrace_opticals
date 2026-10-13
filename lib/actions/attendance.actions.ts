@@ -7,6 +7,42 @@ import Staff from '../models/staff.models';
 import { Patient } from '../models/patient.models';
 import { deleteDocument } from './trash.actions';
 import { format } from 'date-fns';
+import ClinicSettings from '../models/clinic-settings.models';
+import { ensureVisitInvoice } from './visit-clinical.actions';
+import { resolveCompleteStatus, type VisitStatus } from '../clinical/encounter';
+import {
+    isMeaningfulChange,
+    makeVersion,
+    latestVersionContent,
+} from '../clinical/attribution';
+import { writeVisitAuditEntry } from '../helpers/clinical-audit';
+
+/**
+ * Tracked clinical field â†’ its parallel append-only `*Versions` array on the
+ * Attendance document. Mirrors the allow-list in
+ * `lib/actions/clinical-section.actions.ts` (Task 4). Duplicated here on purpose:
+ * that file is a `"use server"` module and importing its `saveClinicalSection`
+ * binding (or the type/list) into this server-action module risks a server-action
+ * composition / import cycle, so the shared *pure* helpers (`makeVersion`,
+ * `isMeaningfulChange`, `latestVersionContent`) and the audit helper are reused
+ * instead and the append is performed inline. KEEP THIS LIST IN SYNC with
+ * `TRACKED_FIELDS` in `clinical-section.actions.ts`.
+ */
+const TRACKED_FIELDS = {
+    doctorNote: "doctorNoteVersions",
+    nurseNote: "nurseNoteVersions",
+    surgicalNote: "surgicalNoteVersions",
+    history: "historyVersions",
+    physicExam: "physicExamVersions",
+    diagnosis: "diagnosisVersions",
+    plan: "planVersions",
+    eyeTest: "eyeTestVersions",
+    vitals: "vitalsVersions",
+    labReport: "labReportVersions",
+    scan: "scanVersions",
+} as const;
+
+type TrackedClinicalField = keyof typeof TRACKED_FIELDS;
 
 async function _createAttendance(user: User, values: Record<string, unknown>) {
 
@@ -20,12 +56,45 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
         const existingAttendance = await Attendance.findOne({ patientId: values.patientId, date });
 
         if (existingAttendance) throw new Error("Attendance for this patient on this date already exists");
+
+        // Auto-apply the clinic's default consultation fee to the visit bill at
+        // check-in, so the charge is never forgotten by clinical staff. The fee
+        // is the single source of truth from clinic settings; accountants can
+        // still adjust the bill later via the billing workflow.
+        const settings = await ClinicSettings.findOne({ key: "clinic" });
+        const consultationFee = Number(settings?.defaultConsultationFee) || 0;
+
         const attendance = new Attendance({
             ...values,
             date,
             createdBy: user._id,
+            billing: {
+                consultationFee,
+                proceduresTotal: 0,
+                productsTotal: 0,
+                otherCharges: [],
+                totalCharged: consultationFee,
+                amountPaid: 0,
+                balance: consultationFee,
+            },
         });
         await attendance.save();
+
+        // Open the visit's invoice immediately so the billing page always has a
+        // target and every later charge syncs onto a guaranteed invoice.
+        // Best-effort: never block check-in if invoice creation fails.
+        try {
+            const inv = await ensureVisitInvoice(String(attendance._id));
+            if (inv?._id) {
+                attendance.set("billing.invoiceId", inv._id);
+                attendance.set("billing.invoiceNumber", inv.invoiceNumber);
+                attendance.set("billing.balance", Number(inv.balance) || consultationFee);
+                await attendance.save();
+            }
+        } catch (invoiceError) {
+            console.error("Visit invoice not created at check-in (non-blocking):", invoiceError);
+        }
+
         // Return the created doc (id) so callers can navigate to the visit.
         return JSON.parse(JSON.stringify(attendance));
     } catch (error) {
@@ -36,7 +105,7 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
 }
 
 
-export const createAttendance = await withAuth(_createAttendance);
+export const createAttendance = await withAuth(_createAttendance, "opdManagement");
 
 async function _getAttendanceById(user: User, id: string) {
     if (!user || !user._id) {
@@ -111,7 +180,7 @@ async function _getAllAttendances(user: User) {
 }
 export const getAllAttendances = await withAuth(_getAllAttendances);
 
-export async function getPreviousVisitsByPatientId(patientId: string) {
+export async function getPreviousVisitsByPatientId(patientId: string, excludeId?: string) {
     try {
         await connectToDB()
 
@@ -119,6 +188,11 @@ export async function getPreviousVisitsByPatientId(patientId: string) {
         const query: Record<string, unknown> = {
             patientId: patientId,  // Find all visits for this specific patient
             status: { $in: ['completed', 'ongoing', 'cancelled', 'waiting'] }, // Only show past visits (not pending new ones)
+        }
+
+        // Exclude the current visit from the "previous visits" list when provided
+        if (excludeId) {
+            query._id = { $ne: excludeId }
         }
 
 
@@ -159,9 +233,127 @@ async function _updateAttendanceById(
 
     // Append updatedBy field to the update object
     updateFields.updatedBy = user._id;
-    updateFields.status = "completed"
+
+    // Status-on-save fix (Req 4.3): a plain record Save must NOT silently
+    // complete the visit. Previously this action unconditionally forced
+    // `status = "completed"` on every call. Now status is taken from the
+    // payload and, when the payload omits it, the current status is preserved
+    // by simply not writing the field. The explicit footer "Complete Visit"
+    // action completes a visit by passing `status: "completed"` (see
+    // `completeVisit` below). The pure decision rule lives in
+    // `resolveSaveStatus` in `lib/clinical/encounter.ts` and is unit-tested.
+    const requestedStatus = updateFields.status as VisitStatus | undefined;
+    const validStatuses: VisitStatus[] = ["waiting", "ongoing", "completed", "cancelled"];
+    if (requestedStatus === undefined || requestedStatus === null) {
+        // No status requested â†’ preserve current status (omit from the $set).
+        delete updateFields.status;
+    } else if (!validStatuses.includes(requestedStatus)) {
+        // Guard against invalid status values leaking into the update.
+        delete updateFields.status;
+    }
 
     try {
+        // Split the payload: any tracked clinical field present must NOT be
+        // blindly `$set` (that would overwrite the versioned content WITHOUT
+        // attribution â€” R2.2 / R7.1). Instead those fields route through the
+        // attributed, append-only path (one version per field, each carrying its
+        // own author from the authenticated `user` and a server timestamp â€”
+        // R1.2 / R1.4). Non-tracked fields keep the exact existing `$set`
+        // behavior. We remove tracked keys from `updateFields` so they are never
+        // also blindly overwritten.
+        const trackedUpdates: { field: TrackedClinicalField; versionsField: string; content: unknown }[] = [];
+        for (const key of Object.keys(updateFields)) {
+            if (Object.prototype.hasOwnProperty.call(TRACKED_FIELDS, key)) {
+                const field = key as TrackedClinicalField;
+                trackedUpdates.push({
+                    field,
+                    versionsField: TRACKED_FIELDS[field],
+                    content: updateFields[key],
+                });
+                // Keep tracked fields out of the blind `$set`.
+                delete updateFields[key];
+            }
+        }
+
+        // Route tracked fields through the attributed append-only path. This
+        // mirrors `saveClinicalSection` (Task 4) using the SAME shared helpers
+        // (`makeVersion` / `isMeaningfulChange` / `latestVersionContent` and
+        // `writeVisitAuditEntry`), without importing that server-action file â€”
+        // avoiding a server-action/import cycle. The clinical content is written
+        // atomically within a single `visit.save()`; the audit entry is
+        // best-effort afterward (R7.3).
+        if (trackedUpdates.length > 0) {
+            const visit = await Attendance.findById(id);
+            if (!visit) {
+                throw new Error("Attendance not found.");
+            }
+
+            // Preserve the status-on-save guarantee here too: only apply a
+            // requested, valid status; otherwise leave the current status
+            // untouched (a plain Save never completes a visit â€” R6.4).
+            if (requestedStatus !== undefined && requestedStatus !== null && validStatuses.includes(requestedStatus)) {
+                visit.status = requestedStatus as never;
+            }
+            // Preserve the existing `updatedBy` behavior on the document itself.
+            visit.updatedBy = user._id as never;
+
+            const auditWrites: { field: TrackedClinicalField; versionIndex: number }[] = [];
+            const now = new Date();
+            for (const { field, versionsField, content } of trackedUpdates) {
+                if (!Array.isArray(visit[versionsField])) {
+                    visit[versionsField] = [] as never;
+                }
+                // No-op guard: a save identical to the latest version does not
+                // append a redundant version (R2.4).
+                const latest = latestVersionContent(visit[versionsField]);
+                if (!isMeaningfulChange(latest, content)) {
+                    continue;
+                }
+                // Append-only: push a fresh attributed version; never replace or
+                // mutate prior versions (R2.1 / R2.2 / R7.1). Author/time come
+                // from the injected `user` + server clock (R1.2 / R1.4).
+                visit[versionsField].push(makeVersion(content, user, now) as never);
+                visit.markModified(versionsField);
+                // Materialise the scalar as the latest value for back-compat
+                // reads (R2.3).
+                visit[field] = content as never;
+                auditWrites.push({ field, versionIndex: visit[versionsField].length - 1 });
+            }
+
+            await visit.save();
+
+            // Best-effort audit entries; never roll back the clinical write (R7.3).
+            for (const { field, versionIndex } of auditWrites) {
+                await writeVisitAuditEntry({
+                    attendanceId: id,
+                    performedBy: String(user?._id ?? user?.id ?? ""),
+                    details: { field, versionIndex },
+                    message: `Clinical section "${field}" recorded`,
+                });
+            }
+
+            // Apply any remaining non-tracked fields via the existing `$set`
+            // path so their behavior is unchanged. When there are none we still
+            // return the freshly-saved document.
+            const hasNonTracked = Object.keys(updateFields).some(
+                (k) => k !== "updatedBy" && k !== "status",
+            );
+            if (hasNonTracked) {
+                const updatedAttendance = await Attendance.findByIdAndUpdate(
+                    id,
+                    { $set: updateFields },
+                    { new: true, runValidators: true },
+                );
+                if (!updatedAttendance) {
+                    throw new Error("Attendance not found.");
+                }
+                return JSON.parse(JSON.stringify(updatedAttendance));
+            }
+
+            return JSON.parse(JSON.stringify(visit));
+        }
+
+        // No tracked fields in the payload â†’ unchanged legacy `$set` path.
         const updatedAttendance = await Attendance.findByIdAndUpdate(
             id,
             { $set: updateFields },
@@ -180,6 +372,26 @@ async function _updateAttendanceById(
 }
 
 export const updateAttendance = await withAuth(_updateAttendanceById);
+
+
+/**
+ * Explicit "Complete Visit" save (Req 4.3 / 9.1). Used ONLY by the encounter
+ * footer's Complete action â€” it persists the aggregated fields like a normal
+ * save but intentionally sets `status: "completed"`. Reuses `_updateAttendanceById`
+ * so the same validation/auth path applies; the resolved completed status comes
+ * from the pure `resolveCompleteStatus` helper, keeping Complete explicit and
+ * idempotent (completing an already-completed visit is a no-op on status).
+ */
+async function _completeVisit(
+    user: User,
+    id: string,
+    values: Record<string, unknown> = {}
+) {
+    const completedStatus: VisitStatus = resolveCompleteStatus();
+    return _updateAttendanceById(user, id, { ...values, status: completedStatus });
+}
+
+export const completeVisit = await withAuth(_completeVisit);
 
 
 export async function updateUserAttendance(id: string) {
@@ -231,4 +443,4 @@ async function _deleteAttendance(user: User, id: string) {
     }
 }
 
-export const deleteAttendance = await withAuth(_deleteAttendance)
+export const deleteAttendance = await withAuth(_deleteAttendance, "deleteAttendance")

@@ -1,0 +1,189 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Extract pure encounter logic + tests": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850206344
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850216684
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850492158
+      }
+    ],
+    "2. Build the tab registry (declarative, gated, lazy)": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850206756
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850507276
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851282028
+      }
+    ],
+    "3. Encounter state provider": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850206876
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850508697
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851282834
+      }
+    ],
+    "4. Shell layout: PatientHeader, MedicalAlertBanner, PreviousVisitPicker": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850207791
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851288504
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851554211
+      }
+    ],
+    "5. Shell layout: TabNavigation + EncounterWorkspace frame": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208078
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851558755
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851792945
+      }
+    ],
+    "6. Migrate section-save tabs (attClinical / attLabScan / attEyeTest / attTreatment)": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208270
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851797929
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791852143808
+      }
+    ],
+    "7. Migrate self-persisting panels (attNursing / ICU / attPrescribe / dental / imaging / lab case)": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208446
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851799393
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791852145375
+      }
+    ],
+    "8. Billing summary tab (read-only) + billing bus wiring": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208626
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791852151610
+      }
+    ],
+    "9. Status-on-save fix (audited server tweak) + tests": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208797
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850509624
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851283949
+      }
+    ],
+    "10. Historical mode end-to-end": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850208927
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791851800243
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791852146131
+      }
+    ],
+    "11. EncounterFooter (Save / Complete / Print / Export)": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850209060
+      },
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791852152589
+      }
+    ],
+    "12. Cutover + regression verification": [
+      {
+        "executionId": "66c7b2b7-271a-420e-845b-b6052ea7fcff",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791850209179
+      }
+    ]
+  }
+}

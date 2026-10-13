@@ -1,0 +1,206 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Pure attribution logic + tests": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877605265
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877613460
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791878194582
+      }
+    ],
+    "2. Attendance model: versioned fields (additive)": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877605872
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791878200844
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879068614
+      }
+    ],
+    "3. History enum + audit write helper": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877607086
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791878202122
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879070302
+      }
+    ],
+    "4. saveClinicalSection server action (append-only, attributed)": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877607346
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879081160
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879812412
+      }
+    ],
+    "5. Route record-Save through the attributed path (non-regression)": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877607517
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879822319
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881025924
+      }
+    ],
+    "6. Extend self-persisting adders with attribution + audit": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877607677
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879080308
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879813928
+      }
+    ],
+    "7. getFieldVersions + getVisitAuditLog server actions": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877607850
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879079565
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879814574
+      }
+    ],
+    "8. auditView permission": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877608021
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791878202812
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879071548
+      }
+    ],
+    "9. AttributionLine + VersionHistoryPopover UI": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877608261
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879824320
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881023414
+      }
+    ],
+    "10. VisitAuditLog tab (gated)": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877608419
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791879823236
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881024373
+      }
+    ],
+    "11. Integration + regression verification": [
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791877608631
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881032136
+      },
+      {
+        "executionId": "d3d47f64-f330-4683-b009-21157676cfcf",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881414475
+      }
+    ],
+    "12. Extend attribution to Lab Report & Scan": [
+      {
+        "executionId": "787f830a-7cbe-4489-81be-fc02b2adf7a4",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881970309
+      }
+    ],
+    "13. Server-level integration tests (test DB)": [
+      {
+        "executionId": "787f830a-7cbe-4489-81be-fc02b2adf7a4",
+        "chatSessionId": "sess_38b1f758-a461-4a98-84fe-13c3cbc769db",
+        "timestamp": 1791881972551
+      }
+    ]
+  }
+}

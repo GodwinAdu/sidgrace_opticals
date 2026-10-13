@@ -101,7 +101,7 @@ async function _sendRecallReminder(user: User, id: string, path: string) {
             return { sent: false, reason: "Patient has no phone number on file" };
         }
 
-        const message = `Dear ${patient.fullName || "patient"}, this is a reminder from SidGrace Dental that your ${recall.type} is due on ${new Date(recall.dueDate).toLocaleDateString()}. Please call us to schedule your appointment.`;
+        const message = `Dear ${patient.fullName || "patient"}, this is a reminder from Medira that your ${recall.type} is due on ${new Date(recall.dueDate).toLocaleDateString()}. Please call us to schedule your appointment.`;
 
         try {
             await sendSMS(phone, message);

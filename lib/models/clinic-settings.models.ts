@@ -10,6 +10,12 @@ const ClinicSettingsSchema = new Schema(
         key: { type: String, default: "clinic", unique: true },
         defaultConsultationFee: { type: Number, default: 0 },
         currency: { type: String, default: "" },
+        // Clinic/hospital identity used on invoices, receipts and report headers.
+        clinicName: { type: String, default: "Medira" },
+        clinicAddress: { type: String, default: "" },
+        clinicPhone: { type: String, default: "" },
+        clinicEmail: { type: String, default: "" },
+        clinicLogoUrl: { type: String, default: "" },
         modifiedBy: { type: Schema.Types.ObjectId, ref: "Staff", default: null },
     },
     { timestamps: true }

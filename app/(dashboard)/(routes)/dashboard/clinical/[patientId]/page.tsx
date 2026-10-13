@@ -9,23 +9,27 @@ import { fetchPatientId } from "@/lib/actions/patient.actions";
 import { getChartByPatient } from "@/lib/actions/dental-chart.actions";
 import { getPerioChartsByPatient, getNotesByPatient } from "@/lib/actions/clinical.actions";
 import { getImagingByPatient } from "@/lib/actions/imaging.actions";
+import { getPatientDocuments } from "@/lib/actions/patient-document.actions";
 import { getAppointmentsByPatient } from "@/lib/actions/portal.actions";
 import { Odontogram } from "../_components/Odontogram";
 import { PerioChart } from "../_components/PerioChart";
 import { ClinicalNotes } from "../_components/ClinicalNotes";
 import { Imaging } from "../_components/Imaging";
+import { Documents } from "../_components/Documents";
+import { StructuredEmr } from "../_components/StructuredEmr";
 
 type ClinicalProps = Promise<{ patientId: string }>;
 
 const page = async ({ params }: { params: ClinicalProps }) => {
     const { patientId } = await params;
 
-    const [patient, chart, perioCharts, notes, images, appointments] = await Promise.all([
+    const [patient, chart, perioCharts, notes, images, documents, appointments] = await Promise.all([
         fetchPatientId(patientId),
         getChartByPatient(patientId),
         getPerioChartsByPatient(patientId),
         getNotesByPatient(patientId),
         getImagingByPatient(patientId),
+        getPatientDocuments(patientId),
         getAppointmentsByPatient(patientId),
     ]);
 
@@ -52,14 +56,20 @@ const page = async ({ params }: { params: ClinicalProps }) => {
             <Separator />
 
             <div className="pt-4">
-                <Tabs defaultValue="chart" className="w-full">
+                <Tabs defaultValue="emr" className="w-full">
                     <TabsList className="flex flex-wrap">
+                        <TabsTrigger value="emr">EMR</TabsTrigger>
                         <TabsTrigger value="chart">Dental Chart</TabsTrigger>
                         <TabsTrigger value="treatment">Treatment Plan</TabsTrigger>
                         <TabsTrigger value="perio">Perio Chart</TabsTrigger>
                         <TabsTrigger value="notes">Clinical Notes</TabsTrigger>
                         <TabsTrigger value="imaging">Imaging</TabsTrigger>
+                        <TabsTrigger value="documents">Documents</TabsTrigger>
                     </TabsList>
+
+                    <TabsContent value="emr" className="pt-4">
+                        <StructuredEmr patientId={patientId} />
+                    </TabsContent>
 
                     <TabsContent value="chart" className="pt-4">
                         <Odontogram
@@ -83,6 +93,9 @@ const page = async ({ params }: { params: ClinicalProps }) => {
                     </TabsContent>
                     <TabsContent value="imaging" className="pt-4">
                         <Imaging patientId={patientId} images={images || []} appointments={appointments || []} />
+                    </TabsContent>
+                    <TabsContent value="documents" className="pt-4">
+                        <Documents patientId={patientId} documents={documents || []} appointments={appointments || []} />
                     </TabsContent>
                 </Tabs>
             </div>

@@ -130,6 +130,7 @@ const actionTypes = [
     "CLINICAL_NOTE_UPDATED",
     "CLINICAL_NOTE_DELETED",
     "CLINICAL_NOTE_RESTORED",
+    "CLINICAL_SECTION_RECORDED",
 
     "IMAGING_CREATED",
     "IMAGING_UPDATED",
@@ -193,7 +194,172 @@ const actionTypes = [
     "TRANSACTION_CREATED",
     "TRANSACTION_UPDATED",
     "TRANSACTION_DELETED",
-    "TRANSACTION_RESTORED"
+    "TRANSACTION_RESTORED",
+
+    // ── Pharmacy ──────────────────────────────────────────────
+    "PRESCRIPTION_CREATED",
+    "PRESCRIPTION_UPDATED",
+    "PRESCRIPTION_DELETED",
+    "PRESCRIPTION_RESTORED",
+    "PRESCRIPTION_DISPENSED",
+
+    // ── Billing settlement ────────────────────────────────────
+    "OUTSTANDING_SETTLED",
+
+    // ── Inpatient / nursing ───────────────────────────────────
+    "WARD_CREATED",
+    "WARD_UPDATED",
+    "WARD_DELETED",
+    "WARD_RESTORED",
+
+    "BED_CREATED",
+    "BED_UPDATED",
+    "BED_DELETED",
+    "BED_RESTORED",
+
+    "ADMISSION_CREATED",
+    "ADMISSION_UPDATED",
+    "ADMISSION_DELETED",
+    "ADMISSION_RESTORED",
+    "PATIENT_ADMITTED",
+    "PATIENT_TRANSFERRED",
+    "PATIENT_DISCHARGED",
+
+    // ── Lab / radiology orders ────────────────────────────────
+    "LAB_ORDER_CREATED",
+    "LAB_ORDER_UPDATED",
+    "LAB_ORDER_RESULTED",
+    "LAB_ORDER_DELETED",
+    "LAB_ORDER_RESTORED",
+
+    // ── Structured EMR (problems / allergies / immunizations) ──
+    "PROBLEM_CREATED",
+    "PROBLEM_UPDATED",
+    "PROBLEM_DELETED",
+    "PROBLEM_RESTORED",
+
+    "ALLERGY_CREATED",
+    "ALLERGY_UPDATED",
+    "ALLERGY_DELETED",
+    "ALLERGY_RESTORED",
+
+    "IMMUNIZATION_CREATED",
+    "IMMUNIZATION_UPDATED",
+    "IMMUNIZATION_DELETED",
+    "IMMUNIZATION_RESTORED",
+
+    // ── Emergency / A&E ───────────────────────────────────────
+    "EMERGENCY_CASE_CREATED",
+    "EMERGENCY_CASE_UPDATED",
+    "EMERGENCY_CASE_DELETED",
+    "EMERGENCY_CASE_RESTORED",
+    "EMERGENCY_BAY_ASSIGNED",
+    "EMERGENCY_DISPOSED",
+
+    // ── CPOE (unified orders) ─────────────────────────────────
+    "CPOE_ORDER_PLACED",
+
+    // ── Operating theatre / surgery ───────────────────────────
+    "THEATRE_CREATED",
+    "THEATRE_UPDATED",
+    "THEATRE_DELETED",
+    "THEATRE_RESTORED",
+    "SURGERY_CASE_CREATED",
+    "SURGERY_CASE_UPDATED",
+    "SURGERY_CASE_DELETED",
+    "SURGERY_CASE_RESTORED",
+    "SURGERY_STATUS_CHANGED",
+    "SURGERY_NOTE_RECORDED",
+    "SURGERY_BILLED",
+
+    // ── Maternity / obstetrics ────────────────────────────────
+    "ANC_RECORD_CREATED",
+    "ANC_RECORD_UPDATED",
+    "ANC_RECORD_DELETED",
+    "ANC_RECORD_RESTORED",
+    "ANC_VISIT_ADDED",
+    "DELIVERY_RECORD_CREATED",
+    "DELIVERY_RECORD_UPDATED",
+    "DELIVERY_RECORD_DELETED",
+    "DELIVERY_RECORD_RESTORED",
+    "NEWBORN_REGISTERED",
+
+    // ── ICU charting (time-stamped observations) ──────────────
+    "ICU_CHART_ENTRY_CREATED",
+
+    // ── Blood bank & specimen tracking ────────────────────────
+    "BLOOD_UNIT_CREATED",
+    "BLOOD_UNIT_UPDATED",
+    "BLOOD_UNIT_DELETED",
+    "BLOOD_UNIT_RESTORED",
+    "BLOOD_UNIT_RESERVED",
+    "BLOOD_UNIT_ISSUED",
+    "BLOOD_UNIT_DISCARDED",
+    "SPECIMEN_CREATED",
+    "SPECIMEN_UPDATED",
+    "SPECIMEN_DELETED",
+    "SPECIMEN_RESTORED",
+    "SPECIMEN_STATUS_CHANGED",
+
+    // ── Referrals (in / out) ──────────────────────────────────
+    "REFERRAL_CREATED",
+    "REFERRAL_UPDATED",
+    "REFERRAL_DELETED",
+    "REFERRAL_RESTORED",
+    "REFERRAL_STATUS_CHANGED",
+
+    // ── Document management (DMS) + consent archive ───────────
+    "PATIENT_DOCUMENT_CREATED",
+    "PATIENT_DOCUMENT_UPDATED",
+    "PATIENT_DOCUMENT_DELETED",
+    "PATIENT_DOCUMENT_RESTORED",
+
+    // ── Queue management & bed-transfer approvals ─────────────
+    "QUEUE_TICKET_CREATED",
+    "QUEUE_TICKET_UPDATED",
+    "QUEUE_TICKET_DELETED",
+    "QUEUE_TICKET_RESTORED",
+    "QUEUE_TICKET_STATUS_CHANGED",
+    "BED_TRANSFER_REQUESTED",
+    "BED_TRANSFER_APPROVED",
+    "BED_TRANSFER_REJECTED",
+
+    // ── Procurement (requisition → PO → GRN) ──────────────────
+    "REQUISITION_CREATED",
+    "REQUISITION_UPDATED",
+    "REQUISITION_DELETED",
+    "REQUISITION_RESTORED",
+    "REQUISITION_STATUS_CHANGED",
+    "PURCHASE_ORDER_CREATED",
+    "PURCHASE_ORDER_UPDATED",
+    "PURCHASE_ORDER_DELETED",
+    "PURCHASE_ORDER_RESTORED",
+    "PURCHASE_ORDER_STATUS_CHANGED",
+    "GRN_CREATED",
+    "GRN_DELETED",
+    "GRN_RESTORED",
+
+    // ── Equipment / biomedical assets + maintenance ───────────
+    "ASSET_CREATED",
+    "ASSET_UPDATED",
+    "ASSET_DELETED",
+    "ASSET_RESTORED",
+    "ASSET_STATUS_CHANGED",
+    "ASSET_MAINTENANCE_LOGGED",
+
+    // ── HR & payroll (leave / timesheet / payroll run) ────────
+    "LEAVE_REQUEST_CREATED",
+    "LEAVE_REQUEST_UPDATED",
+    "LEAVE_REQUEST_DELETED",
+    "LEAVE_REQUEST_RESTORED",
+    "LEAVE_REQUEST_STATUS_CHANGED",
+    "TIMESHEET_CREATED",
+    "TIMESHEET_UPDATED",
+    "TIMESHEET_DELETED",
+    "TIMESHEET_RESTORED",
+    "PAYROLL_RUN_CREATED",
+    "PAYROLL_RUN_DELETED",
+    "PAYROLL_RUN_RESTORED"
 ];
 
 const historySchema = new Schema(

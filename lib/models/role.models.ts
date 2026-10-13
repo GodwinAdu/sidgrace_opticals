@@ -48,6 +48,40 @@ const RoleSchema: Schema<IRole> = new Schema({
         type: Boolean,
         default: false
     },
+    // Attendance detail tab-level permissions
+    attClinical: { type: Boolean, default: false },
+    attLabScan: { type: Boolean, default: false },
+    attEyeTest: { type: Boolean, default: false },
+    attTreatment: { type: Boolean, default: false },
+    attPrescribe: { type: Boolean, default: false },
+    attBilling: { type: Boolean, default: false },
+    attNursing: { type: Boolean, default: false },
+    // Clinical audit log visibility (gates the visit audit trail tab)
+    auditView: { type: Boolean, default: false },
+    // Inpatient / nursing module permissions
+    wardManagement: { type: Boolean, default: false },
+    admissionManagement: { type: Boolean, default: false },
+    nursingDashboard: { type: Boolean, default: false },
+    // Emergency / A&E module permission
+    emergencyManagement: { type: Boolean, default: false },
+    // Operating theatre / surgery module permission
+    theatreManagement: { type: Boolean, default: false },
+    // Maternity / obstetrics module permission
+    maternityManagement: { type: Boolean, default: false },
+    // ICU charting module permission (recording reuses attNursing)
+    icuManagement: { type: Boolean, default: false },
+    // Blood bank module permission (specimens reuse labManagement)
+    bloodBankManagement: { type: Boolean, default: false },
+    // Referrals (in/out) module permission
+    referralManagement: { type: Boolean, default: false },
+    // Procurement (requisition → PO → GRN) module permission (reuses inventoryManagement)
+    procurementManagement: { type: Boolean, default: false },
+    // Equipment / biomedical asset register + maintenance module permission
+    assetManagement: { type: Boolean, default: false },
+    // HR module permission (leave + timesheet / attendance)
+    hrManagement: { type: Boolean, default: false },
+    // Payroll module permission (payroll runs → ledger expense)
+    payrollManagement: { type: Boolean, default: false },
     report: {
         type: Boolean,
         default: false

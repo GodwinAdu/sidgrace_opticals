@@ -7,6 +7,8 @@ import TreatmentPlan from "../models/treatment-plan.models";
 import History from "../models/history.models";
 import { User, withAuth } from "../helpers/auth";
 import { deleteDocument } from "./trash.actions";
+import { computeInvoiceTotals } from "../finance/calc";
+import { nextSequence } from "../models/counter.models";
 
 interface InvoiceItemInput {
     description: string;
@@ -28,19 +30,14 @@ interface InvoiceValues {
 
 async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await Invoice.countDocuments({});
-    const seq = String(count + 1).padStart(5, "0");
-    return `INV-${year}-${seq}`;
+    // Atomic per-year sequence — safe under concurrent creation.
+    const seq = await nextSequence(`invoice-${year}`);
+    return `INV-${year}-${String(seq).padStart(5, "0")}`;
 }
 
 function computeTotals(items: InvoiceItemInput[], tax = 0, discount = 0) {
-    const withAmounts = items.map((it) => ({
-        ...it,
-        amount: (Number(it.quantity) || 0) * (Number(it.unitPrice) || 0),
-    }));
-    const subtotal = withAmounts.reduce((s, it) => s + it.amount, 0);
-    const total = Math.max(0, subtotal + Number(tax || 0) - Number(discount || 0));
-    return { withAmounts, subtotal, total };
+    // Delegates to the shared, unit-tested pure helper.
+    return computeInvoiceTotals(items, tax, discount);
 }
 
 async function _createInvoice(user: User, values: InvoiceValues) {
@@ -85,7 +82,7 @@ async function _createInvoice(user: User, values: InvoiceValues) {
         throw error;
     }
 }
-export const createInvoice = await withAuth(_createInvoice);
+export const createInvoice = await withAuth(_createInvoice, "billingManagement");
 
 async function _createInvoiceFromPlan(user: User, treatmentPlanId: string) {
     try {
@@ -114,7 +111,64 @@ async function _createInvoiceFromPlan(user: User, treatmentPlanId: string) {
         throw error;
     }
 }
-export const createInvoiceFromPlan = await withAuth(_createInvoiceFromPlan);
+export const createInvoiceFromPlan = await withAuth(_createInvoiceFromPlan, "billingManagement");
+
+/**
+ * Replace an invoice's line items (and optionally tax/discount) and recompute
+ * subtotal/total/balance/status. Preserves amountPaid. Used by the billing
+ * invoice-detail custom line-item editor. Rejects edits to a cancelled invoice.
+ */
+async function _updateInvoiceItems(
+    user: User,
+    invoiceId: string,
+    items: InvoiceItemInput[],
+    tax: number | undefined,
+    discount: number | undefined,
+    path?: string
+) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+
+        const invoice = await Invoice.findById(invoiceId);
+        if (!invoice) throw new Error("Invoice not found");
+        if (invoice.status === "cancelled") throw new Error("Cannot edit a cancelled invoice");
+
+        const nextTax = tax === undefined ? Number(invoice.tax) || 0 : Number(tax) || 0;
+        const nextDiscount = discount === undefined ? Number(invoice.discount) || 0 : Number(discount) || 0;
+        const { withAmounts, subtotal, total } = computeTotals(items || [], nextTax, nextDiscount);
+
+        const amountPaid = Number(invoice.amountPaid) || 0;
+        invoice.items = withAmounts as never;
+        invoice.subtotal = subtotal;
+        invoice.tax = nextTax;
+        invoice.discount = nextDiscount;
+        invoice.total = total;
+        invoice.balance = Math.max(0, total - amountPaid);
+        invoice.status = amountPaid <= 0 ? "unpaid" : invoice.balance <= 0 ? "paid" : "partial";
+        invoice.mod_flag = true;
+        invoice.modifiedBy = user._id;
+        invoice.action_type = "updated";
+        await invoice.save();
+
+        await History.create({
+            actionType: "INVOICE_UPDATED",
+            details: { itemId: invoice._id, deletedAt: new Date() },
+            message: `${user.fullName} updated invoice ${invoice.invoiceNumber} line items on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: invoice._id,
+            entityType: "INVOICE",
+        });
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/billing/invoices");
+        return JSON.parse(JSON.stringify(invoice));
+    } catch (error) {
+        console.error("Error updating invoice items:", error);
+        throw error;
+    }
+}
+export const updateInvoiceItems = await withAuth(_updateInvoiceItems, "billingManagement");
 
 async function _getAllInvoices(user: User) {
     try {
@@ -175,7 +229,7 @@ async function _updateInvoiceStatus(user: User, id: string, status: string, path
         throw error;
     }
 }
-export const updateInvoiceStatus = await withAuth(_updateInvoiceStatus);
+export const updateInvoiceStatus = await withAuth(_updateInvoiceStatus, "billingManagement");
 
 async function _deleteInvoice(user: User, id: string) {
     try {
@@ -199,7 +253,7 @@ async function _deleteInvoice(user: User, id: string) {
         throw error;
     }
 }
-export const deleteInvoice = await withAuth(_deleteInvoice);
+export const deleteInvoice = await withAuth(_deleteInvoice, "billingManagement");
 
 
 /**

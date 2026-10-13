@@ -47,7 +47,7 @@ async function _createProcedure(user: User, values: ProcedureValues) {
         throw error;
     }
 }
-export const createProcedure = await withAuth(_createProcedure);
+export const createProcedure = await withAuth(_createProcedure, "procedureManagement");
 
 async function _getAllProcedures(user: User) {
     try {
@@ -96,7 +96,7 @@ async function _updateProcedure(user: User, id: string, values: Partial<Procedur
         throw error;
     }
 }
-export const updateProcedure = await withAuth(_updateProcedure);
+export const updateProcedure = await withAuth(_updateProcedure, "procedureManagement");
 
 async function _deleteProcedure(user: User, id: string) {
     try {
@@ -120,4 +120,4 @@ async function _deleteProcedure(user: User, id: string) {
         throw error;
     }
 }
-export const deleteProcedure = await withAuth(_deleteProcedure);
+export const deleteProcedure = await withAuth(_deleteProcedure, "procedureManagement");

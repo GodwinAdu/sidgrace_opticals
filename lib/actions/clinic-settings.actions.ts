@@ -46,6 +46,11 @@ export const setDefaultConsultationFee = await withAuth(_setDefaultConsultationF
 interface ClinicSettingsInput {
     defaultConsultationFee?: number;
     currency?: string;
+    clinicName?: string;
+    clinicAddress?: string;
+    clinicPhone?: string;
+    clinicEmail?: string;
+    clinicLogoUrl?: string;
 }
 
 async function _updateClinicSettings(user: User, values: ClinicSettingsInput, path?: string) {
@@ -56,9 +61,12 @@ async function _updateClinicSettings(user: User, values: ClinicSettingsInput, pa
         if (values.defaultConsultationFee !== undefined) {
             settings.defaultConsultationFee = Number(values.defaultConsultationFee) || 0;
         }
-        if (values.currency !== undefined) {
-            settings.currency = values.currency;
-        }
+        if (values.currency !== undefined) settings.currency = values.currency;
+        if (values.clinicName !== undefined) settings.clinicName = values.clinicName;
+        if (values.clinicAddress !== undefined) settings.clinicAddress = values.clinicAddress;
+        if (values.clinicPhone !== undefined) settings.clinicPhone = values.clinicPhone;
+        if (values.clinicEmail !== undefined) settings.clinicEmail = values.clinicEmail;
+        if (values.clinicLogoUrl !== undefined) settings.clinicLogoUrl = values.clinicLogoUrl;
         settings.modifiedBy = user._id;
         await settings.save();
         if (path) revalidatePath(path);
@@ -68,4 +76,4 @@ async function _updateClinicSettings(user: User, values: ClinicSettingsInput, pa
         throw error;
     }
 }
-export const updateClinicSettings = await withAuth(_updateClinicSettings);
+export const updateClinicSettings = await withAuth(_updateClinicSettings, "accountManagement");

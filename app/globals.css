@@ -229,4 +229,22 @@
     width: 100%;
     padding: 24px;
   }
+
+  /* Encounter workspace: when printing the attendance/encounter record, show
+     only the scoped printable region (patient header + alert banner + active
+     tab). All surrounding app chrome (sidebar, navbar, tab bar, footer) is
+     hidden. The footer/picker/tab-nav are additionally `print:hidden` in the
+     workspace markup; this block scopes the print to the encounter even when
+     the region is nested inside the dashboard shell. */
+  #encounter-printable,
+  #encounter-printable * {
+    visibility: visible;
+  }
+  #encounter-printable {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 24px;
+  }
 }

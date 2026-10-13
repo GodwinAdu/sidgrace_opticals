@@ -6,21 +6,21 @@ import { cn } from "@/lib/utils"
 
 const REVIEWS = [
   {
-    name: "Amara Okafor",
-    role: "Invisalign Patient",
-    quote: "I was terrified of dentists my whole life. The team here changed that completely. Painless, patient, and my smile has never looked better.",
+    name: "Dr. Amara Okafor",
+    role: "Medical Director",
+    quote: "Medira put our OPD, wards and pharmacy on one screen. Nothing slips through the cracks between departments anymore.",
     avatar: "from-teal-400 to-cyan-500",
   },
   {
     name: "David Mensah",
-    role: "Implant Patient",
-    quote: "The 3D scan and same-day crown blew me away. Professional, modern, and genuinely caring from start to finish.",
+    role: "Hospital Administrator",
+    quote: "Billing finally ties back to the actual visit. Invoices, insurance claims and the ledger all reconcile — month-end is painless now.",
     avatar: "from-cyan-400 to-sky-500",
   },
   {
     name: "Sarah Bello",
-    role: "Family Care",
-    quote: "My kids actually look forward to their dental visits now. Clean, friendly, and the pricing was completely transparent.",
+    role: "Head Nurse",
+    quote: "The nurse worklist and shared patient chart changed our shifts. We see every admitted patient and record care in one place.",
     avatar: "from-emerald-400 to-teal-500",
   },
 ]
@@ -34,10 +34,10 @@ export function Testimonials() {
             Testimonials
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-teal-950 sm:text-4xl">
-            Loved by Thousands of Patients
+            Trusted by Care Teams
           </h2>
           <p className="mt-4 text-lg text-slate-500">
-            Real stories from the people who trust us with their smiles.
+            How clinics and hospitals run their day on Medira.
           </p>
         </div>
 

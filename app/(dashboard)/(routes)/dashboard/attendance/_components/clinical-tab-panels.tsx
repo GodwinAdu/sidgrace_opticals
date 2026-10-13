@@ -44,6 +44,7 @@ import {
 } from "@/lib/actions/visit-clinical.actions";
 import { getPatientOutstanding } from "@/lib/actions/invoice.actions";
 import { settlePatientOutstanding } from "@/lib/actions/payment.actions";
+import { uploadFile } from "@/lib/actions/upload.actions";
 import { getClinicSettings } from "@/lib/actions/clinic-settings.actions";
 import { formatMoney } from "@/lib/utils";
 
@@ -242,15 +243,26 @@ export function VisitImagingPanel({
     const [tooth, setTooth] = useState("");
     const [fileUrl, setFileUrl] = useState("");
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => { setList(images); }, [images]);
 
-    const onFile = (file?: File) => {
+    const onFile = async (file?: File) => {
         if (!file) return;
-        if (file.size > 1.5 * 1024 * 1024) return toast.error("Image too large (max 1.5MB). Paste a URL instead.");
-        const reader = new FileReader();
-        reader.onload = () => setFileUrl(String(reader.result || ""));
-        reader.readAsDataURL(file);
+        if (file.size > 15 * 1024 * 1024) return toast.error("File too large (max 15MB).");
+        try {
+            setUploading(true);
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("keyHint", patientId || "");
+            const res = await uploadFile(fd);
+            setFileUrl(res.url);
+            toast.success("File uploaded");
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Upload failed");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const save = async () => {
@@ -292,8 +304,8 @@ export function VisitImagingPanel({
                         </div>
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="mb-1 block text-xs text-muted-foreground">Upload</label>
-                                <Input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
+                                <label className="mb-1 block text-xs text-muted-foreground">Upload {uploading && "(uploading…)"}</label>
+                                <Input type="file" accept="image/*,application/pdf" disabled={uploading} onChange={(e) => onFile(e.target.files?.[0])} />
                             </div>
                             <div className="flex-1 min-w-[180px]">
                                 <label className="mb-1 block text-xs text-muted-foreground">or paste URL</label>
@@ -736,29 +748,43 @@ export function VisitProceduresPanel({
 
     const total = rows.reduce((s, r) => s + (Number(r.cost) || 0), 0);
 
-    const addRow = () => {
-        const proc = catalog.find((c) => c._id === selProc);
-        if (!proc) return toast.error("Select a procedure");
-        setRows((p) => [...p, { procedureId: proc._id, procedureName: `${proc.code} — ${proc.name}`, tooth: tooth ? Number(tooth) : null, cost: Number(proc.price) || 0 }]);
-        setSelProc(""); setTooth("");
-    };
-    const removeRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
-
-    const persist = async () => {
-        if (!attendanceId) return toast.error("Save the visit first");
-        const prev = procedures; // snapshot for rollback
-        onProceduresChange?.(rows); // optimistic
+    // Persist the given list to the visit bill. Procedures carry a catalog
+    // price, so recording one immediately charges the visit — no second
+    // "Add to Bill" step for the doctor to forget.
+    const persist = async (next: VisitProc[], prev: VisitProc[]) => {
+        if (!attendanceId) {
+            toast.error("Save the visit first");
+            setRows(prev);
+            return;
+        }
+        onProceduresChange?.(next); // optimistic
         try {
             setSaving(true);
-            const res = await saveVisitProcedures(attendanceId, rows, path);
+            const res = await saveVisitProcedures(attendanceId, next, path);
             if (res?.dentalProcedures) onProceduresChange?.(res.dentalProcedures);
             if (res?.billing) onBillingChange?.(res.billing);
-            toast.success("Procedures added to the bill");
+            toast.success("Procedure recorded and charged to the bill");
         } catch {
             setRows(prev); // restore local rows
             onProceduresChange?.(prev); // rollback shared
             toast.error("Something went wrong");
         } finally { setSaving(false); }
+    };
+
+    const addRow = () => {
+        const proc = catalog.find((c) => c._id === selProc);
+        if (!proc) return toast.error("Select a procedure");
+        const prev = rows;
+        const next = [...rows, { procedureId: proc._id, procedureName: `${proc.code} — ${proc.name}`, tooth: tooth ? Number(tooth) : null, cost: Number(proc.price) || 0 }];
+        setRows(next);
+        setSelProc(""); setTooth("");
+        void persist(next, prev); // auto-charge immediately
+    };
+    const removeRow = (i: number) => {
+        const prev = rows;
+        const next = rows.filter((_, idx) => idx !== i);
+        setRows(next);
+        void persist(next, prev); // reverse the charge immediately
     };
 
     if (loading) return <Spinner />;
@@ -815,16 +841,13 @@ export function VisitProceduresPanel({
                     <p className="text-sm text-muted-foreground">No procedures recorded for this visit.</p>
                 )}
 
-                {!readOnly && (
-                    <div className="flex justify-end">
-                        <Button onClick={persist} disabled={saving}>
-                            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Add to Bill
-                        </Button>
+                {saving && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving to bill…
                     </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                    Procedure prices come from the Procedure Catalog. These add to the visit bill — the patient settles it under Payment &amp; Balance below.
+                    Procedure prices come from the Procedure Catalog. Adding a procedure charges the visit bill automatically — the patient settles it under Payment &amp; Balance.
                 </p>
             </CardContent>
         </Card>
@@ -1110,7 +1133,7 @@ export function VisitPaymentPanel({
 }
 
 /* ═══════════ TREATMENT PLAN (living, cross-visit) ═══════════ */
-export function DentalPlanTabPanel({ patientId }: { patientId: string }) {
+export function DentalPlanTabPanel({ patientId, attendanceId, onBillingChange }: { patientId: string; attendanceId?: string; onBillingChange?: (billing: Record<string, unknown>) => void }) {
     const [plans, setPlans] = useState<unknown[]>([]);
     const [procedures, setProcedures] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(true);
@@ -1127,7 +1150,7 @@ export function DentalPlanTabPanel({ patientId }: { patientId: string }) {
     if (loading) return <Spinner />;
     return (
         <div className="space-y-6">
-            <TreatmentPlanBuilder patientId={patientId} procedures={procedures as never} />
+            <TreatmentPlanBuilder patientId={patientId} procedures={procedures as never} attendanceId={attendanceId} onBillingChange={onBillingChange} />
             <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Existing Plans</h3>
                 <ExistingPlans plans={plans as never} />

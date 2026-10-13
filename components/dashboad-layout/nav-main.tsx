@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, BellRing, CalendarClock, ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, Pill, ReceiptText, Settings2Icon, Sparkles, Stethoscope, ThermometerIcon, Trash, UploadCloudIcon, Users, Wallet, } from "lucide-react"
+import { Activity, Ambulance, Baby, BarChart3, BedDouble, BellRing, CalendarClock, ChevronRight, ClipboardList, Droplet, History, LucideMessagesSquare, MailCheck, Menu, Pill, ReceiptText, Scissors, Settings2Icon, Share2, ShoppingCart, Sparkles, Stethoscope, ThermometerIcon, Ticket, Trash, UploadCloudIcon, Users, Wallet, Wrench, } from "lucide-react"
 
 import {
   Collapsible,
@@ -66,6 +66,86 @@ export function NavMain({ role }:{role:IRole}) {
       icon: Users,
       isActive: false,
       roleField: "attendantManagement"
+
+    },
+    {
+      title: "Emergency / A&E",
+      url: `/dashboard/emergency`,
+      icon: Ambulance,
+      isActive: false,
+      roleField: "emergencyManagement"
+
+    },
+    {
+      title: "Operating Theatre",
+      url: `/dashboard/theatre`,
+      icon: Scissors,
+      isActive: false,
+      roleField: "theatreManagement"
+
+    },
+    {
+      title: "Maternity",
+      url: `/dashboard/maternity`,
+      icon: Baby,
+      isActive: false,
+      roleField: "maternityManagement"
+
+    },
+    {
+      title: "Blood Bank",
+      url: `/dashboard/blood-bank`,
+      icon: Droplet,
+      isActive: false,
+      roleField: "bloodBankManagement"
+
+    },
+    {
+      title: "Referrals",
+      url: `/dashboard/referrals`,
+      icon: Share2,
+      isActive: false,
+      roleField: "referralManagement"
+
+    },
+    {
+      title: "Procurement",
+      url: `/dashboard/procurement`,
+      icon: ShoppingCart,
+      isActive: false,
+      roleField: "procurementManagement"
+
+    },
+    {
+      title: "Equipment & Assets",
+      url: `/dashboard/assets`,
+      icon: Wrench,
+      isActive: false,
+      roleField: "assetManagement"
+
+    },
+    {
+      title: "Order Entry (CPOE)",
+      url: `/dashboard/cpoe`,
+      icon: ClipboardList,
+      isActive: false,
+      roleField: "attPrescribe"
+
+    },
+    {
+      title: "Queue & Transfers",
+      url: `/dashboard/queue`,
+      icon: Ticket,
+      isActive: false,
+      roleField: "opdManagement"
+
+    },
+    {
+      title: "HR & Payroll",
+      url: `/dashboard/hr`,
+      icon: Wallet,
+      isActive: false,
+      roleField: "hrManagement"
 
     },
 
@@ -174,6 +254,28 @@ export function NavMain({ role }:{role:IRole}) {
       ],
     },
     {
+      title: "Inpatient",
+      url: "#",
+      icon: BedDouble,
+      items: [
+        {
+          title: "Nursing",
+          url: "/dashboard/nursing",
+          roleField: "nursingDashboard",
+        },
+        {
+          title: "Admissions",
+          url: "/dashboard/admission",
+          roleField: "admissionManagement",
+        },
+        {
+          title: "Wards & Beds",
+          url: "/dashboard/wards",
+          roleField: "wardManagement",
+        },
+      ],
+    },
+    {
       title: "Patient Care",
       url: "#",
       icon: BellRing,
@@ -219,6 +321,11 @@ export function NavMain({ role }:{role:IRole}) {
           title: "Procedure Catalog",
           url: "/dashboard/procedures",
           roleField: "procedureManagement",
+        },
+        {
+          title: "Lab & Radiology",
+          url: "/dashboard/lab",
+          roleField: "labManagement",
         },
         {
           title: "Lab Cases",
@@ -333,6 +440,13 @@ export function NavMain({ role }:{role:IRole}) {
         },
       ],
     },
+    // {
+    //   title: "Operations",
+    //   url: `/dashboard/ops`,
+    //   icon: Activity,
+    //   isActive: false,
+    //   roleField: "reportManagement"
+    // },
     {
       title: "Reports",
       url: `/dashboard/reports`,
