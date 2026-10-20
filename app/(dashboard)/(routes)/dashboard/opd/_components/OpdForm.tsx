@@ -63,7 +63,7 @@ import { toast } from "sonner"
 import { useRouter } from "next/navigation"
 import { fetchPatientBySearch } from "@/lib/actions/patient.actions"
 import { calculateAge } from "@/lib/utils"
-import { createAttendance } from "@/lib/actions/attendance.actions"
+import { createAttendance, updateAttendance } from "@/lib/actions/attendance.actions"
 
 
 type VitalSigns = {
@@ -106,6 +106,11 @@ type Patient = {
 }
 
 type AttendancePatient = Patient & {
+    // The underlying Patient's Mongo _id. The row's own `_id` field holds the
+    // server-created ATTENDANCE id once the patient is checked in, so this keeps
+    // a reference back to the patient for later updates. (Distinct from the
+    // Patient.patientId human folder id.)
+    patientRefId?: string
     visitType: string
     vitals: VitalSigns | null
     eyeTest: EyeTest | null
@@ -326,43 +331,82 @@ export function OpdPatientManagement() {
         }
     }
 
-    // Add patient to attendance list
-    const addToAttendance = (patient: Patient) => {
+    // Add patient to attendance list.
+    // visitTypeArg / priorityArg are passed by the caller so we don't read
+    // just-set (and therefore stale, async) state within the same render tick.
+    // They fall back to the component state when omitted.
+    //
+    // Check-in now PERSISTS immediately: it creates the server-side attendance
+    // record (and its visit invoice + consultation fee) the moment the patient
+    // is added, instead of deferring persistence to "Save Patient". The local
+    // list row carries the server-created attendance `_id` so later vitals saves
+    // and navigation reference the real record. The server's same-day duplicate
+    // guard and auth (opdManagement) are the source of truth; any error (e.g. a
+    // duplicate same-day visit) surfaces to the user and the row is not added.
+    const addToAttendance = async (patient: Patient, visitTypeArg?: string, priorityArg?: string) => {
         setIsAddingToAttendance(true)
 
-        // Check if patient is already in attendance list
-        if (attendanceList.some((p) => p._id === patient._id)) {
-            toast.warning("Patient already in attendance", {
-                description: `${patient.fullName} is already in today's attendance list.`,
-            })
-            setIsAddingToAttendance(false)
-            return
-        }
+        try {
+            // Fast local guard for immediate feedback; the server enforces the
+            // authoritative same-day duplicate check.
+            if (attendanceList.some((p) => p._id === patient._id)) {
+                toast.warning("Patient already in attendance", {
+                    description: `${patient.fullName} is already in today's attendance list.`,
+                })
+                return
+            }
 
-        // Simulate API call with timeout
-        setTimeout(() => {
+            const effectivePriority = priorityArg ?? priority
+            const effectiveVisitType = visitTypeArg ?? visitType
+
+            // Persist the check-in. The server validates patientId, applies the
+            // consultation fee, opens the invoice, and rejects a duplicate
+            // same-day visit. Only a valid visitType (schema enum) is sent.
+            const created = await createAttendance({
+                patientId: patient._id,
+                visitType: effectiveVisitType,
+                status: "waiting",
+            })
+
+            // Use the server-created attendance id for the local row so Save and
+            // navigation act on the real record, not a transient client id.
+            const attendanceId = created?._id ? String(created._id) : patient._id
+
             const attendancePatient: AttendancePatient = {
                 ...patient,
-                priority,
-                visitType,
+                _id: attendanceId,
+                patientRefId: patient._id,
+                priority: effectivePriority,
+                visitType: effectiveVisitType,
                 vitals: null, // Ensure vitals is null for new attendance
                 eyeTest: null, // Ensure eyeTest is null for new attendance
                 checkInTime: new Date(),
-                estimatedWaitTime: priority === "urgent" ? 5 : priority === "high" ? 15 : 30,
+                estimatedWaitTime: effectivePriority === "urgent" ? 5 : effectivePriority === "high" ? 15 : 30,
                 status: "waiting",
             }
 
-            const newList = [...attendanceList, attendancePatient]
-            setAttendanceList(newList)
+            setAttendanceList((prev) => [...prev, attendancePatient])
             setSearchResults([])
             setSearchQuery("")
 
-            toast.success("Patient added to attendance", {
+            toast.success("Patient checked in", {
                 description: `${patient.fullName} has been added to today's attendance list.`,
             })
 
+            // Refresh server components (e.g. the Today's Attendance dialog) so
+            // the freshly persisted visit shows up.
+            router.refresh()
+        } catch (error) {
+            console.log("Failed to check in patient", error)
+            toast.error("Could not check in patient", {
+                description:
+                    error instanceof Error && error.message
+                        ? error.message
+                        : "Please try again later",
+            })
+        } finally {
             setIsAddingToAttendance(false)
-        }, 500)
+        }
     }
 
     // Select patient to record vitals or eye test
@@ -401,7 +445,20 @@ export function OpdPatientManagement() {
     const savePatientData = async () => {
         try {
             setIsLoading(true)
-            if (!selectedPatient) return
+            if (!selectedPatient) {
+                setIsLoading(false)
+                return
+            }
+
+            // Validation gate: run the vitals form through Zod instead of reading
+            // raw getValues() (which bypasses validation). Do NOT block on the
+            // eyeTest form (its tab is currently commented out).
+            const ok = await vitalsForm.trigger()
+            if (!ok) {
+                toast.error("Please correct the vital sign values")
+                setIsLoading(false)
+                return
+            }
 
             // Get values from both forms
             const vitalsData = vitalsForm.getValues()
@@ -410,7 +467,8 @@ export function OpdPatientManagement() {
             // Format blood pressure
             const bloodPressure = `${vitalsData.systolic}/${vitalsData.diastolic}`
 
-            // Create vital signs object
+            // Local vitals object retained for the trend/history UI only (keeps
+            // systolic/diastolic/oxygenSaturation for display).
             const vitals: VitalSigns = {
                 bloodPressure,
                 systolic: vitalsData.systolic,
@@ -421,7 +479,7 @@ export function OpdPatientManagement() {
                 oxygenSaturation: vitalsData.oxygenSaturation,
             }
 
-            // Create eye test object
+            // Local eye test object retained for the attendance-list UI only.
             const eyeTest: EyeTest = {
                 visualAcuityRight: eyeTestData.visualAcuityRight,
                 visualAcuityLeft: eyeTestData.visualAcuityLeft,
@@ -442,17 +500,36 @@ export function OpdPatientManagement() {
                 setVitalHistory([...vitalHistory, selectedPatient.vitals])
             }
 
-            // Create combined data object for database
-            const patientAttendanceData = {
-                patientId: selectedPatient._id,
-                patientName: selectedPatient.fullName,
-                visitType: selectedPatient.visitType,
-                checkInTime: selectedPatient.checkInTime,
-                vitals,
-                eyeTest,
-                status: "waiting",
+            // The attendance record already exists (created at check-in), so we
+            // UPDATE it with the recorded vitals/eyeTest rather than creating a
+            // second record. `selectedPatient._id` is the server attendance id.
+            //
+            // Map to the ACTUAL Attendance schema shape. The schema `vitals`
+            // sub-doc only has temperature/pulse/bloodPressure/respiratoryRate
+            // (no systolic/diastolic/oxygenSaturation columns), so systolic and
+            // diastolic are combined into the bloodPressure string.
+            const patientAttendanceData: Record<string, unknown> = {
+                vitals: {
+                    bloodPressure: `${vitalsData.systolic}/${vitalsData.diastolic}`,
+                    temperature: vitalsData.temperature,
+                    pulse: vitalsData.pulse,
+                    respiratoryRate: vitalsData.respiratoryRate,
+                },
             }
-            await createAttendance(patientAttendanceData)
+
+            // Only include eyeTest when the user actually recorded visual acuity,
+            // and map it to the real schema fields
+            // (visualAcuity/colorVision/intraocularPressure/remarks).
+            if (eyeTestData.visualAcuityRight || eyeTestData.visualAcuityLeft) {
+                patientAttendanceData.eyeTest = {
+                    visualAcuity: `R: ${eyeTestData.visualAcuityRight} L: ${eyeTestData.visualAcuityLeft}`,
+                    intraocularPressure: `R: ${eyeTestData.iopRight} L: ${eyeTestData.iopLeft}`,
+                    colorVision: eyeTestData.colorVision || "",
+                    remarks: eyeTestData.posteriorSegment || eyeTestData.anteriorSegment || "",
+                }
+            }
+
+            await updateAttendance(selectedPatient._id, patientAttendanceData)
 
             // Update the patient in the attendance list
             const updatedList: AttendancePatient[] = attendanceList.map((p) =>
@@ -562,9 +639,12 @@ export function OpdPatientManagement() {
                         <Button
                             size="sm"
                             onClick={() => {
+                                // Keep state in sync for the rest of the UI, but pass the
+                                // selected values directly so addToAttendance never reads
+                                // stale (async) state within this same tick.
                                 setVisitType(localVisitType)
                                 setPriority(localPriority)
-                                addToAttendance(patient)
+                                addToAttendance(patient, localVisitType, localPriority)
                             }}
                             disabled={isAddingToAttendance}
                         >

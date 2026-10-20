@@ -66,7 +66,7 @@ const page = async ({ params }: { params: InvoiceProps }) => {
             <Separator />
             <div className="grid gap-6 pt-4 lg:grid-cols-[1fr_360px]">
                 <div className="space-y-6">
-                    <InvoiceView invoice={invoice} payments={payments || []} currency={currency} clinicName={settings?.clinicName} />
+                    <InvoiceView invoice={invoice} payments={payments || []} currency={currency} clinicName={settings?.clinicName} clinic={{ name: settings?.clinicName, address: settings?.clinicAddress, phone: settings?.clinicPhone, email: settings?.clinicEmail }} epos={{ enabled: settings?.eposEnabled, printerUrl: settings?.eposPrinterUrl, deviceId: settings?.eposDeviceId, openDrawer: settings?.eposOpenDrawer }} />
                     <InvoiceItemsEditor invoice={invoice} currency={currency} />
                     <InvoiceClaimPanel invoiceId={invoiceId} claims={claims || []} currency={currency} />
                 </div>

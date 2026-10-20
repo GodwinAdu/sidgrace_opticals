@@ -12,6 +12,11 @@ import {
     computeLine,
     computePayrollTotals,
     isValidPayrollStatus,
+    canTransitionPayroll,
+    toRate,
+    computeStatutoryDeductions,
+    payLineFromProfile,
+    prorateByHours,
     MS_PER_DAY,
     LEAVE_STATUSES,
     type LeaveStatus,
@@ -220,5 +225,93 @@ describe("isValidPayrollStatus", () => {
         expect(isValidPayrollStatus("posted")).toBe(true);
         expect(isValidPayrollStatus("void")).toBe(false);
         expect(isValidPayrollStatus(null)).toBe(false);
+    });
+});
+
+describe("canTransitionPayroll", () => {
+    it("allows only draft → posted", () => {
+        expect(canTransitionPayroll("draft", "posted")).toBe(true);
+        expect(canTransitionPayroll("posted", "draft")).toBe(false);
+        expect(canTransitionPayroll("draft", "draft")).toBe(false);
+        expect(canTransitionPayroll("posted", "posted")).toBe(false);
+    });
+});
+
+/* ──────────────────── Statutory / compensation / proration ──────────────── */
+
+describe("toRate", () => {
+    it("clamps into [0, 1] and zeroes garbage/negatives", () => {
+        expect(toRate(0.075)).toBe(0.075);
+        expect(toRate("0.1")).toBe(0.1);
+        expect(toRate(1.5)).toBe(1);
+        expect(toRate(-0.2)).toBe(0);
+        expect(toRate("abc")).toBe(0);
+        expect(toRate(null)).toBe(0);
+    });
+});
+
+describe("computeStatutoryDeductions", () => {
+    it("computes PAYE and pension off base + allowances, rounded to 2dp", () => {
+        const { deductions, taxableBase } = computeStatutoryDeductions(
+            { basePay: 1000, allowances: [{ amount: 200 }] },
+            { taxRate: 0.1, pensionRate: 0.08 },
+        );
+        expect(taxableBase).toBe(1200);
+        expect(deductions).toEqual([
+            { label: "PAYE Tax", amount: 120 },
+            { label: "Pension", amount: 96 },
+        ]);
+    });
+
+    it("omits a statutory row when its rate is 0", () => {
+        const { deductions } = computeStatutoryDeductions(
+            { basePay: 1000 },
+            { taxRate: 0, pensionRate: 0.05 },
+        );
+        expect(deductions).toEqual([{ label: "Pension", amount: 50 }]);
+    });
+});
+
+describe("payLineFromProfile", () => {
+    it("folds standing deductions with computed statutory deductions", () => {
+        const line = payLineFromProfile({
+            baseSalary: 2000,
+            allowances: [{ label: "Transport", amount: 300 }],
+            deductions: [{ label: "Loan", amount: 100 }],
+            taxRate: 0.1,
+            pensionRate: 0,
+        });
+        expect(line.basePay).toBe(2000);
+        expect(line.allowances).toEqual([{ label: "Transport", amount: 300 }]);
+        // standing Loan 100 + PAYE on (2000+300)=2300 × 0.1 = 230
+        expect(line.deductions).toEqual([
+            { label: "Loan", amount: 100 },
+            { label: "PAYE Tax", amount: 230 },
+        ]);
+        // gross = 2000 + 300 − (100 + 230) = 1970
+        expect(computeGross(line)).toBe(1970);
+    });
+
+    it("handles an empty profile without throwing", () => {
+        const line = payLineFromProfile({});
+        expect(line.basePay).toBe(0);
+        expect(line.allowances).toEqual([]);
+        expect(line.deductions).toEqual([]);
+    });
+});
+
+describe("prorateByHours", () => {
+    it("prorates base by worked / expected, capped at full base", () => {
+        expect(prorateByHours(1600, 80, 160)).toBe(800);
+        expect(prorateByHours(1600, 200, 160)).toBe(1600); // capped at 1.0 ratio
+    });
+
+    it("returns the base unchanged when expected hours are 0/invalid", () => {
+        expect(prorateByHours(1600, 80, 0)).toBe(1600);
+        expect(prorateByHours(1600, 80, null)).toBe(1600);
+    });
+
+    it("never returns a negative", () => {
+        expect(prorateByHours(-500, 80, 160)).toBe(0);
     });
 });

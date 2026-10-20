@@ -205,6 +205,16 @@ export function NavMain({ role }:{role:IRole}) {
           roleField: "accountManagement",
         },
         {
+          title: "Journal Entries",
+          url: "/dashboard/account/journal-entries",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "General Ledger",
+          url: "/dashboard/account/general-ledger",
+          roleField: "accountingManagement",
+        },
+        {
           title: "Income Statement",
           url: "/dashboard/account/income-statement",
           roleField: "AccountReport",
@@ -220,14 +230,44 @@ export function NavMain({ role }:{role:IRole}) {
           roleField: "AccountReport",
         },
         {
-          title: "Expenses",
-          url: "/dashboard/account/expenses",
-          roleField: "accountManagement",
+          title: "Cash Flow",
+          url: "/dashboard/account/cash-flow",
+          roleField: "AccountReport",
         },
         {
-          title: "Transactions",
-          url: "/dashboard/account/transactions",
-          roleField: "accountManagement",
+          title: "Expense Workflow",
+          url: "/dashboard/account/expense-workflow",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Approvals",
+          url: "/dashboard/account/approvals",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Vendors",
+          url: "/dashboard/account/vendors",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Budgets",
+          url: "/dashboard/account/budgets",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Budget vs Actual",
+          url: "/dashboard/account/budget-vs-actual",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Vendor Spend",
+          url: "/dashboard/account/vendor-spend",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Settings",
+          url: "/dashboard/account/settings",
+          roleField: "accountingSettings",
         },
       ],
     },
@@ -414,6 +454,11 @@ export function NavMain({ role }:{role:IRole}) {
         {
           title: "Drug Inventory",
           url: "/dashboard/pharmacy/drugs",
+          roleField: "pharmacyManagement",
+        },
+        {
+          title: "Point of Sale",
+          url: "/dashboard/pharmacy/pos",
           roleField: "pharmacyManagement",
         },
       ],

@@ -25,6 +25,10 @@ import {
     Check,
     X,
     Plus,
+    Download,
+    Send,
+    Sparkles,
+    FileText,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -34,7 +38,11 @@ import {
     recordTimesheet,
     deleteTimesheet,
     createPayrollRun,
+    postPayrollRun,
     deletePayrollRun,
+    prefillPayrollLines,
+    getPayslipsForRun,
+    setCompensation,
 } from "@/lib/actions/hr.actions";
 import {
     LEAVE_TYPES,
@@ -113,12 +121,62 @@ interface Props {
     leaves: LeaveRow[];
     timesheets: TimesheetRow[];
     payrollRuns: PayrollRunRow[];
+    /** Whether the viewer holds `payrollManagement` (gates the Payroll tab). */
+    canRunPayroll?: boolean;
 }
 
 /* ─────────────────────────────── Helpers ────────────────────────────────── */
 
 const money = (n?: number) =>
     (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/* A single payslip derived from a payroll run line (see getPayslipsForRun). */
+interface PayslipRow {
+    runNumber?: string;
+    periodLabel?: string;
+    periodStart?: string;
+    periodEnd?: string;
+    staffName?: string;
+    basePay?: number;
+    allowances?: { label?: string; amount?: number }[];
+    deductions?: { label?: string; amount?: number }[];
+    gross?: number;
+}
+
+/* Render one payslip onto a jsPDF page. Pure layout — no app state. */
+function renderPayslip(doc: import("jspdf").jsPDF, s: PayslipRow) {
+    let y = 20;
+    doc.setFontSize(16);
+    doc.text("Payslip", 14, y);
+    doc.setFontSize(10);
+    y += 8;
+    doc.text(`Run: ${s.runNumber || ""}${s.periodLabel ? ` (${s.periodLabel})` : ""}`, 14, y);
+    y += 6;
+    const fmt = (d?: string) => (d ? new Date(d).toLocaleDateString() : "");
+    doc.text(`Period: ${fmt(s.periodStart)} - ${fmt(s.periodEnd)}`, 14, y);
+    y += 6;
+    doc.text(`Employee: ${s.staffName || ""}`, 14, y);
+    y += 10;
+    doc.setFontSize(11);
+    doc.text(`Base pay: ${money(s.basePay)}`, 14, y);
+    y += 7;
+    doc.text("Allowances:", 14, y);
+    y += 6;
+    (s.allowances || []).forEach((a) => {
+        doc.text(`  ${a.label || "Allowance"}: +${money(a.amount)}`, 18, y);
+        y += 5;
+    });
+    y += 2;
+    doc.text("Deductions:", 14, y);
+    y += 6;
+    (s.deductions || []).forEach((d) => {
+        doc.text(`  ${d.label || "Deduction"}: -${money(d.amount)}`, 18, y);
+        y += 5;
+    });
+    y += 4;
+    doc.setFontSize(13);
+    doc.text(`Net (Gross) pay: ${money(s.gross)}`, 14, y);
+}
 
 const staffName = (
     ref: { fullName?: string } | string | null | undefined,
@@ -161,7 +219,7 @@ interface DraftLine {
 
 /* ────────────────────────────── Component ───────────────────────────────── */
 
-export function HrManager({ staff, leaves, timesheets, payrollRuns }: Props) {
+export function HrManager({ staff, leaves, timesheets, payrollRuns, canRunPayroll = false }: Props) {
     const router = useRouter();
     const path = usePathname();
     const [busyId, setBusyId] = useState<string | null>(null);
@@ -175,9 +233,16 @@ export function HrManager({ staff, leaves, timesheets, payrollRuns }: Props) {
                 <TabsTrigger value="timesheet">
                     <Clock className="mr-1 h-4 w-4" /> Time / Attendance
                 </TabsTrigger>
-                <TabsTrigger value="payroll">
-                    <Wallet className="mr-1 h-4 w-4" /> Payroll
-                </TabsTrigger>
+                {canRunPayroll && (
+                    <TabsTrigger value="payroll">
+                        <Wallet className="mr-1 h-4 w-4" /> Payroll
+                    </TabsTrigger>
+                )}
+                {canRunPayroll && (
+                    <TabsTrigger value="compensation">
+                        <FileText className="mr-1 h-4 w-4" /> Compensation
+                    </TabsTrigger>
+                )}
             </TabsList>
 
             <TabsContent value="leave">
@@ -202,16 +267,30 @@ export function HrManager({ staff, leaves, timesheets, payrollRuns }: Props) {
                 />
             </TabsContent>
 
-            <TabsContent value="payroll">
-                <PayrollTab
-                    staff={staff}
-                    payrollRuns={payrollRuns}
-                    busyId={busyId}
-                    setBusyId={setBusyId}
-                    router={router}
-                    path={path}
-                />
-            </TabsContent>
+            {canRunPayroll && (
+                <TabsContent value="payroll">
+                    <PayrollTab
+                        staff={staff}
+                        payrollRuns={payrollRuns}
+                        busyId={busyId}
+                        setBusyId={setBusyId}
+                        router={router}
+                        path={path}
+                    />
+                </TabsContent>
+            )}
+
+            {canRunPayroll && (
+                <TabsContent value="compensation">
+                    <CompensationTab
+                        staff={staff}
+                        busyId={busyId}
+                        setBusyId={setBusyId}
+                        router={router}
+                        path={path}
+                    />
+                </TabsContent>
+            )}
         </Tabs>
     );
 }
@@ -577,8 +656,35 @@ function PayrollTab({
         });
 
     const draftTotal = useMemo(() => lines.reduce((acc, l) => acc + lineGross(l), 0), [lines]);
+    const [prefilling, setPrefilling] = useState(false);
 
-    const run = async () => {
+    // Pull standing compensation profiles into draft lines (statutory folded in).
+    const prefill = async () => {
+        try {
+            setPrefilling(true);
+            const pre = await prefillPayrollLines();
+            if (!pre || pre.length === 0) {
+                toast.info("No staff have a compensation profile yet. Set one from the Compensation tab.");
+                return;
+            }
+            setLines(
+                pre.map((p: { staffId: string; staffName?: string; basePay?: number; allowances?: PayAdjustmentRow[]; deductions?: PayAdjustmentRow[] }) => ({
+                    staffId: p.staffId,
+                    staffName: p.staffName || "",
+                    basePay: String(p.basePay ?? ""),
+                    allowances: (p.allowances || []).map((a) => ({ label: a.label || "", amount: String(a.amount ?? "") })),
+                    deductions: (p.deductions || []).map((d) => ({ label: d.label || "", amount: String(d.amount ?? "") })),
+                })),
+            );
+            toast.success(`Prefilled ${pre.length} staff line${pre.length === 1 ? "" : "s"} from compensation profiles`);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Could not prefill");
+        } finally {
+            setPrefilling(false);
+        }
+    };
+
+    const run = async (status: "draft" | "posted") => {
         if (!periodStart || !periodEnd) return toast.error("Pick a pay period");
         const usable = lines.filter((l) => l.staffId);
         if (usable.length === 0) return toast.error("Add at least one staff line");
@@ -589,6 +695,7 @@ function PayrollTab({
                     periodLabel,
                     periodStart,
                     periodEnd,
+                    status,
                     lines: usable.map((l) => {
                         const picked = staff.find((s) => s._id === l.staffId);
                         return {
@@ -602,13 +709,49 @@ function PayrollTab({
                 },
                 path,
             );
-            toast.success("Payroll run posted to the ledger");
+            toast.success(status === "draft" ? "Payroll run saved as draft" : "Payroll run posted to the ledger");
             setPeriodLabel(""); setPeriodStart(""); setPeriodEnd(""); setLines([]);
             router.refresh();
         } catch (e) {
             toast.error(e instanceof Error ? e.message : "Something went wrong");
         } finally {
             setRunning(false);
+        }
+    };
+
+    const post = async (id: string) => {
+        try {
+            setBusyId(id);
+            await postPayrollRun(id, path);
+            toast.success("Payroll run posted to the ledger");
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    const downloadPayslips = async (r: PayrollRunRow) => {
+        try {
+            setBusyId(r._id);
+            const slips = await getPayslipsForRun(r._id);
+            if (!slips || slips.length === 0) {
+                toast.info("No payslips to download for this run");
+                return;
+            }
+            const { default: jsPDF } = await import("jspdf");
+            const doc = new jsPDF();
+            slips.forEach((s: PayslipRow, i: number) => {
+                if (i > 0) doc.addPage();
+                renderPayslip(doc, s);
+            });
+            doc.save(`payslips-${r.runNumber || "run"}.pdf`);
+            toast.success(`Downloaded ${slips.length} payslip${slips.length === 1 ? "" : "s"}`);
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Could not build payslips");
+        } finally {
+            setBusyId(null);
         }
     };
 
@@ -713,17 +856,27 @@ function PayrollTab({
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                        <Button variant="outline" size="sm" onClick={addLine}>
-                            <Plus className="mr-1 h-4 w-4" /> Add staff line
-                        </Button>
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={addLine}>
+                                <Plus className="mr-1 h-4 w-4" /> Add staff line
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={prefill} disabled={prefilling}>
+                                {prefilling ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1 h-4 w-4" />}
+                                Prefill from profiles
+                            </Button>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-4">
                             <span className="text-sm">
                                 <span className="text-muted-foreground">Run total </span>
                                 <span className="font-semibold">{money(draftTotal)}</span>
                             </span>
-                            <Button onClick={run} disabled={running || lines.length === 0}>
+                            <Button variant="outline" onClick={() => run("draft")} disabled={running || lines.length === 0}>
+                                {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                                Save Draft
+                            </Button>
+                            <Button onClick={() => run("posted")} disabled={running || lines.length === 0}>
                                 {running ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
-                                Run Payroll
+                                Run &amp; Post
                             </Button>
                         </div>
                     </div>
@@ -752,9 +905,24 @@ function PayrollTab({
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <div className="text-right text-sm">
-                                        <p className="font-semibold">{money(r.totalGross)}</p>
-                                        <p className="text-xs text-muted-foreground">posted to ledger</p>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <Badge variant={r.status === "posted" ? "default" : "secondary"}>
+                                                {r.status === "posted" ? "posted" : "draft"}
+                                            </Badge>
+                                            <p className="font-semibold">{money(r.totalGross)}</p>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {r.status === "posted" ? "posted to ledger" : "not yet posted"}
+                                        </p>
                                     </div>
+                                    {r.status === "draft" && (
+                                        <Button size="sm" variant="outline" onClick={() => post(r._id)} disabled={busyId === r._id}>
+                                            {busyId === r._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="mr-1 h-4 w-4" /> Post</>}
+                                        </Button>
+                                    )}
+                                    <Button size="sm" variant="ghost" onClick={() => downloadPayslips(r)} disabled={busyId === r._id} title="Download payslips">
+                                        <Download className="h-4 w-4" />
+                                    </Button>
                                     <button onClick={() => remove(r._id)} disabled={busyId === r._id} className="text-muted-foreground hover:text-red-600">
                                         {busyId === r._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     </button>
@@ -777,5 +945,149 @@ function PayrollTab({
                 ))}
             </div>
         </div>
+    );
+}
+
+/* ─────────────────────────── Compensation tab ───────────────────────────── */
+
+function CompensationTab({ staff, busyId, setBusyId, router, path }: TabProps) {
+    const [staffId, setStaffId] = useState("");
+    const [baseSalary, setBaseSalary] = useState("");
+    const [taxRate, setTaxRate] = useState("");
+    const [pensionRate, setPensionRate] = useState("");
+    const [expectedMonthlyHours, setExpectedMonthlyHours] = useState("");
+    const [allowances, setAllowances] = useState<DraftAdj[]>([]);
+    const [deductions, setDeductions] = useState<DraftAdj[]>([]);
+
+    const addAdj = (kind: "allowances" | "deductions") =>
+        (kind === "allowances" ? setAllowances : setDeductions)((prev) => [...prev, { label: "", amount: "" }]);
+    const setAdjField = (kind: "allowances" | "deductions", idx: number, patch: Partial<DraftAdj>) =>
+        (kind === "allowances" ? setAllowances : setDeductions)((prev) =>
+            prev.map((a, i) => (i === idx ? { ...a, ...patch } : a)),
+        );
+    const removeAdj = (kind: "allowances" | "deductions", idx: number) =>
+        (kind === "allowances" ? setAllowances : setDeductions)((prev) => prev.filter((_, i) => i !== idx));
+
+    const reset = () => {
+        setBaseSalary(""); setTaxRate(""); setPensionRate(""); setExpectedMonthlyHours("");
+        setAllowances([]); setDeductions([]);
+    };
+
+    const save = async () => {
+        if (!staffId) return toast.error("Select a staff member");
+        try {
+            setBusyId(staffId);
+            await setCompensation(
+                staffId,
+                {
+                    baseSalary,
+                    taxRate,
+                    pensionRate,
+                    expectedMonthlyHours,
+                    allowances: allowances.filter((a) => a.label || a.amount).map((a) => ({ label: a.label, amount: a.amount })),
+                    deductions: deductions.filter((d) => d.label || d.amount).map((d) => ({ label: d.label, amount: d.amount })),
+                },
+                path,
+            );
+            toast.success("Compensation profile saved");
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    return (
+        <Card>
+            <CardContent className="space-y-4 pt-6">
+                <div>
+                    <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                        Compensation Profile
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                        Set a staff member&apos;s standing salary, recurring allowances / deductions and statutory
+                        rates. Payroll runs prefill from these, folding in PAYE and pension automatically.
+                    </p>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Staff</label>
+                        <Select value={staffId} onValueChange={(v) => { setStaffId(v); reset(); }}>
+                            <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                            <SelectContent>
+                                {staff.map((s) => (
+                                    <SelectItem key={s._id} value={s._id}>
+                                        {s.fullName}{s.role ? ` · ${s.role}` : ""}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Base salary (monthly)</label>
+                        <Input type="number" min={0} value={baseSalary} onChange={(e) => setBaseSalary(e.target.value)} placeholder="0" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Expected monthly hours</label>
+                        <Input type="number" min={0} value={expectedMonthlyHours} onChange={(e) => setExpectedMonthlyHours(e.target.value)} placeholder="e.g. 160" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">PAYE tax rate (0–1)</label>
+                        <Input type="number" min={0} max={1} step="0.001" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} placeholder="e.g. 0.075" />
+                    </div>
+                    <div>
+                        <label className="mb-1 block text-xs text-muted-foreground">Pension rate (0–1)</label>
+                        <Input type="number" min={0} max={1} step="0.001" value={pensionRate} onChange={(e) => setPensionRate(e.target.value)} placeholder="e.g. 0.08" />
+                    </div>
+                </div>
+
+                {/* Standing allowances */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Recurring allowances</span>
+                        <Button size="sm" variant="ghost" onClick={() => addAdj("allowances")}>
+                            <Plus className="mr-1 h-3 w-3" /> Add
+                        </Button>
+                    </div>
+                    {allowances.map((a, i) => (
+                        <div key={i} className="flex gap-2">
+                            <Input className="flex-1" value={a.label} onChange={(e) => setAdjField("allowances", i, { label: e.target.value })} placeholder="e.g. Transport" />
+                            <Input className="w-32" type="number" value={a.amount} onChange={(e) => setAdjField("allowances", i, { amount: e.target.value })} placeholder="0" />
+                            <button onClick={() => removeAdj("allowances", i)} className="text-muted-foreground hover:text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Standing deductions */}
+                <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium text-muted-foreground">Recurring deductions</span>
+                        <Button size="sm" variant="ghost" onClick={() => addAdj("deductions")}>
+                            <Plus className="mr-1 h-3 w-3" /> Add
+                        </Button>
+                    </div>
+                    {deductions.map((d, i) => (
+                        <div key={i} className="flex gap-2">
+                            <Input className="flex-1" value={d.label} onChange={(e) => setAdjField("deductions", i, { label: e.target.value })} placeholder="e.g. Loan" />
+                            <Input className="w-32" type="number" value={d.amount} onChange={(e) => setAdjField("deductions", i, { amount: e.target.value })} placeholder="0" />
+                            <button onClick={() => removeAdj("deductions", i)} className="text-muted-foreground hover:text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex justify-end">
+                    <Button onClick={save} disabled={!staffId || busyId === staffId}>
+                        {busyId === staffId ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2 h-4 w-4" />}
+                        Save Profile
+                    </Button>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

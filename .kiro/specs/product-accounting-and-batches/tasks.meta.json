@@ -1,0 +1,474 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1.1 Implement the batch engine functions and `Batch` interface": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067437182
+      },
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067456137
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071036154
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071051945
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072327962
+      }
+    ],
+    "2.1 Implement `pickAccountCode` and `ResolvedSide` type": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067437694
+      },
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067457117
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071036448
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071053351
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072329999
+      }
+    ],
+    "3.1 Extend the `InventoryProduct` schema": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067438407
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071036733
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072341750
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072493636
+      }
+    ],
+    "3.2 Extend the `InventoryPurchase` schema": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067439790
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071036972
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072342258
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072494648
+      }
+    ],
+    "3.3 Extend `IInventoryProduct` / purchase types in `lib/types.d.ts`": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067439973
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071037207
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072502063
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792073434849
+      }
+    ],
+    "4.1 Implement the pure JE line-builder(s)": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067440205
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071037570
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792073454373
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792074132453
+      }
+    ],
+    "4.2 Implement `postLedgerEntryLines` in `bridge.actions.ts`": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067440644
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071038030
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792074140373
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792075986814
+      }
+    ],
+    "5.1 Add account-link validation to `createProduct` / `updateProduct`": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067440972
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071038252
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792074143248
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792075989981
+      }
+    ],
+    "5.2 Add batch read/mutation helpers keeping the quantity=sum invariant": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067441261
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071038433
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792074145558
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076381510
+      }
+    ],
+    "6.1 Post an inventory-asset debit on purchase and add received stock as a batch": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067441703
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071038631
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076391249
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080424368
+      }
+    ],
+    "6.2 Reverse the purchase JE on delete/reverse": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067442129
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071039075
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080960922
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081290269
+      }
+    ],
+    "7.1 FEFO deplete/restore mirroring the scalar delta logic": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067442308
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071039370
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076393078
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080425629
+      }
+    ],
+    "7.2 Post the COGS-relief JE only (no second revenue JE)": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067442489
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071039989
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080961826
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081289279
+      }
+    ],
+    "8.1 Implement expired and near-expiry listings": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067442960
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071040577
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076394745
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080427334
+      }
+    ],
+    "9.1 Add three account selects gated by accountingManagement": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067443153
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071040874
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076396622
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080437468
+      }
+    ],
+    "9.2 Add pharmacy fields and preserve the isDrug conditional reveal": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067443360
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071041111
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080442596
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080610159
+      }
+    ],
+    "9.3 Add batch entry rows": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067443962
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071041328
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080615546
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080951801
+      }
+    ],
+    "10. Final verification + regression sweep": [
+      {
+        "executionId": "7eab5a28-aec4-435b-850a-bf00605e0b92",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792067444843
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792071041676
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081300696
+      },
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081848254
+      }
+    ],
+    "1. Build the pure batch engine `lib/inventory/batches.ts`": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072330277
+      }
+    ],
+    "2. Build the pure account-resolution engine `lib/inventory/account-resolution.ts`": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792072330594
+      }
+    ],
+    "3. Apply schema and type diffs": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792073435702
+      }
+    ],
+    "4. Add the `postLedgerEntryLines` bridge helper and its pure line-builder": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792075992746
+      }
+    ],
+    "5. Product actions: account-link validation + batch CRUD": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792076383107
+      }
+    ],
+    "8. Expiry reporting action `lib/actions/inventory-expiry.actions.ts`": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080427831
+      }
+    ],
+    "9. ProductForm UI — account selects, pharmacy fields, batch entry": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792080953042
+      }
+    ],
+    "7. Dispense integration in `visit-clinical.actions.ts`": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081289516
+      }
+    ],
+    "6. Rewrite purchase posting in `inventory-purchase.actions.ts`": [
+      {
+        "executionId": "4f083de3-49e8-413b-bc7e-18c80efcbd9f",
+        "chatSessionId": "sess_66973d18-4ffc-4536-9f65-a05f048cd14b",
+        "timestamp": 1792081290468
+      }
+    ]
+  }
+}

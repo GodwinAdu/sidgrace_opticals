@@ -1,0 +1,46 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "findings": [
+    {
+      "id": "HIGH-1",
+      "severity": "HIGH",
+      "title": "Implementation cannot build: the worktree lacks every reference file the action imports",
+      "where": "Blocking prerequisite section; lib/actions/pharmacy-sale.actions.ts import block",
+      "problem": "Re-verified in .worktrees/pharmacy-pos (branch feature/pharmacy-pos, tip f470c67): Test-Path returns False for lib/inventory/batches.ts, lib/inventory/postings.ts, lib/inventory/account-resolution.ts, lib/actions/accounting/bridge.actions.ts, and lib/actions/accounting/accounting-settings.actions.ts. inventory-product.actions.ts and visit-clinical.actions.ts exist but are the pre-batch/pre-FEFO versions. Every core import the new action depends on resolves to a nonexistent file, so tsc --noEmit / next build cannot pass.",
+      "fix": "Before any implementation, either (1) commit the inventory-accounting + batch-engine + pharmacy-inventory work in main to its source branch then merge it into feature/pharmacy-pos, or (2) repoint the worktree at the branch/commit that carries those files. Gate: the five Test-Path checks must return True AND fetchDrugProducts + the FEFO _dispenseVisitProducts (grep depleteFefo) must be present in the worktree."
+    },
+    {
+      "id": "MEDIUM-1",
+      "severity": "MEDIUM",
+      "title": "COGS journal-entry id assignment is unknown-typed and will not type-check cleanly",
+      "where": "Step 9: set sale.cogsJournalEntryId = cogsEntry._id",
+      "problem": "postLedgerEntryLines is typed Promise<Record<string, unknown> | null>, so cogsEntry._id is unknown. Assigning unknown to the typed field cogsJournalEntryId?: Types.ObjectId | null is not safe under strict TS and risks a build failure the DoD requires to pass. _dispenseVisitProducts never stores a COGS JE id, so there is no precedent proving this compiles.",
+      "fix": "Guard presence and coerce explicitly: if (cogsEntry && (cogsEntry as { _id?: unknown })._id) { sale.cogsJournalEntryId = String((cogsEntry as { _id: unknown })._id) as unknown as Types.ObjectId; }. Apply the same String(...) coercion to the revenue id in step 8, and state the cast pattern in the design."
+    },
+    {
+      "id": "NIT-1",
+      "severity": "NIT",
+      "title": "currentUser() return shape described inaccurately",
+      "where": "Finding 6 and the Cashier name (receipt) integration row",
+      "problem": "The design says currentUser() returns { id, role, fullName?, email?, profileImage?, isAuthenticated }, but that is getSession()'s trimmed shape. currentUser() returns the full serialized Staff object (carries _id, fullName, role, plus an index signature). Behavior-safe since user?.fullName and user._id are both readable.",
+      "fix": "Reword to: currentUser() returns the authenticated Staff object (carries _id, fullName?, role, ...); read user?.fullName || 'Cashier'. Remove the isAuthenticated/id-only shape, which belongs to getSession()."
+    },
+    {
+      "id": "NIT-2",
+      "severity": "NIT",
+      "title": "Revenue id persistence relies on the journalEntryId alias without noting it is a string",
+      "where": "Step 8: revEntry.journalEntryId alias equals _id",
+      "problem": "postLedgerEntry returns JSON.parse(JSON.stringify(entry)) with journalEntryId = _id, so both are string values, not ObjectId instances. The design is correct the alias exists but should note the value is a string cast back to ObjectId on save.",
+      "fix": "Add a one-line note: revEntry._id/revEntry.journalEntryId are strings; assign directly and Mongoose casts to ObjectId on save. Pair with MEDIUM-1 cast guidance."
+    },
+    {
+      "id": "NIT-3",
+      "severity": "NIT",
+      "title": "listPharmacySales populate assumes Patient display fields not verified",
+      "where": "listPharmacySales: .populate('patientId', 'fullName patientId')",
+      "problem": "The selected fields on the populated Patient were not verified against the Patient model. Cosmetic only (read list, []-on-error), but selecting a non-existent field silently returns undefined, a latent display bug for the patient chip/receipt label.",
+      "fix": "Confirm the Patient model's human-identifier fields (e.g. fullName and/or a patientId/MRN field) before implementation and select exactly those names."
+    }
+  ],
+  "reviewDoc": "c:\\Users\\Jr\\Desktop\\sidgrace_opticals\\.agents\\tasks\\pharmacy-pos\\design-review.md"
+}

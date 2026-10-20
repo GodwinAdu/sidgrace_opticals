@@ -82,6 +82,11 @@ const RoleSchema: Schema<IRole> = new Schema({
     hrManagement: { type: Boolean, default: false },
     // Payroll module permission (payroll runs → ledger expense)
     payrollManagement: { type: Boolean, default: false },
+    // Accounting (double-entry ledger) module permissions
+    accountingManagement: { type: Boolean, default: false },
+    accountingPost: { type: Boolean, default: false },
+    accountingApprove: { type: Boolean, default: false },
+    accountingSettings: { type: Boolean, default: false },
     report: {
         type: Boolean,
         default: false

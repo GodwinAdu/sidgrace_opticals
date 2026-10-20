@@ -20,8 +20,9 @@
  *
  * The hook also drives the provider's `saving` / `dirty` flags (via
  * `setSaving` / `setSaved`, no attendance overwrite) so a shared
- * SaveStatusIndicator can reflect auto-save progress. On failure the optimistic
- * edit rolls back to the last SERVER-CONFIRMED value and the field goes "error".
+ * SaveStatusIndicator can reflect auto-save progress. On failure the field KEEPS
+ * the user's unsaved text (never silently reverted) and goes "error"; the last
+ * server-confirmed value is retained in the store so a retry re-sends the text.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -97,13 +98,17 @@ export function usePersistSection(): PersistSectionResult {
                 return true;
             } catch (error) {
                 console.error("Failed to persist clinical section:", error);
-                // Exact rollback to the last confirmed value (Property 4).
-                const rollback = reducer.rollbackValue(storeRef.current, field);
-                patchSection(field, rollback);
+                // Keep the user's unsaved text in the field (do NOT roll back to
+                // the last confirmed value — that would silently discard a note
+                // the clinician just typed). The store records the failure so the
+                // field shows an "error"/unsaved state; the no-op guard still
+                // compares against the last CONFIRMED value, so a retry (explicit
+                // Save, the next auto-save, or unmount flush) re-sends this text.
+                // Nothing was persisted, so attribution/version integrity is intact.
                 setStore((s) => reducer.fail(s, field));
                 providerSetSaved();
                 toast.error("Save failed", {
-                    description: "Your change was not saved — it has been reverted. Please retry.",
+                    description: "Your change wasn't saved yet and is kept in the field — it will retry, or press Save.",
                 });
                 return false;
             } finally {

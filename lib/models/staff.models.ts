@@ -34,6 +34,28 @@ const StaffSchema = new Schema<IStaff>(
         requirePasswordChange: { type: Boolean, default: true },
         isBanned: { type: Boolean, default: false },
         onLeave: { type: Boolean, default: false },
+        // Standing compensation profile (HR/payroll). Optional; prefills a run.
+        compensation: {
+            type: new Schema(
+                {
+                    baseSalary: { type: Number, default: 0, min: 0 },
+                    allowances: {
+                        type: [new Schema({ label: String, amount: Number }, { _id: false })],
+                        default: [],
+                    },
+                    deductions: {
+                        type: [new Schema({ label: String, amount: Number }, { _id: false })],
+                        default: [],
+                    },
+                    taxRate: { type: Number, default: 0, min: 0, max: 1 },
+                    pensionRate: { type: Number, default: 0, min: 0, max: 1 },
+                    expectedMonthlyHours: { type: Number, default: 0, min: 0 },
+                },
+                { _id: false }
+            ),
+            default: undefined,
+        },
+        lastLogin: { type: Date, default: null },
         createdBy: {
             type: Schema.Types.ObjectId,
             ref: "Staff",

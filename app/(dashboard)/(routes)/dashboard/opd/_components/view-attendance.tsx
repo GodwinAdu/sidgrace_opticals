@@ -23,18 +23,18 @@ import { EmptyState } from "./empty-state"
 
 
 // Define types for our data
-interface Patient {
-    _id: string
-    fullName: string
-    dob: string
-}
-
+// `getAllAttendances` returns rows shaped
+// `{ _id, patient: <fullName string>, visitDate: <formatted "PPP" string>, status, ...rawDoc }`.
+// `patientId` (when present via the raw spread) is only populated with
+// `fullName` and may be `null` if the patient was deleted.
 interface AttendanceRecord {
     _id: string
-    patientId: Patient
-    date: string
-    status: "completed" | "waiting" | "in-progress" | "cancelled"
+    patient: string
+    visitDate: string
+    date?: string
+    status: "completed" | "waiting" | "in-progress" | "ongoing" | "cancelled"
     followUpDate?: string
+    patientId?: { fullName?: string; dob?: string } | null
 }
 
 interface AttendanceDialogProps {
@@ -49,6 +49,7 @@ const getStatusColor = (status: string) => {
         case "waiting":
             return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300"
         case "in-progress":
+        case "ongoing":
             return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300"
         case "cancelled":
             return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300"
@@ -63,7 +64,7 @@ export function AttendanceDialog({ data , isLoading = false }: AttendanceDialogP
 
     // Filter data based on search term
     const filteredData = data.filter((record) =>
-        record.patient.toLowerCase().includes(searchTerm.toLowerCase()),
+        (record.patient ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
     )
 
     return (
@@ -110,27 +111,31 @@ export function AttendanceDialog({ data , isLoading = false }: AttendanceDialogP
                                             <div className="flex items-center space-x-3">
                                                 <Avatar className="h-8 w-8">
                                                     <AvatarImage
-                                                        src={`/placeholder.svg?height=32&width=32&text=${record.patientId.fullName.charAt(0)}`}
-                                                        alt={record.patient}
+                                                        src={`/placeholder.svg?height=32&width=32&text=${record.patient?.charAt(0) ?? "?"}`}
+                                                        alt={record.patient ?? "Patient"}
                                                     />
-                                                    <AvatarFallback>{record.patient.charAt(0)}</AvatarFallback>
+                                                    <AvatarFallback>{record.patient?.charAt(0) ?? "?"}</AvatarFallback>
                                                 </Avatar>
                                                 <div>
-                                                    <div className="font-medium">{record.patient}</div>
-                                                    <div className="text-sm text-muted-foreground">Age: {calculateAge(record.patientId.dob)}</div>
+                                                    <div className="font-medium">{record.patient ?? "Unknown patient"}</div>
+                                                    {record.patientId?.dob && (
+                                                        <div className="text-sm text-muted-foreground">Age: {calculateAge(record.patientId.dob)}</div>
+                                                    )}
                                                 </div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex items-center space-x-2">
                                                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                                                <span>{format(new Date(record.date), "MMM dd, yyyy")}</span>
+                                                <span>{record.visitDate}</span>
                                             </div>
-                                            <div className="text-sm text-muted-foreground">{format(new Date(record.date), "hh:mm a")}</div>
+                                            {record.date && (
+                                                <div className="text-sm text-muted-foreground">{format(new Date(record.date), "hh:mm a")}</div>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Badge className={getStatusColor(record.status)}>
-                                                {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
+                                                {record.status ? record.status.charAt(0).toUpperCase() + record.status.slice(1) : "Unknown"}
                                             </Badge>
                                         </TableCell>
                                         <TableCell>

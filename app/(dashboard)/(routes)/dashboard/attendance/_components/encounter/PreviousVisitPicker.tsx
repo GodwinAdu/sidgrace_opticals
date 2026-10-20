@@ -190,6 +190,11 @@ export default function PreviousVisitPicker({
                                             <span className="capitalize text-muted-foreground">
                                                 • {visit.visitType || "visit"}
                                             </span>
+                                            {visit.diagnosis?.primary ? (
+                                                <span className="max-w-[160px] truncate text-muted-foreground">
+                                                    — {visit.diagnosis.primary}
+                                                </span>
+                                            ) : null}
                                         </span>
                                     </SelectItem>
                                 ))

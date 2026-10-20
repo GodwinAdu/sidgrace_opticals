@@ -46,6 +46,13 @@ const InventoryPurchaseSchema: Schema<IInventoryPurchase> = new Schema({
         ref: "Transaction",
         default: null,
     },
+    // NEW — JE id of the inventory-debit posting (R3.4). `transactionId` is KEPT as-is
+    // for backward compat (R7.4); new purchases use journalEntryId.
+    journalEntryId: {
+        type: Schema.Types.ObjectId,
+        ref: "JournalEntry",
+        default: null,
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: "Staff",

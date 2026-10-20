@@ -196,12 +196,23 @@ const actionTypes = [
     "TRANSACTION_DELETED",
     "TRANSACTION_RESTORED",
 
+    // ── Accounting core (journal entries, ledger, periods) ────
+    "JOURNAL_ENTRY_CREATED",
+    "JOURNAL_ENTRY_UPDATED",
+    "JOURNAL_ENTRY_POSTED",
+    "JOURNAL_ENTRY_REVERSED",
+    "ACCOUNTING_PERIOD_CONFIGURED",
+    "ACCOUNTING_PERIOD_CLOSED",
+    "ACCOUNTING_PERIOD_REOPENED",
+
     // ── Pharmacy ──────────────────────────────────────────────
     "PRESCRIPTION_CREATED",
     "PRESCRIPTION_UPDATED",
     "PRESCRIPTION_DELETED",
     "PRESCRIPTION_RESTORED",
     "PRESCRIPTION_DISPENSED",
+    "PHARMACY_SALE_CREATED",
+    "PHARMACY_SALE_VOIDED",
 
     // ── Billing settlement ────────────────────────────────────
     "OUTSTANDING_SETTLED",
@@ -359,7 +370,38 @@ const actionTypes = [
     "TIMESHEET_RESTORED",
     "PAYROLL_RUN_CREATED",
     "PAYROLL_RUN_DELETED",
-    "PAYROLL_RUN_RESTORED"
+    "PAYROLL_RUN_RESTORED",
+
+    // ── Accounting (double-entry ledger) ──────────────────────
+    "CHART_ACCOUNT_CREATED",
+    "CHART_ACCOUNT_UPDATED",
+    "CHART_ACCOUNT_DEACTIVATED",
+    "CHART_ACCOUNT_DELETED",
+    "CHART_ACCOUNT_SEEDED",
+    "ACCOUNTING_SETTINGS_UPDATED",
+
+    // ── Vendors (accounts-payable master) ─────────────────────
+    "VENDOR_CREATED",
+    "VENDOR_UPDATED",
+    "VENDOR_DEACTIVATED",
+    "VENDOR_DELETED",
+
+    // ── Expense approval rules ────────────────────────────────
+    "APPROVAL_RULE_CREATED",
+    "APPROVAL_RULE_UPDATED",
+    "APPROVAL_RULE_DELETED",
+
+    // ── Expenses (capture → submit → approve → post) ──────────
+    "EXPENSE_CAPTURED",
+    "EXPENSE_SUBMITTED",
+    "EXPENSE_APPROVED",
+    "EXPENSE_REJECTED",
+    "EXPENSE_POSTED",
+
+    // ── Budgets (budget vs actual) ────────────────────────────
+    "BUDGET_CREATED",
+    "BUDGET_UPDATED",
+    "BUDGET_DELETED"
 ];
 
 const historySchema = new Schema(

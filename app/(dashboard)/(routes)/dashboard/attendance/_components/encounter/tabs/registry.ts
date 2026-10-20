@@ -233,6 +233,15 @@ export const encounterTabs: RegisteredTab[] = [
         load: () => import("./NursingNotesTabModule"),
     },
     {
+        id: "care-plan",
+        label: "Care Plan",
+        shortLabel: "Care Plan",
+        group: "nursing",
+        icon: ClipboardList,
+        gate: nursing,
+        load: () => import("./CarePlanTabModule"),
+    },
+    {
         id: "mar",
         label: "Med Admin",
         shortLabel: "MAR",

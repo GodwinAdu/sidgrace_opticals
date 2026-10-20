@@ -46,6 +46,19 @@ vi.mock("../../lib/helpers/auth", async () => {
     };
 });
 
+// `saveClinicalSection` now enforces a per-field role permission in its body via
+// `currentRoleCached()` (defense-in-depth: the action is a public endpoint). Back
+// that role source with the SAME controllable `testCtx.role`, keeping the real
+// `hasPermission` / `isAdmin` / `AuthError`, so these tests exercise the real new
+// authorization path with a role we control.
+vi.mock("../../lib/helpers/authz", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("../../lib/helpers/authz")>();
+    return {
+        ...actual,
+        currentRoleCached: async () => testCtx.role as never,
+    };
+});
+
 // Import AFTER the mock + after setup.ts has set MONGODB_URL.
 const { saveClinicalSection } = await import("../../lib/actions/clinical-section.actions");
 const { updateAttendance } = await import("../../lib/actions/attendance.actions");

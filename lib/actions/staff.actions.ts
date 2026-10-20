@@ -53,9 +53,32 @@ async function _createStaff(user: User, values: CreateStaffValues) {
 
         const hashedPassword = await hash(password, 10)
 
+        // Mass-assignment guard (defense-in-depth): strip server-managed audit /
+        // identity fields so a client cannot forge them through the `[key:
+        // string]` index signature. Legitimate staff fields (role, department,
+        // profile) are admin-set and preserved; only server-owned bookkeeping is
+        // removed and re-stamped below.
+        const safeValues: Record<string, unknown> = { ...values };
+        const PROTECTED_FIELDS = [
+            "_id",
+            "createdBy",
+            "modifiedBy",
+            "deletedBy",
+            "del_flag",
+            "mod_flag",
+            "action_type",
+            "createdAt",
+            "updatedAt",
+            "lastLogin",
+        ];
+        for (const protectedKey of PROTECTED_FIELDS) {
+            if (protectedKey in safeValues) delete safeValues[protectedKey];
+        }
+
         const newUser = new Staff({
-            ...values,
+            ...safeValues,
             password: hashedPassword,
+            createdBy: user._id,
             action_type: "created"
         });
 

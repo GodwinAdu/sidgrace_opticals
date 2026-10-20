@@ -9,7 +9,7 @@ import History from "../models/history.models";
 import Payment from "../models/payment.models";
 import { User, withAuth } from "../helpers/auth";
 import { deleteDocument } from "./trash.actions";
-import { postLedgerEntry } from "./transaction.actions";
+import { postLedgerEntry } from "./accounting/bridge.actions";
 import { nextSequence } from "../models/counter.models";
 
 /* ─────────────── INSURANCE ─────────────── */
@@ -307,7 +307,7 @@ async function maybePostInsurancePayment(
 
     if (path) revalidatePath(path);
     revalidatePath("/dashboard/billing/invoices");
-    revalidatePath("/dashboard/account/transactions");
+    revalidatePath("/dashboard/account/journal-entries");
 }
 
 async function _updateClaim(

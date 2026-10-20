@@ -248,3 +248,69 @@
     padding: 24px;
   }
 }
+
+/* ───────────────────────── Receipt (thermal / Epson) print mode ─────────────────────────
+   When the user clicks "Print Receipt", JS adds `printing-receipt` to <body> just before
+   window.print() and removes it afterwards. In that mode we print ONLY the compact 80mm
+   receipt slip (#receipt-print-area) and size the page to an 80mm roll, so a receipt
+   printer (Epson TM-series, etc., installed as a normal Windows printer) prints a tidy
+   slip instead of a full A4 page. Without the class the receipt block is hidden, so it
+   never affects the normal full-invoice print above. */
+@media print {
+  body.printing-receipt * {
+    visibility: hidden;
+  }
+  body.printing-receipt #receipt-print-area,
+  body.printing-receipt #receipt-print-area * {
+    visibility: visible;
+  }
+  body.printing-receipt #receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 72mm;              /* printable width inside an 80mm roll */
+    padding: 0;
+    margin: 0;
+    font-family: "Courier New", ui-monospace, monospace;
+    color: #000;
+  }
+  /* In receipt mode, suppress the full A4 invoice region so the two never both print. */
+  body.printing-receipt #invoice-print-area {
+    display: none !important;
+  }
+  body.printing-receipt {
+    background: #fff;
+  }
+}
+
+/* The receipt block is screen-hidden; it only exists to be printed. */
+#receipt-print-area {
+  display: none;
+}
+@media print {
+  body.printing-receipt #receipt-print-area {
+    display: block;
+  }
+}
+
+/* Narrow the paper to the receipt roll only while printing a receipt. */
+@page receipt {
+  size: 80mm auto;
+  margin: 4mm;
+}
+
+/* Pharmacy POS receipt print isolation: when printing, hide everything except
+   the #pos-receipt block so only the slip renders. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #pos-receipt,
+  #pos-receipt * {
+    visibility: visible;
+  }
+  #pos-receipt {
+    position: absolute;
+    inset: 0;
+  }
+}

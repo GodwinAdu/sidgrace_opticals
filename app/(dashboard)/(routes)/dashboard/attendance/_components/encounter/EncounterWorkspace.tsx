@@ -106,10 +106,17 @@ function EncounterWorkspaceInner({
     // Default landing is Overview; fall back to default tab if the active
     // registry section stops being visible.
     const [activeId, setActiveId] = useState<string>(OVERVIEW_ID);
+    // Resolve the active section safely: keep the user's selection when it is
+    // Overview or still a visible tab; otherwise fall back to the default tab —
+    // but only if that default is actually visible. When no registry tab is
+    // visible (e.g. a role with no att* flags), fall back to Overview so the
+    // outlet never mounts a role-hidden section.
     const resolvedActive =
         activeId === OVERVIEW_ID || visibleTabs.some((t) => t.id === activeId)
             ? activeId
-            : defaultTab;
+            : visibleTabs.some((t) => t.id === defaultTab)
+                ? defaultTab
+                : OVERVIEW_ID;
 
     const ActiveTab = resolvedActive === OVERVIEW_ID ? null : lazyTabComponents[resolvedActive];
 

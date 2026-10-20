@@ -147,3 +147,121 @@ async function _addIntakeOutput(user: User, attendanceId: string, entry: IoInput
     }
 }
 export const addIntakeOutput = await withAuth(_addIntakeOutput, "attNursing");
+
+/* ─────────────── NURSING CARE PLAN (nursing-process items) ─────────────── */
+interface CarePlanInput {
+    problem: string;
+    goal?: string;
+    interventions?: string;
+    evaluation?: string;
+    status?: "active" | "resolved";
+}
+
+/**
+ * Open a new care-plan item (problem / nursing diagnosis → goal → interventions
+ * → evaluation). Append-only create; items are updated via
+ * `updateCarePlanItem`. Gated by `attNursing`; attributed + audited.
+ */
+async function _addCarePlanItem(user: User, attendanceId: string, entry: CarePlanInput, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!entry?.problem?.trim()) throw new Error("A problem / nursing diagnosis is required");
+        await connectToDB();
+
+        const visit = await Attendance.findById(attendanceId);
+        if (!visit) throw new Error("Visit not found");
+
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
+        const now = new Date();
+        visit.carePlan = visit.carePlan || [];
+        visit.carePlan.push({
+            problem: entry.problem.trim(),
+            goal: entry.goal?.trim() || "",
+            interventions: entry.interventions?.trim() || "",
+            evaluation: entry.evaluation?.trim() || "",
+            status: entry.status === "resolved" ? "resolved" : "active",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
+            updatedByName: authoredByName,
+            createdAt: now,
+            updatedAt: now,
+        } as never);
+        visit.markModified("carePlan");
+        await visit.save();
+
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "carePlan", problem: entry.problem.trim() },
+            message: `${authoredByName || "A staff member"} opened a care-plan item: ${entry.problem.trim()}.`,
+        });
+
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify(visit.carePlan));
+    } catch (error) {
+        console.error("Error adding care-plan item:", error);
+        throw error;
+    }
+}
+export const addCarePlanItem = await withAuth(_addCarePlanItem, "attNursing");
+
+interface CarePlanUpdate {
+    goal?: string;
+    interventions?: string;
+    evaluation?: string;
+    status?: "active" | "resolved";
+}
+
+/**
+ * Update an existing care-plan item (progress its evaluation and/or status, or
+ * revise the goal/interventions). The problem statement itself is immutable once
+ * opened — revise care via evaluation/status so the record stays faithful.
+ * Gated by `attNursing`; records the last updater + time; audited.
+ */
+async function _updateCarePlanItem(
+    user: User,
+    attendanceId: string,
+    itemId: string,
+    update: CarePlanUpdate,
+    path?: string,
+) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!itemId) throw new Error("A care-plan item is required");
+        await connectToDB();
+
+        const visit = await Attendance.findById(attendanceId);
+        if (!visit) throw new Error("Visit not found");
+
+        const list = (visit.carePlan || []) as unknown as Array<Record<string, unknown> & { _id?: unknown }>;
+        const item = list.find((c) => String(c._id) === String(itemId));
+        if (!item) throw new Error("Care-plan item not found");
+
+        if (update.goal !== undefined) item.goal = update.goal.trim();
+        if (update.interventions !== undefined) item.interventions = update.interventions.trim();
+        if (update.evaluation !== undefined) item.evaluation = update.evaluation.trim();
+        if (update.status !== undefined) item.status = update.status === "resolved" ? "resolved" : "active";
+
+        const { authoredByName } = authorSnapshot(user);
+        item.updatedByName = authoredByName;
+        item.updatedAt = new Date();
+
+        visit.markModified("carePlan");
+        await visit.save();
+
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "carePlan", itemId: String(itemId), status: item.status },
+            message: `${authoredByName || "A staff member"} updated a care-plan item.`,
+        });
+
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify(visit.carePlan));
+    } catch (error) {
+        console.error("Error updating care-plan item:", error);
+        throw error;
+    }
+}
+export const updateCarePlanItem = await withAuth(_updateCarePlanItem, "attNursing");

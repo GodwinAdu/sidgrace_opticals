@@ -6,7 +6,7 @@ import { connectToDB } from '../mongoose';
 import Staff from '../models/staff.models';
 import { Patient } from '../models/patient.models';
 import { deleteDocument } from './trash.actions';
-import { format } from 'date-fns';
+import { format, startOfDay, endOfDay } from 'date-fns';
 import ClinicSettings from '../models/clinic-settings.models';
 import { ensureVisitInvoice } from './visit-clinical.actions';
 import { resolveCompleteStatus, type VisitStatus } from '../clinical/encounter';
@@ -49,13 +49,78 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
     try {
         if (!user) throw new Error("User is not authenticated");
 
-        const date = new Date();
-
         await connectToDB();
 
-        const existingAttendance = await Attendance.findOne({ patientId: values.patientId, date });
+        // Validate patientId up-front: a check-in without a valid patient
+        // reference must be rejected before any billing side effects.
+        if (!values.patientId || !Types.ObjectId.isValid(String(values.patientId))) {
+            throw new Error("A valid patientId is required to create an attendance.");
+        }
+
+        // Duplicate-visit guard: match ANY attendance for this patient created
+        // today (same-DAY range), not an exact timestamp. Exact-timestamp
+        // equality never matched, allowing unlimited same-day visits each
+        // auto-creating a consultation-fee invoice (billing integrity bug).
+        const now = new Date();
+        const existingAttendance = await Attendance.findOne({
+            patientId: values.patientId,
+            date: { $gte: startOfDay(now), $lte: endOfDay(now) },
+        });
 
         if (existingAttendance) throw new Error("Attendance for this patient on this date already exists");
+
+        // Mass-assignment guard (defense-in-depth), mirroring PROTECTED_FIELDS in
+        // `_updateAttendanceById`. A check-in must never let the client write
+        // identity fields, server-managed audit fields, billing, versioned
+        // clinical arrays, or inpatient sub-documents. Work on a shallow copy so
+        // the caller's object is untouched.
+        const safeValues: Record<string, unknown> = { ...values };
+        const PROTECTED_FIELDS = [
+            "_id",
+            "createdBy",
+            "updatedBy",
+            "del_flag",
+            "mod_flag",
+            "action_type",
+            "deletedBy",
+            "createdAt",
+            "updatedAt",
+            "billing",
+            "doctorNoteVersions",
+            "nurseNoteVersions",
+            "surgicalNoteVersions",
+            "historyVersions",
+            "physicExamVersions",
+            "diagnosisVersions",
+            "planVersions",
+            "eyeTestVersions",
+            "vitalsVersions",
+            "labReportVersions",
+            "scanVersions",
+            "nursingNotes",
+            "medicationAdmin",
+            "intakeOutput",
+            "icuChart",
+            "carePlan",
+            "admissionId",
+        ];
+        for (const protectedKey of PROTECTED_FIELDS) {
+            if (protectedKey in safeValues) delete safeValues[protectedKey];
+        }
+
+        // Status: a new check-in may only start as "waiting" or "ongoing"; any
+        // other value (including "completed"/"cancelled") is forced to "waiting".
+        const requestedStatus = safeValues.status;
+        if (requestedStatus !== "waiting" && requestedStatus !== "ongoing") {
+            safeValues.status = "waiting";
+        }
+
+        // visitType: accept only values in the schema enum; otherwise drop it and
+        // let the schema default apply (do not throw).
+        const VISIT_TYPES = ["new", "follow-up", "procedure", "emergency", "outpatient", "inpatient", ""];
+        if ("visitType" in safeValues && !VISIT_TYPES.includes(safeValues.visitType as string)) {
+            delete safeValues.visitType;
+        }
 
         // Auto-apply the clinic's default consultation fee to the visit bill at
         // check-in, so the charge is never forgotten by clinical staff. The fee
@@ -65,8 +130,8 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
         const consultationFee = Number(settings?.defaultConsultationFee) || 0;
 
         const attendance = new Attendance({
-            ...values,
-            date,
+            ...safeValues,
+            date: new Date(),
             createdBy: user._id,
             billing: {
                 consultationFee,
@@ -197,7 +262,7 @@ export async function getPreviousVisitsByPatientId(patientId: string, excludeId?
 
 
         const previousVisits = await Attendance.find(query)
-            .select('_id date status visitType') // Only get fields we need for the list
+            .select('_id date status visitType diagnosis') // list fields + a reason hint
             .sort({ date: -1 }) // Sort by date, newest first
             .limit(10) // Only get last 10 visits (for performance)
             .lean() // Return plain JavaScript objects (faster)
@@ -233,6 +298,44 @@ async function _updateAttendanceById(
 
     // Append updatedBy field to the update object
     updateFields.updatedBy = user._id;
+
+    // Mass-assignment guard (defense-in-depth). This generic save path must
+    // never write identity fields or clinical sub-documents that have their own
+    // dedicated, permission-gated actions. The encounter Complete/Sign flow posts
+    // the whole working document, so without this strip a client could escalate
+    // by injecting e.g. nursingNotes (needs attNursing) or reassign patientId.
+    // Tracked clinical fields are routed through the attributed append-only path
+    // below and are intentionally NOT in this list.
+    const PROTECTED_FIELDS = [
+        "_id",
+        "patientId",
+        "createdBy",
+        "del_flag",
+        "mod_flag",
+        "action_type",
+        "deletedBy",
+        "createdAt",
+        "updatedAt",
+        "nursingNotes",
+        "medicationAdmin",
+        "intakeOutput",
+        "icuChart",
+        "carePlan",
+        "doctorNoteVersions",
+        "nurseNoteVersions",
+        "surgicalNoteVersions",
+        "historyVersions",
+        "physicExamVersions",
+        "diagnosisVersions",
+        "planVersions",
+        "eyeTestVersions",
+        "vitalsVersions",
+        "labReportVersions",
+        "scanVersions",
+    ];
+    for (const protectedKey of PROTECTED_FIELDS) {
+        if (protectedKey in updateFields) delete updateFields[protectedKey];
+    }
 
     // Status-on-save fix (Req 4.3): a plain record Save must NOT silently
     // complete the visit. Previously this action unconditionally forced

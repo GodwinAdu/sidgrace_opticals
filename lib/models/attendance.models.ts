@@ -165,6 +165,26 @@ const AttendanceSchema = new Schema({
         recordedAt: { type: Date, default: Date.now },
     }],
 
+    // ─────────────── Nursing Care Plan (nursing-process format) ───────────────
+    // A list of care items, each following the standard nursing process:
+    // problem / nursing diagnosis → goal (expected outcome) → interventions →
+    // evaluation, with a status that moves active → resolved. Append a new item
+    // to open a problem; update its evaluation/status as care progresses. Each
+    // item carries attribution (opener + last updater) for the audit trail.
+    carePlan: [{
+        problem: { type: String, default: "" },
+        goal: { type: String, default: "" },
+        interventions: { type: String, default: "" },
+        evaluation: { type: String, default: "" },
+        status: { type: String, enum: ["active", "resolved"], default: "active" },
+        authoredBy: { type: Schema.Types.ObjectId, ref: "Staff", default: null },
+        authoredByName: { type: String, default: "" },
+        authoredByRole: { type: String, default: "" },
+        updatedByName: { type: String, default: "" },
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+    }],
+
     // Quick link to the active admission (source of truth is the Admission doc).
     admissionId: { type: Schema.Types.ObjectId, ref: "Admission", default: null },
 

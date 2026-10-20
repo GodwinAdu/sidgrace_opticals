@@ -51,6 +51,10 @@ interface ClinicSettingsInput {
     clinicPhone?: string;
     clinicEmail?: string;
     clinicLogoUrl?: string;
+    eposEnabled?: boolean;
+    eposPrinterUrl?: string;
+    eposDeviceId?: string;
+    eposOpenDrawer?: boolean;
 }
 
 async function _updateClinicSettings(user: User, values: ClinicSettingsInput, path?: string) {
@@ -67,6 +71,10 @@ async function _updateClinicSettings(user: User, values: ClinicSettingsInput, pa
         if (values.clinicPhone !== undefined) settings.clinicPhone = values.clinicPhone;
         if (values.clinicEmail !== undefined) settings.clinicEmail = values.clinicEmail;
         if (values.clinicLogoUrl !== undefined) settings.clinicLogoUrl = values.clinicLogoUrl;
+        if (values.eposEnabled !== undefined) settings.eposEnabled = !!values.eposEnabled;
+        if (values.eposPrinterUrl !== undefined) settings.eposPrinterUrl = String(values.eposPrinterUrl).trim();
+        if (values.eposDeviceId !== undefined) settings.eposDeviceId = String(values.eposDeviceId).trim() || "local_printer";
+        if (values.eposOpenDrawer !== undefined) settings.eposOpenDrawer = !!values.eposOpenDrawer;
         settings.modifiedBy = user._id;
         await settings.save();
         if (path) revalidatePath(path);

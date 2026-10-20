@@ -6,15 +6,23 @@ import {
     getPayrollRuns,
 } from "@/lib/actions/hr.actions";
 import { fetchAllStaffs } from "@/lib/actions/staff.actions";
+import { currentRoleCached, hasPermission } from "@/lib/helpers/authz";
 import { HrManager } from "./_components/HrManager";
 
 const page = async () => {
-    const [staff, leaves, timesheets, payrollRuns] = await Promise.all([
+    const [staff, leaves, timesheets, payrollRuns, role] = await Promise.all([
         fetchAllStaffs(),
         getLeaveRequests(),
         getTimesheets(),
         getPayrollRuns(),
+        currentRoleCached(),
     ]);
+
+    // Payroll run/delete are gated server-side by `payrollManagement`; surface the
+    // Payroll tab only when the viewer actually holds that permission (admin roles
+    // bypass via `hasPermission`), so an HR-only user never sees a tab whose
+    // actions would be rejected.
+    const canRunPayroll = hasPermission(role, "payrollManagement");
 
     const staffOptions = (staff || []).map((s: { _id: string; fullName?: string; role?: string }) => ({
         _id: s._id,
@@ -35,6 +43,7 @@ const page = async () => {
                     leaves={leaves || []}
                     timesheets={timesheets || []}
                     payrollRuns={payrollRuns || []}
+                    canRunPayroll={canRunPayroll}
                 />
             </div>
         </>

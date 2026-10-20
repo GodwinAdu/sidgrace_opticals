@@ -24,10 +24,24 @@ interface EyeTestTabProps {
     readOnly?: boolean
 }
 
+/**
+ * Coerce whatever is stored on the visit (a partial object, a legacy string, or
+ * nothing) into a complete {@link EyeTestData} where every field is a string.
+ * This guards the IOP `.split("/")` below from an undefined/missing field.
+ */
+function normalizeEyeTest(data: Partial<EyeTestData> | string | null | undefined): EyeTestData {
+    const src = typeof data === "object" && data !== null ? data : {}
+    const str = (v: unknown) => (typeof v === "string" ? v : "")
+    return {
+        visualAcuity: str((src as Partial<EyeTestData>).visualAcuity),
+        colorVision: str((src as Partial<EyeTestData>).colorVision),
+        intraocularPressure: str((src as Partial<EyeTestData>).intraocularPressure),
+        remarks: str((src as Partial<EyeTestData>).remarks),
+    }
+}
+
 export default function EyeTestTab({ initialData, onSave, onChange, autoSave, readOnly = false }: EyeTestTabProps) {
-    const [eyeTestData, setEyeTestData] = useState<EyeTestData>(
-        initialData || { visualAcuity: "", colorVision: "", intraocularPressure: "", remarks: "" },
-    )
+    const [eyeTestData, setEyeTestData] = useState<EyeTestData>(() => normalizeEyeTest(initialData))
 
     const handleChange = (field: keyof EyeTestData, value: string) => {
         const next = { ...eyeTestData, [field]: value }
@@ -39,7 +53,7 @@ export default function EyeTestTab({ initialData, onSave, onChange, autoSave, re
         if (onSave) onSave(eyeTestData)
     }
 
-    const [odIop = "", osIop = ""] = eyeTestData.intraocularPressure.split("/")
+    const [odIop = "", osIop = ""] = (eyeTestData.intraocularPressure || "").split("/")
 
     return (
         <Card className="dark:bg-gray-800 dark:border-gray-700">

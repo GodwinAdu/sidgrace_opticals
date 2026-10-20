@@ -1,0 +1,277 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Pure ledger + CoA engine + tests": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903155553
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903170618
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903342073
+      }
+    ],
+    "2. Accounting models (CoA, JournalEntry, Period, Vendor)": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903157782
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903355643
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904144964
+      }
+    ],
+    "3. Chart of Accounts actions + seed": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903158712
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904156427
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791905698640
+      }
+    ],
+    "4. Journal entry + ledger + period actions": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903159843
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904157604
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791905700313
+      }
+    ],
+    "5. Compatibility bridge + accounting settings model/actions": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903160256
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791905711059
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791906350505
+      }
+    ],
+    "6. Permissions wiring (accounting role flags)": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903160517
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903356604
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904145948
+      }
+    ],
+    "7. Layer A verification": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903161117
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791906358934
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913379837
+      }
+    ],
+    "8. Pure statements engine + tests": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903161536
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904158973
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791905702702
+      }
+    ],
+    "9. Report actions + statement UI": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903161841
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791905711957
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791906352029
+      }
+    ],
+    "10. Layer B verification": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903161957
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791906361220
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913379240
+      }
+    ],
+    "11. Pure approvals engine + tests": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162127
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903357841
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791904146818
+      }
+    ],
+    "12. Vendors + expenses + approval-rule models and actions": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162299
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791906362219
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913378132
+      }
+    ],
+    "13. Vendors + Expenses + Approvals UI": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162407
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913386715
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913729780
+      }
+    ],
+    "14. Layer C verification": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162527
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913737862
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791914786626
+      }
+    ],
+    "15. Budgets model + actions + budget-vs-actual + over-budget hook": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162666
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913385815
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913730520
+      }
+    ],
+    "16. Settings + periods + budgets + reports UI, and final verification": [
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791903162790
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791913738943
+      },
+      {
+        "executionId": "b859ed34-61ee-46c0-ab0b-53c5fc807388",
+        "chatSessionId": "sess_cd83ac0d-6659-4496-8a1c-b856ed1d194c",
+        "timestamp": 1791915787077
+      }
+    ]
+  }
+}

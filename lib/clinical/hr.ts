@@ -210,10 +210,122 @@ export function computePayrollTotals(lines?: PayLineInput[]): PayrollTotals {
 
 /* ───────────────────────────── Payroll run status ───────────────────────── */
 
-/** Lifecycle state of a payroll run. */
+/**
+ * Lifecycle state of a payroll run:
+ *
+ *     draft ──▶ posted     (an approver posts the run; the ledger expense is
+ *                           booked at this transition, never while draft)
+ *
+ * `posted` is terminal (a posted run is reversed by deletion, not un-posted).
+ */
 export type PayrollStatus = "draft" | "posted";
+
+export const PAYROLL_STATUSES: { value: PayrollStatus; label: string }[] = [
+    { value: "draft", label: "Draft" },
+    { value: "posted", label: "Posted" },
+];
 
 /** True when `value` is a recognised payroll-run status. */
 export function isValidPayrollStatus(value?: string | null): value is PayrollStatus {
     return value === "draft" || value === "posted";
+}
+
+/** True when `from → to` is an allowed payroll-run transition (only draft→posted). */
+export function canTransitionPayroll(from: PayrollStatus, to: PayrollStatus): boolean {
+    return from === "draft" && to === "posted";
+}
+
+/* ─────────────────────── Compensation profile & statutory ───────────────── */
+
+/**
+ * A staff member's standing compensation profile — the recurring figures a
+ * payroll run prefills each period so an operator never re-keys a salary. All
+ * amounts are plain numbers (minor-unit agnostic) and coerced defensively.
+ */
+export interface CompensationProfile {
+    baseSalary?: number | string | null;
+    allowances?: PayAdjustment[];
+    deductions?: PayAdjustment[];
+    /** Statutory rates applied on top of the standing deductions (0..1 each). */
+    taxRate?: number | string | null;
+    pensionRate?: number | string | null;
+}
+
+/** Clamp any rate-ish value into the inclusive [0, 1] range (0 on garbage). */
+export function toRate(value?: number | string | null): number {
+    const n = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(n) || n <= 0) return 0;
+    return n > 1 ? 1 : n;
+}
+
+/**
+ * Statutory deductions derived from a taxable base (base + allowances):
+ *
+ *     PAYE    = taxableBase × taxRate
+ *     Pension = taxableBase × pensionRate
+ *
+ * Returns labelled {@link PayAdjustment}s (rounded to 2 dp) ready to append to a
+ * line's `deductions[]`, plus the taxable base they were computed from. A zero
+ * rate yields no row for that statutory item.
+ */
+export function computeStatutoryDeductions(
+    line: PayLineInput,
+    rates: { taxRate?: number | string | null; pensionRate?: number | string | null },
+): { deductions: PayAdjustment[]; taxableBase: number } {
+    const base = toAmount(line?.basePay);
+    const allowances = sumAdjustments(line?.allowances);
+    const taxableBase = base + allowances;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    const out: PayAdjustment[] = [];
+    const tax = round2(taxableBase * toRate(rates?.taxRate));
+    if (tax > 0) out.push({ label: "PAYE Tax", amount: tax });
+    const pension = round2(taxableBase * toRate(rates?.pensionRate));
+    if (pension > 0) out.push({ label: "Pension", amount: pension });
+
+    return { deductions: out, taxableBase };
+}
+
+/**
+ * Build a ready-to-run payroll line from a compensation profile, folding the
+ * standing deductions together with the computed statutory ones. Pure: the
+ * caller (server action or UI) decides what to do with the result.
+ */
+export function payLineFromProfile(profile: CompensationProfile): Required<PayLineInput> {
+    const allowances = Array.isArray(profile?.allowances) ? profile.allowances : [];
+    const standingDeductions = Array.isArray(profile?.deductions) ? profile.deductions : [];
+    const { deductions: statutory } = computeStatutoryDeductions(
+        { basePay: profile?.baseSalary, allowances },
+        { taxRate: profile?.taxRate, pensionRate: profile?.pensionRate },
+    );
+    return {
+        basePay: toAmount(profile?.baseSalary),
+        allowances: allowances.map((a) => ({ label: a?.label || "", amount: toAmount(a?.amount) })),
+        deductions: [
+            ...standingDeductions.map((d) => ({ label: d?.label || "", amount: toAmount(d?.amount) })),
+            ...statutory,
+        ],
+    };
+}
+
+/**
+ * Prorate a monthly base salary by hours actually worked in the period:
+ *
+ *     prorated = base × min(1, workedHours / expectedHours)
+ *
+ * Used to link timesheets to pay. When `expectedHours` is 0/invalid the base is
+ * returned unchanged (no proration). Never returns a negative figure.
+ */
+export function prorateByHours(
+    base: number | string | null | undefined,
+    workedHours: number | string | null | undefined,
+    expectedHours: number | string | null | undefined,
+): number {
+    const b = toAmount(base);
+    const worked = Math.max(0, toAmount(workedHours));
+    const expected = toAmount(expectedHours);
+    if (expected <= 0) return b < 0 ? 0 : b;
+    const ratio = Math.min(1, worked / expected);
+    const out = b * ratio;
+    return out > 0 ? Math.round(out * 100) / 100 : 0;
 }

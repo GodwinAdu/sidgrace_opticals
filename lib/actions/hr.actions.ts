@@ -8,7 +8,7 @@ import History from "../models/history.models";
 import { User, withAuth } from "../helpers/auth";
 import { nextSequence } from "../models/counter.models";
 import { deleteDocument } from "./trash.actions";
-import { postLedgerEntry, reverseLedgerEntry } from "./transaction.actions";
+import { postLedgerEntry, reverseLedgerEntry } from "./accounting/bridge.actions";
 import {
     canTransitionLeave,
     isValidLeaveStatus,
@@ -16,9 +16,11 @@ import {
     leaveDays,
     computeLine,
     computePayrollTotals,
+    payLineFromProfile,
     type LeaveStatus,
     type LeaveType,
     type PayLineInput,
+    type CompensationProfile,
 } from "../clinical/hr";
 
 const HR_PATH = "/dashboard/hr";
@@ -306,6 +308,72 @@ interface CreatePayrollRunInput {
     periodEnd: Date | string;
     lines: PayrollLineInput[];
     note?: string;
+    /**
+     * Whether to post the run to the ledger immediately ("posted", the default,
+     * preserving prior behaviour) or save it for later approval ("draft"). A
+     * draft books no ledger expense until `postPayrollRun` is called.
+     */
+    status?: "draft" | "posted";
+}
+
+/** Build the computed, persisted line + totals from raw payroll inputs. */
+function buildPayrollLines(rawLines: PayrollLineInput[]) {
+    const lines = rawLines.map((line) => {
+        const input: PayLineInput = {
+            basePay: line.basePay,
+            allowances: line.allowances,
+            deductions: line.deductions,
+        };
+        const r = computeLine(input);
+        return {
+            staffId: line.staffId,
+            staffName: line.staffName?.trim() || "",
+            basePay: r.base,
+            allowances: (line.allowances || []).map((a) => ({
+                label: a.label?.trim() || "",
+                amount: Number(a.amount) || 0,
+            })),
+            deductions: (line.deductions || []).map((d) => ({
+                label: d.label?.trim() || "",
+                amount: Number(d.amount) || 0,
+            })),
+            gross: r.gross,
+        };
+    });
+    const totals = computePayrollTotals(
+        rawLines.map((l) => ({
+            basePay: l.basePay,
+            allowances: l.allowances,
+            deductions: l.deductions,
+        })),
+    );
+    return { lines, totals };
+}
+
+/**
+ * Post a payroll run's gross to the accounting ledger as a cash-basis expense
+ * (category "Payroll", which the bridge routes to the dedicated `payrollExpense`
+ * account). Returns the JE id (or null). Shared by immediate-post creation and
+ * the draft → post transition so the posting path is identical.
+ */
+async function postPayrollToLedger(
+    user: User,
+    runNumber: string,
+    periodLabel: string,
+    totalGross: number,
+    periodEnd: Date | string,
+): Promise<string | null> {
+    if (totalGross <= 0) return null;
+    const txn = await postLedgerEntry(user, {
+        type: "expense",
+        category: "Payroll",
+        amount: totalGross,
+        accountName: "Operating Expenses",
+        source: "manual",
+        description: `Payroll ${runNumber}${periodLabel ? ` (${periodLabel})` : ""}`,
+        date: new Date(periodEnd).toISOString(),
+    });
+    return txn?._id ? String(txn._id) : null;
 }
 
 async function generatePayrollRunNumber(): Promise<string> {
@@ -332,53 +400,17 @@ async function _createPayrollRun(user: User, values: CreatePayrollRunInput, path
         }
         await connectToDB();
 
-        // Build the computed lines from the (defensively coerced) inputs.
-        const lines = values.lines.map((line) => {
-            const input: PayLineInput = {
-                basePay: line.basePay,
-                allowances: line.allowances,
-                deductions: line.deductions,
-            };
-            const r = computeLine(input);
-            return {
-                staffId: line.staffId,
-                staffName: line.staffName?.trim() || "",
-                basePay: r.base,
-                allowances: (line.allowances || []).map((a) => ({
-                    label: a.label?.trim() || "",
-                    amount: Number(a.amount) || 0,
-                })),
-                deductions: (line.deductions || []).map((d) => ({
-                    label: d.label?.trim() || "",
-                    amount: Number(d.amount) || 0,
-                })),
-                gross: r.gross,
-            };
-        });
-
-        const totals = computePayrollTotals(
-            values.lines.map((l) => ({
-                basePay: l.basePay,
-                allowances: l.allowances,
-                deductions: l.deductions,
-            })),
-        );
+        const { lines, totals } = buildPayrollLines(values.lines);
 
         const runNumber = await generatePayrollRunNumber();
         const periodLabel = values.periodLabel?.trim() || "";
+        const asDraft = values.status === "draft";
 
-        // Post the payroll cost to the ledger as a cash-basis expense.
-        const txn = totals.totalGross > 0
-            ? await postLedgerEntry(user, {
-                type: "expense",
-                category: "Payroll",
-                amount: totals.totalGross,
-                accountName: "Operating Expenses",
-                source: "manual",
-                description: `Payroll ${runNumber}${periodLabel ? ` (${periodLabel})` : ""}`,
-                date: new Date(values.periodEnd).toISOString(),
-            })
-            : null;
+        // Post the payroll cost to the ledger unless the run is saved as a draft
+        // (drafts book no expense until explicitly posted via postPayrollRun).
+        const transactionId = asDraft
+            ? null
+            : await postPayrollToLedger(user, runNumber, periodLabel, totals.totalGross, values.periodEnd);
 
         const run = await PayrollRun.create({
             runNumber,
@@ -390,8 +422,8 @@ async function _createPayrollRun(user: User, values: CreatePayrollRunInput, path
             totalAllowances: totals.totalAllowances,
             totalDeductions: totals.totalDeductions,
             totalGross: totals.totalGross,
-            status: "posted",
-            transactionId: txn?._id || null,
+            status: asDraft ? "draft" : "posted",
+            transactionId,
             note: values.note?.trim() || "",
             createdBy: user._id,
             action_type: "created",
@@ -399,8 +431,8 @@ async function _createPayrollRun(user: User, values: CreatePayrollRunInput, path
 
         await History.create({
             actionType: "PAYROLL_RUN_CREATED",
-            details: { itemId: run._id, runNumber, totalGross: totals.totalGross },
-            message: `${user.fullName} ran payroll ${runNumber} (${totals.lineCount} staff, total ${totals.totalGross}) on ${new Date().toLocaleString()}.`,
+            details: { itemId: run._id, runNumber, totalGross: totals.totalGross, status: run.status },
+            message: `${user.fullName} ${asDraft ? "drafted" : "ran"} payroll ${runNumber} (${totals.lineCount} staff, total ${totals.totalGross}) on ${new Date().toLocaleString()}.`,
             performedBy: user._id,
             entityId: run._id,
             entityType: "PAYROLL_RUN",
@@ -415,6 +447,198 @@ async function _createPayrollRun(user: User, values: CreatePayrollRunInput, path
     }
 }
 export const createPayrollRun = await withAuth(_createPayrollRun, "payrollManagement");
+
+/**
+ * Post a draft payroll run: books the ledger expense (idempotently — a run that
+ * already has a `transactionId` is not double-posted) and flips `status` to
+ * "posted". Only `draft → posted` is allowed. Gated by `payrollManagement`.
+ */
+async function _postPayrollRun(user: User, id: string, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!id) throw new Error("A payroll run is required");
+        await connectToDB();
+
+        const run = await PayrollRun.findById(id);
+        if (!run || run.del_flag) throw new Error("Payroll run not found");
+        if (run.status === "posted") throw new Error("This payroll run is already posted");
+
+        // Book the ledger expense only if one was not already booked.
+        if (!run.transactionId && Number(run.totalGross) > 0) {
+            const txnId = await postPayrollToLedger(
+                user,
+                run.runNumber,
+                run.periodLabel || "",
+                Number(run.totalGross) || 0,
+                run.periodEnd,
+            );
+            run.transactionId = (txnId as never) || null;
+        }
+
+        run.status = "posted";
+        run.mod_flag = true;
+        run.modifiedBy = user._id as never;
+        run.action_type = "updated";
+        await run.save();
+
+        await History.create({
+            actionType: "PAYROLL_RUN_POSTED",
+            details: { itemId: run._id, runNumber: run.runNumber, totalGross: run.totalGross },
+            message: `${user.fullName} posted payroll ${run.runNumber} to the ledger on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: run._id,
+            entityType: "PAYROLL_RUN",
+        });
+
+        revalidatePath(HR_PATH);
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify(run));
+    } catch (error) {
+        console.error("Error posting payroll run:", error);
+        throw error;
+    }
+}
+export const postPayrollRun = await withAuth(_postPayrollRun, "payrollManagement");
+
+/**
+ * Derive the payslips for a payroll run (one per line). Pure read — payslips are
+ * materialised from the run's stored `lines[]`, so they stay consistent with the
+ * posted figures without a second collection to keep in sync. Gated by
+ * `payrollManagement`.
+ */
+async function _getPayslipsForRun(user: User, runId: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!runId) throw new Error("A payroll run is required");
+        await connectToDB();
+
+        const run = await PayrollRun.findById(runId).lean();
+        if (!run || run.del_flag) throw new Error("Payroll run not found");
+
+        const payslips = (run.lines || []).map((l) => ({
+            runId: String(run._id),
+            runNumber: run.runNumber,
+            periodLabel: run.periodLabel || "",
+            periodStart: run.periodStart,
+            periodEnd: run.periodEnd,
+            status: run.status,
+            staffId: l.staffId ? String(l.staffId) : "",
+            staffName: l.staffName || "",
+            basePay: Number(l.basePay) || 0,
+            allowances: (l.allowances || []).map((a) => ({ label: a.label || "", amount: Number(a.amount) || 0 })),
+            deductions: (l.deductions || []).map((d) => ({ label: d.label || "", amount: Number(d.amount) || 0 })),
+            gross: Number(l.gross) || 0,
+        }));
+
+        return JSON.parse(JSON.stringify(payslips));
+    } catch (error) {
+        console.error("Error building payslips:", error);
+        return [];
+    }
+}
+export const getPayslipsForRun = await withAuth(_getPayslipsForRun, "payrollManagement");
+
+/* ───────────────────────── COMPENSATION PROFILES ──────────────────────────── */
+
+interface CompensationInput {
+    baseSalary?: number | string;
+    allowances?: { label?: string; amount?: number | string }[];
+    deductions?: { label?: string; amount?: number | string }[];
+    taxRate?: number | string;
+    pensionRate?: number | string;
+    expectedMonthlyHours?: number | string;
+}
+
+/**
+ * Set a staff member's standing compensation profile (base salary, recurring
+ * allowances / deductions, statutory rates, expected monthly hours). This is
+ * what a payroll run prefills from. Gated by `payrollManagement`.
+ */
+async function _setCompensation(user: User, staffId: string, values: CompensationInput, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!staffId) throw new Error("A staff member is required");
+        await connectToDB();
+
+        const staff = await Staff.findById(staffId);
+        if (!staff || staff.del_flag) throw new Error("Staff member not found");
+
+        const clampRate = (v?: number | string) => {
+            const n = Number(v);
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return n > 1 ? 1 : n;
+        };
+
+        staff.set("compensation", {
+            baseSalary: Math.max(0, Number(values.baseSalary) || 0),
+            allowances: (values.allowances || [])
+                .filter((a) => a && (a.label || a.amount))
+                .map((a) => ({ label: a.label?.trim() || "", amount: Number(a.amount) || 0 })),
+            deductions: (values.deductions || [])
+                .filter((d) => d && (d.label || d.amount))
+                .map((d) => ({ label: d.label?.trim() || "", amount: Number(d.amount) || 0 })),
+            taxRate: clampRate(values.taxRate),
+            pensionRate: clampRate(values.pensionRate),
+            expectedMonthlyHours: Math.max(0, Number(values.expectedMonthlyHours) || 0),
+        });
+        staff.mod_flag = true;
+        staff.modifiedBy = user._id as never;
+        staff.action_type = "updated";
+        await staff.save();
+
+        await History.create({
+            actionType: "STAFF_COMPENSATION_UPDATED",
+            details: { itemId: staff._id },
+            message: `${user.fullName} updated the compensation profile for ${staff.fullName} on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: staff._id,
+            entityType: "STAFF",
+        });
+
+        revalidatePath(HR_PATH);
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify(staff.compensation || {}));
+    } catch (error) {
+        console.error("Error setting compensation profile:", error);
+        throw error;
+    }
+}
+export const setCompensation = await withAuth(_setCompensation, "payrollManagement");
+
+/**
+ * Prefill payroll lines for a period from every active staff member's standing
+ * compensation profile, folding in statutory PAYE / pension via the pure
+ * helper. Staff without a profile are skipped. Gated by `payrollManagement`.
+ */
+async function _prefillPayrollLines(user: User) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+
+        const staff = await Staff.find({ del_flag: false, isActive: true })
+            .select("fullName compensation")
+            .lean();
+
+        const lines = (staff || [])
+            .filter((s) => s.compensation && Number(s.compensation.baseSalary) > 0)
+            .map((s) => {
+                const built = payLineFromProfile(s.compensation as CompensationProfile);
+                return {
+                    staffId: String(s._id),
+                    staffName: s.fullName || "",
+                    basePay: built.basePay,
+                    allowances: built.allowances,
+                    deductions: built.deductions,
+                };
+            });
+
+        return JSON.parse(JSON.stringify(lines));
+    } catch (error) {
+        console.error("Error prefilling payroll lines:", error);
+        return [];
+    }
+}
+export const prefillPayrollLines = await withAuth(_prefillPayrollLines, "payrollManagement");
 
 async function _getPayrollRuns(user: User) {
     try {

@@ -37,46 +37,50 @@ export interface SectionRailProps {
 }
 
 export default function SectionRail({ items, activeId, onSelect, doneState }: SectionRailProps) {
-    const btnRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    // Both layouts (mobile strip + desktop rail) are mounted at once and only
+    // CSS-hidden, so they must NOT share one ref map — otherwise `.focus()`
+    // lands on the hidden layout's button and roving focus is lost on phones.
+    // Each layout keeps its own ref map and focuses within itself.
+    const mobileRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+    const desktopRefs = useRef<Record<string, HTMLButtonElement | null>>({});
     const ids = useMemo(() => items.map((i) => i.id), [items]);
 
-    const focusSelect = useCallback(
-        (id: string) => {
-            onSelect(id);
-            requestAnimationFrame(() => btnRefs.current[id]?.focus());
-        },
-        [onSelect],
+    const makeKeyDown = useCallback(
+        (refs: React.MutableRefObject<Record<string, HTMLButtonElement | null>>) =>
+            (e: React.KeyboardEvent<HTMLButtonElement>, id: string) => {
+                const n = ids.length;
+                if (n === 0) return;
+                const i = ids.indexOf(id);
+                let next: number | null = null;
+                switch (e.key) {
+                    case "ArrowDown":
+                    case "ArrowRight":
+                        next = (i + 1) % n;
+                        break;
+                    case "ArrowUp":
+                    case "ArrowLeft":
+                        next = (i - 1 + n) % n;
+                        break;
+                    case "Home":
+                        next = 0;
+                        break;
+                    case "End":
+                        next = n - 1;
+                        break;
+                    default:
+                        return;
+                }
+                e.preventDefault();
+                const nextId = ids[next];
+                onSelect(nextId);
+                // Focus within the SAME layout the key event came from.
+                requestAnimationFrame(() => refs.current[nextId]?.focus());
+            },
+        [ids, onSelect],
     );
 
-    const onKeyDown = useCallback(
-        (e: React.KeyboardEvent<HTMLButtonElement>, id: string) => {
-            const n = ids.length;
-            if (n === 0) return;
-            const i = ids.indexOf(id);
-            let next: number | null = null;
-            switch (e.key) {
-                case "ArrowDown":
-                case "ArrowRight":
-                    next = (i + 1) % n;
-                    break;
-                case "ArrowUp":
-                case "ArrowLeft":
-                    next = (i - 1 + n) % n;
-                    break;
-                case "Home":
-                    next = 0;
-                    break;
-                case "End":
-                    next = n - 1;
-                    break;
-                default:
-                    return;
-            }
-            e.preventDefault();
-            focusSelect(ids[next]);
-        },
-        [ids, focusSelect],
-    );
+    const onMobileKeyDown = useMemo(() => makeKeyDown(mobileRefs), [makeKeyDown]);
+    const onDesktopKeyDown = useMemo(() => makeKeyDown(desktopRefs), [makeKeyDown]);
 
     if (items.length === 0) return null;
 
@@ -99,13 +103,13 @@ export default function SectionRail({ items, activeId, onSelect, doneState }: Se
                             <button
                                 key={item.id}
                                 ref={(el) => {
-                                    btnRefs.current[item.id] = el;
+                                    mobileRefs.current[item.id] = el;
                                 }}
                                 type="button"
                                 aria-current={isActive ? "page" : undefined}
                                 tabIndex={isActive ? 0 : -1}
                                 onClick={() => onSelect(item.id)}
-                                onKeyDown={(e) => onKeyDown(e, item.id)}
+                                onKeyDown={(e) => onMobileKeyDown(e, item.id)}
                                 className={cn(
                                     "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-9",
                                     isActive
@@ -134,16 +138,13 @@ export default function SectionRail({ items, activeId, onSelect, doneState }: Se
                         <button
                             key={item.id}
                             ref={(el) => {
-                                // Both layouts share the ref map; only one is visible at a time,
-                                // so focus lands on the rendered button. The desktop (lg+) layout
-                                // registers last, which is correct for keyboard nav on desktop.
-                                if (el) btnRefs.current[item.id] = el;
+                                desktopRefs.current[item.id] = el;
                             }}
                             type="button"
                             aria-current={isActive ? "page" : undefined}
                             tabIndex={isActive ? 0 : -1}
                             onClick={() => onSelect(item.id)}
-                            onKeyDown={(e) => onKeyDown(e, item.id)}
+                            onKeyDown={(e) => onDesktopKeyDown(e, item.id)}
                             className={cn(
                                 "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                 isActive

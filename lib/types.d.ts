@@ -21,6 +21,19 @@ interface IStaff extends Document {
     password: string;
     onLeave?: boolean;
     profileImage?: string | null;
+    /**
+     * Standing compensation profile used to prefill a payroll run. Optional —
+     * staff without a profile simply start a run line from zero.
+     */
+    compensation?: {
+        baseSalary?: number;
+        allowances?: { label?: string; amount?: number }[];
+        deductions?: { label?: string; amount?: number }[];
+        taxRate?: number;      // 0..1 (e.g. 0.075 = 7.5% PAYE)
+        pensionRate?: number;  // 0..1
+        expectedMonthlyHours?: number; // for timesheet proration
+    };
+    lastLogin?: Date | null;
     isActive: boolean;
     requirePasswordChange: boolean;
     sendWelcomeEmail: boolean;
@@ -114,6 +127,11 @@ interface IRole {
     hrManagement?: boolean;
     // Payroll module permission (payroll runs → ledger expense)
     payrollManagement?: boolean;
+    // Accounting (double-entry ledger) module permissions
+    accountingManagement?: boolean;
+    accountingPost?: boolean;
+    accountingApprove?: boolean;
+    accountingSettings?: boolean;
     report?: boolean;
     trash?: boolean;
     history?: boolean;
@@ -240,6 +258,16 @@ interface IInventoryIssue extends Document {
 }
 
 
+interface IInventoryBatch {
+    batchNumber: string;
+    expiryDate?: Date | null;
+    quantity: number;
+    manufactureDate?: Date | null;
+    costPerUnit?: number | null;
+    supplierId?: Types.ObjectId | null;
+    receivedAt?: Date | null;
+}
+
 interface IInventoryProduct extends Document {
     _id?: string;
     schoolId: Types.ObjectId;
@@ -255,6 +283,18 @@ interface IInventoryProduct extends Document {
     unit?: string;
     reorderLevel?: number;
     prescriptionRequired?: boolean;
+    // Chart-of-Accounts links (optional; null = fall back to defaults)
+    inventoryAccountId?: Types.ObjectId | null;
+    revenueAccountId?: Types.ObjectId | null;
+    cogsAccountId?: Types.ObjectId | null;
+    // Batch / lot tracking (embedded; quantity stays the derived sum)
+    batches?: IInventoryBatch[];
+    // Additional pharmacy fields (optional)
+    genericName?: string;
+    manufacturer?: string;
+    barcode?: string;
+    storageConditions?: string;
+    controlledSubstance?: boolean;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;
     deletedBy?: Types.ObjectId | null;
@@ -282,6 +322,8 @@ interface IInventoryPurchase extends Document {
     purchaseItems: IPurchaseItem[];
     total?: number;
     transactionId?: Types.ObjectId | null;
+    // JE id of the inventory-debit posting (R3.4); null until posted.
+    journalEntryId?: Types.ObjectId | null;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;
     deletedBy?: Types.ObjectId | null;
@@ -553,6 +595,53 @@ interface IPayment extends Document {
     reference?: string;
     note?: string;
     receivedBy?: Types.ObjectId | null;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag: boolean;
+    del_flag: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+interface IPharmacySaleBatchLine {
+    batchNumber: string;
+    quantity: number;
+    costPerUnit?: number | null;
+}
+
+interface IPharmacySaleItem {
+    productId: Types.ObjectId;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    total: number;
+    prescriptionRequired: boolean;
+    controlledSubstance: boolean;
+    batchBreakdown: IPharmacySaleBatchLine[];
+}
+
+interface IPharmacySale extends Document {
+    _id?: string;
+    saleNumber: string;
+    items: IPharmacySaleItem[];
+    subTotal: number;
+    total: number;
+    customerName: string;
+    customerPhone: string;
+    patientId?: Types.ObjectId | null;
+    paymentMethod: "cash" | "card" | "mobile-money" | "bank-transfer" | "other";
+    paymentReference: string;
+    amountTendered: number;
+    change: number;
+    authorizationNote: string;
+    status: "completed" | "voided";
+    journalEntryId?: Types.ObjectId | null;
+    cogsJournalEntryId?: Types.ObjectId | null;
+    soldBy?: Types.ObjectId | null;
+    voidedBy?: Types.ObjectId | null;
+    voidReason: string;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;
     deletedBy?: Types.ObjectId | null;
@@ -999,30 +1088,6 @@ interface IBranch extends Document {
 }
 
 
-interface ITransaction extends Document {
-    _id?: string;
-    type: "income" | "expense";
-    category: string;          // e.g. "Consultation", "Procedure", "Rent", "Salaries", "Supplies"
-    amount: number;
-    accountId?: Types.ObjectId | null;
-    accountName?: string;
-    date: Date;
-    description?: string;
-    method?: string;           // cash | card | mobile-money | bank-transfer | insurance | other
-    source?: "manual" | "payment" | "invoice" | "purchase" | "attendance";
-    sourceId?: Types.ObjectId | null;
-    patientId?: Types.ObjectId | null;
-    createdBy?: Types.ObjectId | null;
-    modifiedBy?: Types.ObjectId | null;
-    deletedBy?: Types.ObjectId | null;
-    mod_flag: boolean;
-    del_flag: boolean;
-    action_type?: string | null;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
-
-
 // ═══════════════════════════════════════════════════════════════
 //  STRUCTURED EMR INTERFACES (problems / allergies / immunizations)
 // ═══════════════════════════════════════════════════════════════
@@ -1242,22 +1307,6 @@ interface IDeliveryRecord extends Document {
 }
 
 
-interface IAccount extends Document {
-    _id?: string;
-    accountName: string;
-    balance: number;
-    deposits?: Types.ObjectId[];
-    expenses?: Types.ObjectId[];
-    createdBy?: Types.ObjectId | null;
-    modifiedBy?: Types.ObjectId | null;
-    deletedBy?: Types.ObjectId | null;
-    mod_flag?: boolean;
-    del_flag?: boolean;
-    action_type?: string | null;
-    createdAt?: Date;
-    updatedAt?: Date;
-}
-
 // ═══════════════════════════════════════════════════════════════
 //  PROCUREMENT (REQUISITION → PURCHASE ORDER → GRN) INTERFACES
 // ═══════════════════════════════════════════════════════════════
@@ -1458,6 +1507,258 @@ interface IPayrollRun extends Document {
     totalGross?: number;              // amount posted to the ledger
     status: "draft" | "posted";
     transactionId?: Types.ObjectId | null;
+    note?: string;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  ACCOUNTING CORE (DOUBLE-ENTRY LEDGER) INTERFACES
+// ═══════════════════════════════════════════════════════════════
+
+type AccountingAccountType = "asset" | "liability" | "equity" | "revenue" | "expense";
+type AccountingNormalBalance = "debit" | "credit";
+
+interface IChartAccount extends Document {
+    _id?: string;
+    code: string;                              // unique, sortable/hierarchical
+    name: string;
+    type: AccountingAccountType;
+    subtype?: string;                          // reporting group, e.g. "current-asset"
+    parentId?: Types.ObjectId | null;          // child.type must equal parent.type
+    normalBalance: AccountingNormalBalance;    // derived from type on save
+    isCashAccount?: boolean;
+    isActive: boolean;
+    isSystem?: boolean;                        // seeded; not deletable
+    description?: string;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+interface IJournalLine {
+    accountId: Types.ObjectId;
+    debit: number;                             // >= 0; exactly one side positive
+    credit: number;                            // >= 0; exactly one side positive
+    memo?: string;
+}
+
+interface IJournalEntry extends Document {
+    _id?: string;
+    entryNo: string;                           // nextSequence("journal-YYYY")
+    date: Date;                                // posting date (validated vs periods)
+    memo?: string;
+    status: "draft" | "posted" | "reversed";
+    basis: "accrual" | "cash";
+    source:
+        | "manual"
+        | "payment"
+        | "invoice"
+        | "purchase"
+        | "insurance"
+        | "payroll"
+        | "expense"
+        | "bridge";
+    sourceId?: Types.ObjectId | null;
+    vendorId?: Types.ObjectId | null;          // set when vendor-related
+    reversalOf?: Types.ObjectId | null;        // set on a reversing entry
+    reversedBy?: Types.ObjectId | null;        // set on the original once reversed
+    lines: IJournalLine[];                     // balanced, >= 2, one-sided each
+    postedBy?: Types.ObjectId | null;
+    postedAt?: Date | null;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+interface IAccountingPeriod extends Document {
+    _id?: string;
+    fiscalYear: number;
+    periodNo: number;                          // 1..13
+    start: Date;
+    end: Date;
+    status: "open" | "closed";
+    closedBy?: Types.ObjectId | null;
+    closedAt?: Date | null;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+interface IVendor extends Document {
+    _id?: string;
+    name: string;
+    contactName?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    taxId?: string;
+    paymentTerms?: string;
+    payableAccountId?: Types.ObjectId | null;  // defaults to settings A/P when absent
+    isActive: boolean;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// A configurable expense-approval rule: an amount band mapped to an ordered
+// chain of approver roles. `maxAmount` null = open-ended ("and above"); a rule
+// flagged `isDefault` is the fallback when no band contains an amount.
+// An approver slot on a step: a named staff member or any holder of a role.
+interface IStepApprover {
+    kind: "staff" | "role";
+    value: string;        // staffId when kind="staff"; role name when kind="role"
+    label?: string;       // optional display label
+}
+
+// A configurable step on a rule: who may approve and the quorum that must.
+interface IApprovalRuleStep {
+    approvers: IStepApprover[];
+    requiredCount: number;  // how many of `approvers` must approve (quorum, >=1)
+}
+interface IApprovalRule extends Document {
+    _id?: string;
+    name: string;
+    minAmount: number;                         // inclusive lower bound
+    maxAmount?: number | null;                 // inclusive upper bound; null = and above
+    approverRoles?: string[];                  // LEGACY ordered role chain (each role = 1-of-1 step)
+    steps?: IApprovalRuleStep[];               // structured steps (named staff/roles + quorum)
+    isDefault?: boolean;                       // fallback when no band matches
+    isActive: boolean;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// One step of an expense's frozen approval chain; "pending" until `decision` is set.
+interface IStepDecisionRecord {
+    approverId: Types.ObjectId | string;
+    approverName?: string;
+    decision: "approved" | "rejected";
+    reason?: string;
+    decidedAt?: Date | null;
+}
+
+interface IExpenseApprovalStep {
+    role?: string;
+    approverId?: Types.ObjectId | null;
+    decision?: "approved" | "rejected" | null;
+    reason?: string;
+    decidedAt?: Date | null;
+    approvers?: IStepApprover[];
+    requiredCount?: number;
+    decisions?: IStepDecisionRecord[];
+}
+
+// An expense with a capture → submit → approve/reject → post lifecycle. The
+// approval chain is frozen from the active rules at submit time; posting builds
+// a balanced journal entry (debit expense, credit cash/payable) and links it.
+interface IExpense extends Document {
+    _id?: string;
+    expenseNo: string;                         // nextSequence("expense-YYYY")
+    date: Date;
+    amount: number;
+    expenseAccountId: Types.ObjectId;          // debit side
+    creditAccountId: Types.ObjectId;           // cash or payable (credit side)
+    vendorId?: Types.ObjectId | null;          // optional vendor; drives payable + spend
+    payee?: string;
+    description?: string;
+    attachmentUrl?: string;
+    status: "draft" | "submitted" | "approved" | "rejected" | "posted";
+    approvalChain: IExpenseApprovalStep[];     // frozen from rules at submit time
+    journalEntryId?: Types.ObjectId | null;    // set when posted
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// Default-account mappings used by the posting bridge. Each value is a
+// ChartAccount `code` (stored as a string for stability across re-seeds).
+interface IAccountingDefaultAccounts {
+    cash?: string;                             // debit on income, credit on expense
+    accountsReceivable?: string;
+    accountsPayable?: string;
+    revenue?: string;                          // credit on income (global fallback)
+    expense?: string;                          // debit on expense (global fallback)
+    insuranceReceivable?: string;
+    inventory?: string;
+    payrollExpense?: string;
+    // Per-category overrides keyed by the posting `category` label. A matching
+    // key wins over the global `revenue`/`expense` default; an unmapped category
+    // falls back to that default, then to the seeded system code.
+    revenueByCategory?: Record<string, string>;
+    expenseByCategory?: Record<string, string>;
+}
+
+// Singleton accounting settings document (keyed `key: "accounting"`). Holds the
+// period-validation mode, the default posting basis, the over-budget behaviour,
+// and the default-account mappings the compatibility bridge posts against.
+interface IAccountingSettings extends Document {
+    _id?: string;
+    key: "accounting";                         // singleton key
+    periodValidation: "strict" | "lenient";
+    basisDefault: "accrual" | "cash";
+    overBudgetMode?: "warn" | "block";
+    defaultAccounts: IAccountingDefaultAccounts;
+    createdBy?: Types.ObjectId | null;
+    modifiedBy?: Types.ObjectId | null;
+    deletedBy?: Types.ObjectId | null;
+    mod_flag?: boolean;
+    del_flag?: boolean;
+    action_type?: string | null;
+    createdAt?: Date;
+    updatedAt?: Date;
+}
+
+// A budget target for one account in one fiscal period (or the whole year when
+// `periodNo` is null), optionally scoped to a department / cost center. The
+// unique (fiscalYear, periodNo, accountId, departmentId) tuple keeps a single
+// budget per account+period+department; budget-vs-actual compares this against
+// the actual from posted entries, and the over-budget hook warns or blocks an
+// expense submission that would push an account over its budget (R12.1–12.5).
+interface IBudget extends Document {
+    _id?: string;
+    fiscalYear: number;
+    periodNo?: number | null;                  // null = whole-year budget
+    accountId: Types.ObjectId;                 // ref ChartAccount
+    departmentId?: Types.ObjectId | null;      // optional cost center
+    amount: number;                            // budgeted amount for the period
     note?: string;
     createdBy?: Types.ObjectId | null;
     modifiedBy?: Types.ObjectId | null;

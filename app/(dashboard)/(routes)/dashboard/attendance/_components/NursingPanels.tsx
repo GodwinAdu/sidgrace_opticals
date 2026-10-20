@@ -14,9 +14,9 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter, usePathname } from "next/navigation";
-import { Loader2, Plus, StickyNote, Pill, Droplets, HeartPulse } from "lucide-react";
+import { Loader2, Plus, StickyNote, Pill, Droplets, HeartPulse, ClipboardList, CheckCircle2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { addNursingNote, addMedicationAdmin, addIntakeOutput } from "@/lib/actions/nursing.actions";
+import { addNursingNote, addMedicationAdmin, addIntakeOutput, addCarePlanItem, updateCarePlanItem } from "@/lib/actions/nursing.actions";
 import { addIcuChartEntry, getIcuChart } from "@/lib/actions/icu.actions";
 import { ICU_ENTRY_TYPES, orderTimeline, type IcuEntryType, type IcuTimelineEntry } from "@/lib/clinical/icu";
 
@@ -264,6 +264,164 @@ export function IntakeOutputPanel({
                                 <span className="text-xs text-muted-foreground">{when(e.recordedAt)}</span>
                             </div>
                         ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
+}
+
+/* ─────────────── NURSING CARE PLAN ─────────────── */
+interface CarePlanItem {
+    _id?: string;
+    problem?: string;
+    goal?: string;
+    interventions?: string;
+    evaluation?: string;
+    status?: "active" | "resolved";
+    authoredByName?: string;
+    updatedByName?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
+export function CarePlanPanel({
+    attendanceId,
+    items = [],
+    readOnly,
+}: {
+    attendanceId?: string;
+    items?: CarePlanItem[];
+    readOnly?: boolean;
+}) {
+    const router = useRouter();
+    const path = usePathname();
+    const [problem, setProblem] = useState("");
+    const [goal, setGoal] = useState("");
+    const [interventions, setInterventions] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [busyId, setBusyId] = useState<string | null>(null);
+    const [evalDraft, setEvalDraft] = useState<Record<string, string>>({});
+
+    const add = async () => {
+        if (!attendanceId) return toast.error("Save the visit first");
+        if (!problem.trim()) return toast.error("Enter a problem / nursing diagnosis");
+        try {
+            setSaving(true);
+            await addCarePlanItem(attendanceId, { problem: problem.trim(), goal, interventions }, path);
+            toast.success("Care-plan item added");
+            setProblem(""); setGoal(""); setInterventions("");
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const saveItem = async (id: string, update: { evaluation?: string; status?: "active" | "resolved" }) => {
+        if (!attendanceId || !id) return;
+        try {
+            setBusyId(id);
+            await updateCarePlanItem(attendanceId, id, update, path);
+            toast.success("Care-plan item updated");
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    return (
+        <Card>
+            <CardContent className="space-y-4 pt-6">
+                <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                    <ClipboardList className="h-4 w-4" /> Nursing Care Plan
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                    Open a problem (nursing diagnosis) with a goal and planned interventions, then record
+                    evaluation and mark it resolved as care progresses.
+                </p>
+
+                {!readOnly && (
+                    <div className="space-y-2 rounded-lg border bg-muted/30 p-4">
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Problem / Nursing diagnosis</label>
+                            <Input value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="e.g. Risk of falls related to impaired vision" />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Goal / Expected outcome</label>
+                            <Textarea rows={2} value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="e.g. Patient remains free of injury for the duration of the visit" />
+                        </div>
+                        <div>
+                            <label className="mb-1 block text-xs text-muted-foreground">Interventions</label>
+                            <Textarea rows={2} value={interventions} onChange={(e) => setInterventions(e.target.value)} placeholder="e.g. Keep call bell within reach; assist with ambulation; clear walkway" />
+                        </div>
+                        <div className="flex justify-end">
+                            <Button onClick={add} disabled={saving}>
+                                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                                Add Care Item
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {items.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No care-plan items yet.</p>
+                ) : (
+                    <div className="space-y-3">
+                        {[...items].reverse().map((c, i) => {
+                            const id = c._id ? String(c._id) : "";
+                            const resolved = c.status === "resolved";
+                            return (
+                                <div key={id || i} className="rounded-lg border px-3 py-3 text-sm">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <p className="font-medium">{c.problem}</p>
+                                        <Badge variant={resolved ? "default" : "secondary"} className="shrink-0 capitalize">
+                                            {resolved ? "resolved" : "active"}
+                                        </Badge>
+                                    </div>
+                                    {c.goal && <p className="mt-1 text-xs"><span className="text-muted-foreground">Goal:</span> {c.goal}</p>}
+                                    {c.interventions && <p className="mt-0.5 text-xs"><span className="text-muted-foreground">Interventions:</span> {c.interventions}</p>}
+                                    {c.evaluation && <p className="mt-0.5 text-xs"><span className="text-muted-foreground">Evaluation:</span> {c.evaluation}</p>}
+                                    <p className="mt-1 text-[11px] text-muted-foreground">
+                                        {c.authoredByName ? `Opened by ${c.authoredByName}` : ""}{c.createdAt ? ` · ${when(c.createdAt)}` : ""}
+                                    </p>
+
+                                    {!readOnly && id && (
+                                        <div className="mt-2 flex flex-wrap items-end gap-2 border-t pt-2">
+                                            <div className="min-w-[200px] flex-1">
+                                                <label className="mb-1 block text-xs text-muted-foreground">Record evaluation</label>
+                                                <Input
+                                                    value={evalDraft[id] ?? ""}
+                                                    onChange={(e) => setEvalDraft((p) => ({ ...p, [id]: e.target.value }))}
+                                                    placeholder="Patient response / outcome so far"
+                                                />
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                disabled={busyId === id || (evalDraft[id] ?? "").trim() === ""}
+                                                onClick={() => { void saveItem(id, { evaluation: evalDraft[id] }); setEvalDraft((p) => ({ ...p, [id]: "" })); }}
+                                            >
+                                                {busyId === id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                                Save Evaluation
+                                            </Button>
+                                            <Button
+                                                size="sm"
+                                                variant={resolved ? "secondary" : "default"}
+                                                disabled={busyId === id}
+                                                onClick={() => void saveItem(id, { status: resolved ? "active" : "resolved" })}
+                                            >
+                                                <CheckCircle2 className="mr-1 h-4 w-4" />
+                                                {resolved ? "Reopen" : "Mark Resolved"}
+                                            </Button>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
             </CardContent>

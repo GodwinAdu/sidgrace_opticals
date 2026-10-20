@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { DashboardOverview } from "@/components/dashboard-page/dashboard-overview";
 import { RecentPanels } from "@/components/dashboard-page/recent-panels";
 import { getReportData } from "@/lib/actions/reports.actions";
-import { getIncomeStatement } from "@/lib/actions/accounting-reports.actions";
+import { incomeStatement as getIncomeStatement } from "@/lib/actions/accounting/reports.actions";
 import { fetchAllHistories } from "@/lib/actions/history.actions";
 import { getRecentPatients, getRecentAppointments } from "@/lib/actions/portal.actions";
 import { currentUser } from "@/lib/helpers/current-user";
@@ -19,7 +19,7 @@ const page = async () => {
 
     const [report, incomeStatement, activity, recentPatients, recentAppointments, user] = await Promise.all([
         getReportData(),
-        getIncomeStatement(yearStart, today),
+        getIncomeStatement({ from: yearStart, to: today }, "accrual"),
         fetchAllHistories(null, 10),
         getRecentPatients(6),
         getRecentAppointments(6),
@@ -27,11 +27,15 @@ const page = async () => {
     ]);
 
     const userName = user?.fullName || "there";
+    const margin =
+        incomeStatement.revenue > 0
+            ? Math.round((incomeStatement.netIncome / incomeStatement.revenue) * 1000) / 10
+            : 0;
     const accounting = {
-        totalRevenue: incomeStatement.totalRevenue,
-        totalExpenses: incomeStatement.totalExpenses,
-        netProfit: incomeStatement.netProfit,
-        margin: incomeStatement.margin,
+        totalRevenue: incomeStatement.revenue,
+        totalExpenses: incomeStatement.expenses,
+        netProfit: incomeStatement.netIncome,
+        margin,
     };
 
     return (

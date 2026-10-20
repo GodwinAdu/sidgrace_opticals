@@ -101,6 +101,10 @@ const rolePresets = {
     wardManagement: true,
     admissionManagement: true,
     nursingDashboard: true,
+    accountingManagement: true,
+    accountingPost: true,
+    accountingApprove: true,
+    accountingSettings: true,
     report: true,
     trash: true,
     history: true,
@@ -176,6 +180,10 @@ interface IRole {
   wardManagement?: boolean
   admissionManagement?: boolean
   nursingDashboard?: boolean
+  accountingManagement?: boolean
+  accountingPost?: boolean
+  accountingApprove?: boolean
+  accountingSettings?: boolean
   report: boolean
   trash: boolean
   history: boolean
@@ -337,6 +345,11 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
     // HR & payroll module permissions
     hrManagement: z.boolean().optional(),
     payrollManagement: z.boolean().optional(),
+    // Accounting (double-entry ledger) module permissions
+    accountingManagement: z.boolean().optional(),
+    accountingPost: z.boolean().optional(),
+    accountingApprove: z.boolean().optional(),
+    accountingSettings: z.boolean().optional(),
     // Dental clinic feature permissions
     procedureManagement: z.boolean().optional(),
     dentalChartManagement: z.boolean().optional(),
@@ -1386,6 +1399,36 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
                       { name: "wardManagement", label: "Wards & Beds (bed board)" },
                       { name: "admissionManagement", label: "Admissions (admit / transfer / discharge)" },
                       { name: "nursingDashboard", label: "Nursing Dashboard (worklist)" },
+                    ].map((perm) => (
+                      <FormField
+                        key={perm.name}
+                        control={form.control}
+                        name={perm.name as keyof z.infer<typeof CreateRoleSchema>}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                            <FormControl>
+                              <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>{perm.label}</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Accounting (double-entry ledger) module permissions */}
+                  <div className="py-5">
+                    <h1 className="font-semibold text-lg capitalize">Accounting</h1>
+                    <p className="text-xs text-muted-foreground">Chart of accounts, journal entries, statements, expenses, approvals and settings.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { name: "accountingManagement", label: "Accounting (view ledger, statements & reports)" },
+                      { name: "accountingPost", label: "Post & reverse journal entries" },
+                      { name: "accountingApprove", label: "Approve expenses" },
+                      { name: "accountingSettings", label: "Accounting Settings (chart, periods, rules, budgets)" },
                     ].map((perm) => (
                       <FormField
                         key={perm.name}

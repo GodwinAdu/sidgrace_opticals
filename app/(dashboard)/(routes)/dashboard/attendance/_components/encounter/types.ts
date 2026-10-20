@@ -121,6 +121,7 @@ export interface AttendanceData {
     nursingNotes?: { note?: string; createdAt?: string }[];
     medicationAdmin?: { drugName?: string; dose?: string; route?: string; note?: string; givenAt?: string }[];
     intakeOutput?: { type?: string; kind?: string; amountMl?: number; recordedAt?: string }[];
+    carePlan?: { _id?: string; problem?: string; goal?: string; interventions?: string; evaluation?: string; status?: "active" | "resolved"; authoredByName?: string; updatedByName?: string; createdAt?: string; updatedAt?: string }[];
     billing?: {
         invoiceId?: string | null;
         invoiceNumber?: string;
@@ -147,6 +148,8 @@ export interface PreviousVisit {
     date: Date;
     status: "waiting" | "pending" | "ongoing" | "completed" | "cancelled";
     visitType: "outpatient" | "inpatient" | "emergency";
+    /** Primary diagnosis / reason hint so visits are distinguishable in the picker. */
+    diagnosis?: { primary?: string; secondary?: string[] } | null;
 }
 
 /** Active-admission context shown in the header for inpatients. */

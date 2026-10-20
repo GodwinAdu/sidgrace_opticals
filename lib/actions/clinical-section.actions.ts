@@ -10,6 +10,7 @@ import {
     latestVersionContent,
 } from "../clinical/attribution";
 import { writeVisitAuditEntry } from "../helpers/clinical-audit";
+import { AuthError, hasPermission, currentRoleCached, type Permission } from "../helpers/authz";
 
 /**
  * Attributed, append-only save for a single tracked clinical field on a visit.
@@ -48,6 +49,31 @@ const TRACKED_FIELDS = {
     scan: "scanVersions",
 } as const;
 
+/**
+ * Per-field permission map. Each tracked clinical field requires the SAME role
+ * flag the UI/registry gates its tab with, so the server enforces the exact same
+ * rule the tab visibility implies (defense-in-depth: a server action is a public
+ * endpoint, so UI gating alone is not a control). Admin bypasses via
+ * `hasPermission`. Mirrors `registry.ts`:
+ *   attClinical → history/physicExam/diagnosis/doctorNote/nurseNote/vitals/surgicalNote
+ *   attEyeTest  → eyeTest
+ *   attLabScan  → labReport/scan
+ *   attTreatment→ plan
+ */
+const FIELD_PERMISSION: Record<keyof typeof TRACKED_FIELDS, Permission> = {
+    doctorNote: "attClinical",
+    nurseNote: "attClinical",
+    surgicalNote: "attClinical",
+    history: "attClinical",
+    physicExam: "attClinical",
+    diagnosis: "attClinical",
+    vitals: "attClinical",
+    eyeTest: "attEyeTest",
+    labReport: "attLabScan",
+    scan: "attLabScan",
+    plan: "attTreatment",
+};
+
 /** A field name accepted by {@link saveClinicalSection}. */
 export type TrackedClinicalField = keyof typeof TRACKED_FIELDS;
 
@@ -77,6 +103,18 @@ async function _saveClinicalSection(
         // Only allow-listed clinical fields may be written through this path.
         const versionsField = TRACKED_FIELDS[field as TrackedClinicalField];
         if (!versionsField) throw new Error(`Field "${field}" is not a tracked clinical field`);
+
+        // Per-field authorization (defense-in-depth). The UI/registry already
+        // hides tabs a role may not use, but this action is a public endpoint —
+        // so we enforce the SAME flag the tab is gated with here. Admin bypasses.
+        const required = FIELD_PERMISSION[field as TrackedClinicalField];
+        const role = await currentRoleCached();
+        if (!hasPermission(role, required)) {
+            throw new AuthError(
+                "FORBIDDEN",
+                `You do not have permission to record the "${field}" section.`,
+            );
+        }
 
         await connectToDB();
 
@@ -137,9 +175,10 @@ async function _saveClinicalSection(
 }
 
 /**
- * Attributed, append-only save for a tracked clinical field. Auth-only (no extra
- * permission flag): tab-level gating happens in the UI/registry, and the author
- * is injected by `withAuth`.
+ * Attributed, append-only save for a tracked clinical field. `withAuth` injects
+ * the authenticated author and rejects unauthenticated callers; the body then
+ * enforces the per-field role permission (see `FIELD_PERMISSION`) so the server
+ * applies the same gate the tab UI implies — UI gating alone is not a control.
  */
 export const saveClinicalSection = await withAuth(_saveClinicalSection);
 
