@@ -15,6 +15,11 @@ if (!REFRESH_TOKEN_SECRET) {
 const accessTokenEncoder = new TextEncoder().encode(ACCESS_TOKEN_SECRET);
 const refreshTokenEncoder = new TextEncoder().encode(REFRESH_TOKEN_SECRET);
 
+// Secure cookies require HTTPS; browsers drop them over plain HTTP, which breaks
+// login from LAN machines (http://<ip>:3000). Keep this OFF for HTTP-on-LAN and
+// only enable COOKIE_SECURE=true when the app is actually served over HTTPS.
+const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
+
 // Public routes that don't require authentication
 const publicRoutes = [
     "/sign-in",
@@ -96,10 +101,10 @@ export async function proxy(request: NextRequest) {
             name: 'token',
             value: newAccessToken,
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: COOKIE_SECURE,
             maxAge: 60 * 60, // 1 hour
             path: '/',
-            sameSite: 'strict'
+            sameSite: 'lax'
         });
 
         return response;
@@ -142,10 +147,10 @@ export async function proxy(request: NextRequest) {
             name: 'token',
             value: newAccessToken,
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: COOKIE_SECURE,
             maxAge: 60 * 60, // 1 hour
             path: '/',
-            sameSite: 'strict'
+            sameSite: 'lax'
         });
 
         // Use the refresh payload for authorization checks
@@ -207,10 +212,10 @@ export async function proxy(request: NextRequest) {
                     name: 'token',
                     value: newAccessToken,
                     httpOnly: true,
-                    secure: process.env.NODE_ENV === 'production',
+                    secure: COOKIE_SECURE,
                     maxAge: 60 * 60, // 1 hour
                     path: '/',
-                    sameSite: 'strict'
+                    sameSite: 'lax'
                 });
 
                 return response;
