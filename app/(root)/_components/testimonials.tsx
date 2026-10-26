@@ -8,7 +8,7 @@ const REVIEWS = [
   {
     name: "Dr. Amara Okafor",
     role: "Medical Director",
-    quote: "Medira put our OPD, wards and pharmacy on one screen. Nothing slips through the cracks between departments anymore.",
+    quote: "Dapfam put our clinic on one screen. Nothing slips through the cracks between departments anymore.",
     avatar: "from-teal-400 to-cyan-500",
   },
   {
@@ -37,7 +37,7 @@ export function Testimonials() {
             Trusted by Care Teams
           </h2>
           <p className="mt-4 text-lg text-slate-500">
-            How clinics and hospitals run their day on Medira.
+            How the clinic runs its day on Dapfam.
           </p>
         </div>
 

@@ -28,7 +28,7 @@ export function CtaFooter() {
           <div className="pointer-events-none absolute -bottom-16 -right-16 h-64 w-64 rounded-full bg-teal-900/25 blur-3xl" />
           <div className="relative">
             <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              Ready to Run Your Hospital on Medira?
+              Ready to Run Your Clinic on Dapfam?
             </h2>
             <p className="mx-auto mt-4 max-w-xl text-teal-50/90">
               Bring every department into one system and start managing care and billing with confidence.
@@ -62,15 +62,15 @@ export function CtaFooter() {
                 <Stethoscope className="h-5 w-5 text-white" />
               </span>
               <span className="text-lg font-bold text-white">
-                Med<span className="text-teal-400">ira</span>
+                Dapfam<span className="text-teal-400"> Dental Clinic</span>
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-teal-100/60">
-              Modern, compassionate hospital management for clinics and hospitals of every kind.
+              Modern, compassionate clinic management for Dapfam Dental Clinic.
             </p>
             <div className="mt-6 space-y-2.5 text-sm text-teal-100/70">
               <p className="flex items-center gap-2"><MapPin className="h-4 w-4 text-teal-400" /> 123 Health Avenue, Suite 200</p>
-              <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-teal-400" /> care@medira.app</p>
+              <p className="flex items-center gap-2"><Mail className="h-4 w-4 text-teal-400" /> info@dapfamdentalclinic.com</p>
               <p className="flex items-center gap-2"><Clock className="h-4 w-4 text-teal-400" /> Mon–Sat: 8:00 AM – 7:00 PM</p>
             </div>
           </div>
@@ -92,7 +92,7 @@ export function CtaFooter() {
         </div>
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-8 text-sm text-teal-100/50 sm:flex-row">
-          <p>© {new Date().getFullYear()} Medira. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Dapfam Dental Clinic. All rights reserved.</p>
           <div className="flex gap-6">
             <a href="#" className="transition-colors hover:text-teal-300">Privacy Policy</a>
             <a href="#" className="transition-colors hover:text-teal-300">Terms of Service</a>

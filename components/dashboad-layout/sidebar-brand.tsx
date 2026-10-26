@@ -15,9 +15,9 @@ export function SidebarBrand() {
                         </div>
                         <div className="grid flex-1 text-left leading-tight">
                             <span className="truncate text-sm font-bold">
-                                Med<span className="text-teal-500">ira</span>
+                                Dapfam<span className="text-teal-500"> Dental</span>
                             </span>
-                            <span className="truncate text-xs text-muted-foreground">Hospital Management</span>
+                            <span className="truncate text-xs text-muted-foreground">Dental Clinic Management</span>
                         </div>
                     </Link>
                 </SidebarMenuButton>

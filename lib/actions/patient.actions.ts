@@ -37,7 +37,7 @@ async function _createPatient(user: User, values) {
 
         const data = {
             destination: values.phone,
-            message: `Hi ${values.fullName}, welcome to Medira! Your account is now active. We're glad to have you with us!`
+            message: `Hi ${values.fullName}, welcome to Dapfam Dental Clinic! Your account is now active. We're glad to have you with us!`
         };
 
         const patient = new Patient({

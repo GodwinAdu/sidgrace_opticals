@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import Link from "next/link"
-import { Loader2, LogInIcon } from "lucide-react"
+import { Eye, EyeOff, Loader2, LogInIcon } from "lucide-react"
 import { toast } from "sonner"
 import { loginStaff } from "@/lib/actions/staff.actions"
 import { useRouter } from "next/navigation"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useState } from "react"
 
 
 const formSchema = z.object({
@@ -25,6 +26,7 @@ const formSchema = z.object({
 })
 export function LoginForm() {
     const router = useRouter()
+    const [showPassword, setShowPassword] = useState(false)
     // 1. Define your form.
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -97,7 +99,24 @@ export function LoginForm() {
                                     </Link>
                                 </div>
                                 <FormControl>
-                                    <Input type="password" placeholder="*********" {...field} />
+                                    <div className="relative">
+                                        <Input
+                                            type={showPassword ? "text" : "password"}
+                                            placeholder="*********"
+                                            className="pr-10"
+                                            {...field}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword((v) => !v)}
+                                            disabled={isSubmitting}
+                                            aria-label={showPassword ? "Hide password" : "Show password"}
+                                            aria-pressed={showPassword}
+                                            className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground focus:outline-none"
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
                                 </FormControl>
 
                                 <FormMessage />
