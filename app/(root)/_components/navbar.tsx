@@ -9,7 +9,7 @@ import { buttonVariants } from "@/components/ui/button"
 
 const NAV_LINKS = [
   { label: "Features", href: "#services" },
-  { label: "Why Medira", href: "#why-us" },
+  { label: "Why Dapfam", href: "#why-us" },
   { label: "Platform", href: "#technology" },
 ]
 
@@ -51,7 +51,7 @@ export function Navbar() {
               scrolled ? "text-teal-950" : "text-white"
             )}
           >
-            Med<span className="text-teal-400">ira</span>
+            Dapfam<span className="text-teal-400"> Dental Clinic</span>
           </span>
         </Link>
 

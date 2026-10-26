@@ -11,7 +11,7 @@ const ClinicSettingsSchema = new Schema(
         defaultConsultationFee: { type: Number, default: 0 },
         currency: { type: String, default: "" },
         // Clinic/hospital identity used on invoices, receipts and report headers.
-        clinicName: { type: String, default: "Medira" },
+        clinicName: { type: String, default: "Dapfam Dental Clinic" },
         clinicAddress: { type: String, default: "" },
         clinicPhone: { type: String, default: "" },
         clinicEmail: { type: String, default: "" },

@@ -8,8 +8,8 @@ import { getRecentPatients, getRecentAppointments } from "@/lib/actions/portal.a
 import { currentUser } from "@/lib/helpers/current-user";
 
 export const metadata: Metadata = {
-    title: "Dashboard | Medira",
-    description: "Dashboard for Medira",
+    title: "Dashboard | Dapfam Dental Clinic",
+    description: "Dashboard for Dapfam Dental Clinic",
 };
 
 const page = async () => {

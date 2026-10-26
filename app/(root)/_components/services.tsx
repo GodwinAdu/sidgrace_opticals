@@ -50,7 +50,7 @@ export function Services() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-4 py-1.5 text-sm font-medium text-teal-600">
-            What Medira Does
+            What Dapfam Does
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-teal-950 sm:text-4xl">
             Run the Whole Hospital in One Place

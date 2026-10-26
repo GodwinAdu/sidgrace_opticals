@@ -52,7 +52,7 @@ export function MediraHero() {
             <Stethoscope className="h-5 w-5 text-white" />
           </span>
           <span className="text-lg font-bold tracking-tight text-white">
-            Med<span className="text-teal-400">ira</span>
+            Dapfam<span className="text-teal-400"> Dental Clinic</span>
           </span>
         </div>
         <Link
@@ -77,9 +77,9 @@ export function MediraHero() {
           </motion.div>
 
           <motion.h1 variants={item} className="max-w-xl text-4xl font-bold leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Run your whole hospital with{" "}
+            Run your whole clinic with{" "}
             <span className="relative bg-gradient-to-r from-teal-300 to-cyan-200 bg-clip-text text-transparent">
-              Medira
+              Dapfam Dental Clinic
             </span>
           </motion.h1>
 

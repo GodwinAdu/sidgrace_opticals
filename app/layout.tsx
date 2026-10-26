@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Medira",
-  description: "Medira — hospital management for clinics and hospitals of every kind.",
+  title: "Dapfam Dental Clinic",
+  description: "Dapfam Dental Clinic — clinic management system.",
 };
 
 export default function RootLayout({

@@ -35,7 +35,7 @@ interface Payment {
     createdAt?: string;
 }
 
-const CLINIC_NAME = "Medira";
+const CLINIC_NAME = "Dapfam Dental Clinic";
 
 const STATUS: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700",

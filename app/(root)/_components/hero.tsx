@@ -38,8 +38,8 @@ export function Hero() {
           </motion.h1>
 
           <motion.p variants={item} className="mt-6 max-w-lg text-lg leading-relaxed text-teal-100/85">
-            Medira brings OPD, inpatient wards, pharmacy, nursing, billing and accounting into one
-            system — for clinics and hospitals of every kind, from a single practice to a full facility.
+            Dapfam Dental Clinic brings appointments, patients, pharmacy, nursing, billing and accounting into one
+            system — everything the clinic needs in one place.
           </motion.p>
 
           <motion.div variants={item} className="mt-9 flex flex-col gap-4 sm:flex-row">
@@ -78,7 +78,7 @@ export function Hero() {
                 ))}
                 <span className="ml-1 text-sm font-semibold text-white">4.9/5</span>
               </div>
-              <p className="text-sm text-teal-100/70">from care teams who switched to Medira</p>
+              <p className="text-sm text-teal-100/70">from the care team at Dapfam Dental Clinic</p>
             </div>
           </motion.div>
         </motion.div>
