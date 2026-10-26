@@ -7,8 +7,28 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { fetchStaffById } from "../actions/staff.actions";
 
+/**
+ * Whether auth cookies should carry the `Secure` flag (HTTPS-only).
+ *
+ * Browsers DROP `Secure` cookies when the page is served over plain HTTP, which
+ * breaks login on LAN machines reaching the host at http://<ip>:3000 (localhost
+ * is exempt, which is why it only failed on other machines). For a trusted LAN
+ * served over HTTP we must NOT force Secure.
+ *
+ * Default: off (works over HTTP on the LAN). Set COOKIE_SECURE=true only when
+ * the app is actually served over HTTPS.
+ */
+const COOKIE_SECURE = process.env.COOKIE_SECURE === "true";
 
-
+/** Shared options for the auth cookies so every set-site stays consistent. */
+const authCookieBase = {
+    httpOnly: true,
+    secure: COOKIE_SECURE,
+    path: "/",
+    // "lax" lets the cookie ride top-level navigations (the post-login redirect)
+    // while still blocking cross-site POSTs. "strict" was over-tight here.
+    sameSite: "lax" as const,
+};
 
 
 interface User {
@@ -135,11 +155,8 @@ async function tryRefreshToken(): Promise<boolean> {
 
         // Set the new token in cookies
         cookieStore.set("token", newToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...authCookieBase,
             maxAge: 60 * 60, // 1 hour
-            path: "/",
-            sameSite: "strict"
         });
 
         return true;
@@ -271,21 +288,15 @@ export async function login(userId: string, role: string, rememberMe: boolean = 
 
     // Set access token cookie
     cookieStore.set("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        ...authCookieBase,
         maxAge: 60 * 60, // 1 hour
-        path: "/",
-        sameSite: "strict"
     });
 
     // Set refresh token if remember me is enabled
     if (refreshToken) {
         cookieStore.set("refreshToken", refreshToken, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            ...authCookieBase,
             maxAge: 30 * 24 * 60 * 60, // 30 days
-            path: "/",
-            sameSite: "strict"
         });
     }
 
