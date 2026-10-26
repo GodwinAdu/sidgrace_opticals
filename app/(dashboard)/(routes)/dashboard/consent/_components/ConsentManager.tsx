@@ -22,7 +22,7 @@ interface Consent {
 }
 
 const DEFAULT_TEMPLATE = (proc: string) =>
-    `I consent to the dental procedure "${proc}" at SidGrace Dental. The nature, purpose, risks, benefits and alternatives have been explained to me and I have had the opportunity to ask questions. I understand no guarantee has been made as to the result of the treatment.`;
+    `I consent to the procedure "${proc}" at Medira. The nature, purpose, risks, benefits and alternatives have been explained to me and I have had the opportunity to ask questions. I understand no guarantee has been made as to the result of the treatment.`;
 
 export function ConsentManager({ patientId, consents }: { patientId: string; consents: Consent[] }) {
     const router = useRouter();

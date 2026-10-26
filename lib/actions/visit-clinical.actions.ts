@@ -18,10 +18,40 @@ import Attendance from "../models/attendance.models";
 import ClinicalNote from "../models/clinical-note.models";
 import PerioChart from "../models/perio-chart.models";
 import Imaging from "../models/imaging.models";
-import { postLedgerEntry } from "./transaction.actions";
+import { postLedgerEntry, postLedgerEntryLines } from "./accounting/bridge.actions";
+import { getSettingsInternal } from "./accounting/accounting-settings.actions";
 import Invoice from "../models/invoice.models";
 import History from "../models/history.models";
 import InventoryProduct from "../models/inventory-product.models";
+import ChartAccount from "../models/accounting/chart-account.models";
+import { nextSequence, nextUniqueNumber } from "../models/counter.models";
+import { makeVersion } from "../clinical/attribution";
+import { writeVisitAuditEntry } from "../helpers/clinical-audit";
+import {
+    type Batch,
+    type ConsumedBatch,
+    depleteFefo,
+    restoreStock,
+    sumBatchQuantity,
+    coerceLegacyToOpeningBatch,
+    isInsufficientStockError,
+} from "../inventory/batches";
+import { pickAccountCode } from "../inventory/account-resolution";
+import {
+    buildCogsReliefJournalLines,
+    type ConsumedBatchCost,
+} from "../inventory/postings";
+
+/**
+ * Derive the denormalised `authoredByName` / `authoredByRole` snapshots from the
+ * authenticated `user`, reusing the exact precedence encoded by the pure
+ * `makeVersion` helper (name = fullName; role = specialization || role) so every
+ * attributed write stamps identical attribution for the same user.
+ */
+function authorSnapshot(user: User) {
+    const version = makeVersion(null, user as never, new Date());
+    return { authoredByName: version.authoredByName, authoredByRole: version.authoredByRole };
+}
 
 interface DentalNoteInput {
     teeth?: number[];
@@ -89,6 +119,7 @@ async function _addVisitDentalNote(user: User, attendanceId: string, patientId: 
         });
 
         // Embed a snapshot on the visit.
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalNotes = visit.dentalNotes || [];
         visit.dentalNotes.push({
             teeth: values.teeth || [],
@@ -97,10 +128,20 @@ async function _addVisitDentalNote(user: User, attendanceId: string, patientId: 
             assessment: values.assessment || "",
             plan: values.plan || "",
             authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             noteId: note._id,
             createdAt: new Date(),
         });
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalNotes", noteId: String(note._id) },
+            message: `${authoredByName || "A staff member"} recorded a dental note.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ note, dentalNotes: visit.dentalNotes }));
@@ -127,13 +168,25 @@ async function _saveVisitPerioExam(user: User, attendanceId: string, patientId: 
             createdBy: user._id,
         });
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.perioExam = {
             measurements: measurements || [],
             note: note || "",
             chartId: chart._id,
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             recordedAt: new Date(),
         };
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "perioExam", chartId: String(chart._id) },
+            message: `${authoredByName || "A staff member"} recorded a periodontal exam.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ chart, perioExam: visit.perioExam }));
@@ -164,6 +217,7 @@ async function _addVisitImaging(user: User, attendanceId: string, patientId: str
             createdBy: user._id,
         });
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalImaging = visit.dentalImaging || [];
         visit.dentalImaging.push({
             tooth: values.tooth ?? null,
@@ -171,10 +225,21 @@ async function _addVisitImaging(user: User, attendanceId: string, patientId: str
             title: values.title || "Untitled",
             fileUrl: values.fileUrl,
             note: values.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             imagingId: image._id,
             takenAt: new Date(),
         });
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalImaging", imagingId: String(image._id) },
+            message: `${authoredByName || "A staff member"} added a dental imaging record.`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ image, dentalImaging: visit.dentalImaging }));
@@ -305,6 +370,7 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
         await connectToDB();
         const visit = await loadVisit(attendanceId);
 
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
         visit.dentalProcedures = (procedures || []).map((p) => ({
             procedureId: p.procedureId || null,
             procedureName: p.procedureName || "",
@@ -312,11 +378,22 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
             surface: p.surface || "",
             cost: Number(p.cost) || 0,
             note: p.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
             performedAt: new Date(),
         }));
         recomputeVisitBilling(visit as unknown as VisitLike);
         await syncInvoiceIfExists(user, visit as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
         await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalProcedures", count: (procedures || []).length },
+            message: `${authoredByName || "A staff member"} recorded ${(procedures || []).length} dental procedure(s).`,
+        });
 
         if (path) revalidatePath(path);
         return JSON.parse(JSON.stringify({ dentalProcedures: visit.dentalProcedures, billing: visit.billing }));
@@ -326,6 +403,77 @@ async function _saveVisitProcedures(user: User, attendanceId: string, procedures
     }
 }
 export const saveVisitProcedures = await withAuth(_saveVisitProcedures);
+
+/**
+ * APPEND procedures to the visit (does not replace existing ones) and rebuild
+ * the bill. Used when sending items from a treatment plan to the current visit
+ * bill. Ensures an invoice exists first so the charge is reflected even on
+ * visits created before auto-invoicing. No ledger post.
+ */
+async function _addProceduresToVisit(user: User, attendanceId: string, procedures: VisitProcedureInput[], path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        if (!procedures || procedures.length === 0) throw new Error("No procedures to add");
+        await connectToDB();
+        const visit = await loadVisit(attendanceId);
+
+        const { authoredByName, authoredByRole } = authorSnapshot(user);
+        const existing = (visit.dentalProcedures || []) as unknown[];
+        const appended = (procedures || []).map((p) => ({
+            procedureId: p.procedureId || null,
+            procedureName: p.procedureName || "",
+            tooth: p.tooth ?? null,
+            surface: p.surface || "",
+            cost: Number(p.cost) || 0,
+            note: p.note || "",
+            authoredBy: user._id,
+            authoredByName,
+            authoredByRole,
+            performedAt: new Date(),
+        }));
+        visit.dentalProcedures = [...existing, ...appended] as never;
+
+        recomputeVisitBilling(visit as unknown as VisitLike);
+
+        // Guarantee an invoice exists so the bill reflects the new charges.
+        if (!visit.billing?.invoiceId) {
+            await _ensureVisitInvoice(user, attendanceId);
+            // reload to pick up the invoiceId written by ensureVisitInvoice
+            const refreshed = await loadVisit(attendanceId);
+            refreshed.dentalProcedures = visit.dentalProcedures;
+            recomputeVisitBilling(refreshed as unknown as VisitLike);
+            await syncInvoiceIfExists(user, refreshed as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
+            await refreshed.save();
+            // Best-effort audit AFTER the clinical save (R7.3).
+            await writeVisitAuditEntry({
+                attendanceId,
+                performedBy: String(user._id ?? user.id),
+                details: { field: "dentalProcedures", count: appended.length },
+                message: `${authoredByName || "A staff member"} added ${appended.length} dental procedure(s) to the visit.`,
+            });
+            if (path) revalidatePath(path);
+            return JSON.parse(JSON.stringify({ dentalProcedures: refreshed.dentalProcedures, billing: refreshed.billing }));
+        }
+
+        await syncInvoiceIfExists(user, visit as unknown as Parameters<typeof syncInvoiceIfExists>[1]);
+        await visit.save();
+
+        // Best-effort audit AFTER the clinical save (R7.3).
+        await writeVisitAuditEntry({
+            attendanceId,
+            performedBy: String(user._id ?? user.id),
+            details: { field: "dentalProcedures", count: appended.length },
+            message: `${authoredByName || "A staff member"} added ${appended.length} dental procedure(s) to the visit.`,
+        });
+
+        if (path) revalidatePath(path);
+        return JSON.parse(JSON.stringify({ dentalProcedures: visit.dentalProcedures, billing: visit.billing }));
+    } catch (error) {
+        console.error("Error adding procedures to visit:", error);
+        throw error;
+    }
+}
+export const addProceduresToVisit = await withAuth(_addProceduresToVisit);
 
 /* ─────────────── OTHER CHARGES (manual line items) ─────────────── */
 async function _setVisitOtherCharges(user: User, attendanceId: string, charges: { label: string; amount: number }[], path?: string) {
@@ -353,6 +501,98 @@ export const setVisitOtherCharges = await withAuth(_setVisitOtherCharges);
 interface DispenseItemInput {
     productId: string;
     quantity: number;
+}
+
+/* ── Batch <-> schema conversion helpers (Mongoose stores Dates; the pure
+ *    engine in lib/inventory/batches.ts speaks ISO strings). Mirrors the
+ *    toIso / toDateOrNull / toPureBatch pattern in inventory-product.actions.ts
+ *    so stock math stays identical between the app and the property tests. ── */
+
+/** Normalize a `Date | string | null | undefined` to an ISO string or `null`. */
+function toIso(value: string | Date | null | undefined): string | null {
+    if (value == null || value === "") return null;
+    const d = value instanceof Date ? value : new Date(value);
+    const ms = d.getTime();
+    return Number.isNaN(ms) ? null : d.toISOString();
+}
+
+/** Normalize a `Date | string | null | undefined` to a `Date` or `null` (schema side). */
+function toDateOrNull(value: string | Date | null | undefined): Date | null {
+    const iso = toIso(value);
+    return iso == null ? null : new Date(iso);
+}
+
+/** Map a persisted product batch (Dates) to the pure engine's {@link Batch} shape (ISO strings). */
+function toPureBatch(b: {
+    batchNumber?: string;
+    expiryDate?: Date | string | null;
+    quantity?: number | null;
+    manufactureDate?: Date | string | null;
+    costPerUnit?: number | null;
+    supplierId?: unknown;
+    receivedAt?: Date | string | null;
+}): Batch {
+    return {
+        batchNumber: String(b.batchNumber ?? ""),
+        expiryDate: toIso(b.expiryDate ?? null),
+        quantity: Number(b.quantity) || 0,
+        manufactureDate: toIso(b.manufactureDate ?? null),
+        costPerUnit: b.costPerUnit ?? null,
+        supplierId: b.supplierId == null ? null : String(b.supplierId),
+        receivedAt: toIso(b.receivedAt ?? null),
+    };
+}
+
+/** Map a pure {@link Batch} back to the schema shape (ISO strings → Dates) for persistence. */
+function toSchemaBatch(b: Batch) {
+    return {
+        batchNumber: b.batchNumber,
+        expiryDate: toDateOrNull(b.expiryDate),
+        quantity: Number(b.quantity) || 0,
+        manufactureDate: toDateOrNull(b.manufactureDate),
+        costPerUnit: b.costPerUnit ?? null,
+        supplierId: (b.supplierId ?? null) as unknown,
+        receivedAt: toDateOrNull(b.receivedAt),
+    };
+}
+
+/**
+ * Read the current batches off a product as pure {@link Batch}es, lazily coercing
+ * a legacy scalar `quantity` into an opening batch (R7.1/R7.2) when the product
+ * has a positive scalar quantity and no batches yet. Does NOT persist.
+ */
+function readProductBatches(product: {
+    quantity?: number | null;
+    batches?: unknown[] | null;
+}): Batch[] {
+    const existing = Array.isArray(product.batches)
+        ? (product.batches as Parameters<typeof toPureBatch>[0][]).map(toPureBatch)
+        : [];
+    return coerceLegacyToOpeningBatch(Number(product.quantity) || 0, existing);
+}
+
+/**
+ * Resolve an active, non-deleted ChartAccount by its `code`, returning its id as
+ * a string, or null when the code is unset / unmatched. Mirrors the bridge's own
+ * `resolveAccountByCode` and inventory-purchase's `resolveCodeToAccountId`.
+ */
+async function resolveCodeToAccountId(code: string | null | undefined): Promise<string | null> {
+    if (!code) return null;
+    const account = await ChartAccount.findOne({ code: String(code), del_flag: { $ne: true } });
+    return account ? String(account._id) : null;
+}
+
+/**
+ * Resolve a product's account link (a ChartAccount `_id`) to its `code`, so it
+ * can feed the pure `pickAccountCode` resolver alongside the settings default
+ * code. Returns null when the link is unset or the referenced account no longer
+ * resolves to an active, non-deleted account. Mirrors inventory-purchase's
+ * `resolveLinkIdToCode`.
+ */
+async function resolveLinkIdToCode(id: unknown): Promise<string | null> {
+    if (!id) return null;
+    const account = await ChartAccount.findOne({ _id: String(id), del_flag: { $ne: true } });
+    return account ? String(account.code) : null;
 }
 
 /**
@@ -389,11 +629,6 @@ async function _dispenseVisitProducts(user: User, attendanceId: string, items: D
             if (qty <= 0) continue;
             const product = await InventoryProduct.findById(it.productId);
             if (!product) throw new Error("Product not found");
-            const already = prevQty.get(String(it.productId)) || 0;
-            const delta = qty - already; // positive = take more stock, negative = return
-            if (delta > 0 && (Number(product.quantity) || 0) < delta) {
-                throw new Error(`Not enough stock for ${product.name}. Available: ${product.quantity}`);
-            }
             const unitPrice = Number(product.salePrice) || 0;
             dispensed.push({
                 productId: String(it.productId),
@@ -404,17 +639,156 @@ async function _dispenseVisitProducts(user: User, attendanceId: string, items: D
             });
         }
 
-        // Apply stock deltas: decrement for increases, restore for decreases/removals.
+        // ── Reconcile stock through the batch engine (R6.3/R6.4/R8.4/R8.5) ──
+        // Mirror the scalar DELTA logic: for each product touched this visit,
+        // delta = newly-dispensed − previously-dispensed. A POSITIVE delta
+        // deplete()s that many units FEFO (skipping expired lots); a NEGATIVE
+        // delta restore()s the difference. The pure engine computes the next
+        // batch state WITHOUT mutating, so we stage every change and only
+        // persist once ALL depletions succeed — an insufficient/expired-stock
+        // error on any product aborts the whole op with no stock/ledger change.
+        const now = new Date();
         const newQty = new Map<string, number>();
         for (const d of dispensed) newQty.set(d.productId, (newQty.get(d.productId) || 0) + d.quantity);
         const allIds = new Set<string>([...prevQty.keys(), ...newQty.keys()]);
+
+        // consumedByProduct carries the per-batch cost breakdown produced by the
+        // FEFO depletion so task 7.2 can post the COGS-relief JE from real
+        // depleted-batch cost. Only POSITIVE-delta depletions produce rows.
+        const consumedByProduct = new Map<string, ConsumedBatch[]>();
+        // Per-product fallback cost (product.purchasePrice) feeding
+        // computeCogsAmount/buildCogsReliefJournalLines when a consumed row's
+        // costPerUnit is null. Keyed by String(productId), stashed during deplete.
+        const fallbackPriceByProduct = new Map<string, number>();
+        // First-seen COGS / Inventory account link codes (mirrors 6.1's single-JE
+        // approach: the first depleted product carrying a link wins the account
+        // resolution for the whole dispense; otherwise we fall back to defaults).
+        let cogsLinkCode: string | null = null;
+        let inventoryLinkCode: string | null = null;
+
+        // Stage {product doc, next pure batch state} per changed product; persist
+        // in a second pass so a throw mid-loop leaves nothing written.
+        const pending: {
+            product: IInventoryProduct;
+            batches: Batch[];
+        }[] = [];
+
         for (const id of allIds) {
             const delta = (newQty.get(id) || 0) - (prevQty.get(id) || 0);
-            if (delta !== 0) {
-                const product = await InventoryProduct.findById(id);
-                if (product) {
-                    product.quantity = Math.max(0, (Number(product.quantity) || 0) - delta);
-                    await product.save();
+            if (delta === 0) continue;
+
+            const product = await InventoryProduct.findById(id);
+            if (!product) continue;
+
+            // Batch-aware view, lazily coercing a legacy scalar quantity to an
+            // opening batch so products that predate batch tracking still work.
+            const currentBatches = readProductBatches(product as unknown as { quantity?: number | null; batches?: unknown[] | null });
+
+            let nextBatches: Batch[];
+            if (delta > 0) {
+                // Deplete FEFO. depleteFefo throws InsufficientStockError when the
+                // non-expired available quantity (expired lots skipped per R8.5) is
+                // less than the request, WITHOUT mutating the input batches.
+                try {
+                    const result = depleteFefo(currentBatches, delta, now);
+                    nextBatches = result.batches;
+                    consumedByProduct.set(String(id), result.consumed);
+                    // Stash the per-product fallback cost (used when a consumed
+                    // row has no costPerUnit) and claim the first COGS / Inventory
+                    // account links for the single whole-dispense JE (R4.2/R4.3).
+                    fallbackPriceByProduct.set(String(id), Number((product as unknown as { purchasePrice?: number }).purchasePrice) || 0);
+                    const prod = product as unknown as { cogsAccountId?: unknown; inventoryAccountId?: unknown };
+                    if (cogsLinkCode == null && prod.cogsAccountId) {
+                        cogsLinkCode = await resolveLinkIdToCode(prod.cogsAccountId);
+                    }
+                    if (inventoryLinkCode == null && prod.inventoryAccountId) {
+                        inventoryLinkCode = await resolveLinkIdToCode(prod.inventoryAccountId);
+                    }
+                } catch (err) {
+                    if (isInsufficientStockError(err)) {
+                        // Available = non-expired stock the engine would allow.
+                        throw new Error(
+                            `Not enough stock for ${product.name}. Available: ${err.available}`,
+                        );
+                    }
+                    throw err;
+                }
+            } else {
+                // Negative delta → return the difference to stock.
+                nextBatches = restoreStock(currentBatches, -delta);
+            }
+
+            pending.push({ product: product as unknown as IInventoryProduct, batches: nextBatches });
+        }
+
+        // All depletions succeeded — now persist the staged batch states and keep
+        // product.quantity = sumBatchQuantity(batches) (R6.1).
+        for (const { product, batches } of pending) {
+            if (!product) continue;
+            product.batches = batches.map(toSchemaBatch) as unknown as IInventoryProduct["batches"];
+            product.quantity = sumBatchQuantity(batches);
+            await (product as unknown as { save: () => Promise<unknown> }).save();
+        }
+
+        // ── Post the COGS-relief JE only (R4.2/R4.3/R4.4/R4.5/R10.3) ──
+        // Revenue is recognised EXACTLY ONCE by the existing payment path
+        // (`recordVisitPayment` posts `type: "income"`); dispense posts NO revenue
+        // JE. The only accounting here is the cost-of-goods-sold relief: debit COGS,
+        // credit Inventory for the real depleted-batch cost.
+        //
+        // Single-JE scope (mirrors 6.1's purchase approach): the first depleted
+        // product carrying a cogs/inventory link wins the account resolution;
+        // otherwise we fall back to the settings defaults (COGS → expense,
+        // Inventory → inventory). Per-product fallback prices are folded into the
+        // consumed rows so a single `buildCogsReliefJournalLines` call computes the
+        // correct aggregate amount across all depleted products.
+        //
+        // Skip-and-complete: if COGS or Inventory doesn't resolve, or the amount is
+        // not strictly positive, nothing is posted and the dispense completes.
+        if (consumedByProduct.size > 0) {
+            const settings = await getSettingsInternal();
+            const defaults = settings?.defaultAccounts || {};
+
+            const cogsCode = pickAccountCode(cogsLinkCode, defaults.expense);
+            const inventoryCode = pickAccountCode(inventoryLinkCode, defaults.inventory);
+            const cogsAccountId = await resolveCodeToAccountId(cogsCode);
+            const inventoryAccountId = await resolveCodeToAccountId(inventoryCode);
+
+            if (cogsAccountId && inventoryAccountId) {
+                // Fold each product's fallback price into its consumed rows: a
+                // null costPerUnit becomes the product's purchasePrice, so the
+                // single builder call (fallbackPrice 0) sums the real cost.
+                const consumed: ConsumedBatchCost[] = [];
+                for (const [pid, rows] of consumedByProduct) {
+                    const fallback = fallbackPriceByProduct.get(pid) ?? 0;
+                    for (const row of rows) {
+                        consumed.push({
+                            quantity: Number(row.quantity) || 0,
+                            costPerUnit: row.costPerUnit == null ? fallback : row.costPerUnit,
+                        });
+                    }
+                }
+
+                const built = buildCogsReliefJournalLines({
+                    consumed,
+                    fallbackPrice: 0,
+                    cogsAccountId,
+                    inventoryAccountId,
+                    memo: "COGS relief",
+                });
+
+                if (built) {
+                    await postLedgerEntryLines(user, {
+                        lines: built.lines,
+                        memo: "COGS relief",
+                        // No "dispense" source exists in the JE enum; use the
+                        // neutral "bridge" origin (NOT "payment", to avoid any
+                        // conflation with the revenue payment entries). Linked to
+                        // the visit via sourceId for traceability.
+                        source: "bridge",
+                        sourceId: String(visit._id),
+                        vendorId: null,
+                    });
                 }
             }
         }
@@ -440,9 +814,13 @@ export const dispenseVisitProducts = await withAuth(_dispenseVisitProducts);
 /* ─────────────── GENERATE INVOICE FROM VISIT ─────────────── */
 async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await Invoice.countDocuments({});
-    const seq = String(count + 1).padStart(5, "0");
-    return `INV-${year}-${seq}`;
+    // Shares the same atomic sequence as invoice.actions so visit-generated and
+    // manual invoices never collide.
+    return nextUniqueNumber(
+        `invoice-${year}`,
+        (seq) => `INV-${year}-${String(seq).padStart(5, "0")}`,
+        async (value) => !!(await Invoice.exists({ invoiceNumber: value })),
+    );
 }
 
 /** Build invoice line items + total from a visit's current charges. */
@@ -493,6 +871,7 @@ function buildVisitInvoiceItems(visit: {
  * NOTE: caller is responsible for saving the visit doc.
  */
 async function syncInvoiceIfExists(user: User, visit: {
+    _id?: unknown;
     billing?: {
         invoiceId?: unknown;
         consultationFee?: number;
@@ -516,6 +895,9 @@ async function syncInvoiceIfExists(user: User, visit: {
     invoice.status = invoice.status === "cancelled"
         ? "cancelled"
         : amountPaid <= 0 ? "unpaid" : invoice.balance <= 0 ? "paid" : "partial";
+    // Self-heal the visit link on invoices created before these fields existed.
+    if (!invoice.attendanceId && visit._id) invoice.attendanceId = visit._id as never;
+    if (!invoice.source || invoice.source === "manual") invoice.source = "visit";
     invoice.mod_flag = true;
     invoice.modifiedBy = user._id;
     await invoice.save();
@@ -567,6 +949,8 @@ async function _createInvoiceFromVisit(user: User, attendanceId: string, path?: 
             invoice = await Invoice.create({
                 invoiceNumber,
                 patientId,
+                attendanceId: visit._id,
+                source: "visit",
                 items: items as never,
                 subtotal: total,
                 tax: 0,
@@ -605,6 +989,75 @@ async function _createInvoiceFromVisit(user: User, attendanceId: string, path?: 
     }
 }
 export const createInvoiceFromVisit = await withAuth(_createInvoiceFromVisit);
+
+/**
+ * Ensure a visit has a linked invoice, creating one from current charges if it
+ * does not. Unlike createInvoiceFromVisit this NEVER throws on "no charges" —
+ * it creates an empty draft so the billing page always has a target to manage.
+ * Idempotent: returns the existing invoice when one is already linked.
+ * Intended to be called at OPD check-in (after the attendance is saved).
+ */
+async function _ensureVisitInvoice(user: User, attendanceId: string, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+        const visit = await loadVisit(attendanceId);
+
+        const existingId = visit.billing?.invoiceId ? String(visit.billing.invoiceId) : null;
+        if (existingId) {
+            const existing = await Invoice.findById(existingId);
+            if (existing) return JSON.parse(JSON.stringify(existing));
+        }
+
+        const patientId = visit.patientId ? String(visit.patientId) : null;
+        if (!patientId) throw new Error("Visit has no linked patient");
+
+        recomputeVisitBilling(visit as unknown as VisitLike);
+        const { items, total } = buildVisitInvoiceItems(visit as unknown as Parameters<typeof buildVisitInvoiceItems>[0]);
+
+        const invoiceNumber = await generateInvoiceNumber();
+        const invoice = await Invoice.create({
+            invoiceNumber,
+            patientId,
+            attendanceId: visit._id,
+            source: "visit",
+            items: items as never,
+            subtotal: total,
+            tax: 0,
+            discount: 0,
+            total,
+            amountPaid: 0,
+            balance: total,
+            status: total > 0 ? "unpaid" : "draft",
+            notes: "Generated at check-in",
+            createdBy: user._id,
+            action_type: "created",
+        });
+
+        await History.create({
+            actionType: "INVOICE_CREATED",
+            details: { itemId: invoice._id, deletedAt: new Date() },
+            message: `${user.fullName} opened invoice ${invoiceNumber} at check-in on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: invoice._id,
+            entityType: "INVOICE",
+        });
+
+        visit.set("billing.invoiceId", invoice._id);
+        visit.set("billing.invoiceNumber", invoice.invoiceNumber);
+        visit.set("billing.amountPaid", 0);
+        visit.set("billing.balance", Number(invoice.balance) || 0);
+        await visit.save();
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/billing/invoices");
+        return JSON.parse(JSON.stringify(invoice));
+    } catch (error) {
+        console.error("Error ensuring visit invoice:", error);
+        throw error;
+    }
+}
+export const ensureVisitInvoice = await withAuth(_ensureVisitInvoice);
 
 /** Fetch the invoice linked to a visit (or null). */
 async function _getVisitInvoice(user: User, attendanceId: string) {
@@ -703,10 +1156,10 @@ async function _recordVisitPayment(user: User, attendanceId: string, amount: num
 
         if (path) revalidatePath(path);
         // A payment posts revenue and updates the invoice — keep the billing,
-        // transactions and accounting pages fresh on next navigation.
+        // journal entries and accounting pages fresh on next navigation.
         revalidatePath("/dashboard/billing/invoices");
         revalidatePath(`/dashboard/billing/invoices/${invoiceId}`);
-        revalidatePath("/dashboard/account/transactions");
+        revalidatePath("/dashboard/account/journal-entries");
         revalidatePath("/dashboard/account/income-statement");
         return JSON.parse(JSON.stringify({ billing: visit.billing, invoice }));
     } catch (error) {

@@ -2,45 +2,45 @@
 
 import { motion } from "framer-motion"
 import {
-  Sparkles,
-  Smile,
   Stethoscope,
-  Syringe,
-  Baby,
-  ScanLine,
+  BedDouble,
+  Pill,
+  ReceiptText,
+  ClipboardList,
+  BarChart3,
   ArrowUpRight,
 } from "lucide-react"
 
 const SERVICES = [
   {
     icon: Stethoscope,
-    title: "General Dentistry",
-    desc: "Routine exams, cleanings, and fillings to keep your teeth and gums healthy for life.",
+    title: "OPD & Consultations",
+    desc: "Check-in, vitals, consultation notes, diagnosis and orders — one shared record per visit for doctors and nurses.",
   },
   {
-    icon: Sparkles,
-    title: "Cosmetic Dentistry",
-    desc: "Teeth whitening, veneers, and bonding to give you a brighter, more confident smile.",
+    icon: BedDouble,
+    title: "Inpatient & Wards",
+    desc: "Admissions, ward and bed management, transfers, discharge, and a nurse worklist for every admitted patient.",
   },
   {
-    icon: Smile,
-    title: "Orthodontics & Invisalign",
-    desc: "Clear aligners and modern braces that straighten teeth discreetly and comfortably.",
+    icon: Pill,
+    title: "Pharmacy",
+    desc: "Prescriptions flow from the doctor to the pharmacy queue; dispensing updates stock and bills the visit automatically.",
   },
   {
-    icon: Syringe,
-    title: "Dental Implants",
-    desc: "Permanent, natural-looking tooth replacements that restore full function and aesthetics.",
+    icon: ReceiptText,
+    title: "Billing & Invoicing",
+    desc: "Invoice-driven billing with payments, insurance claims, and automatic charges for consultation, procedures and beds.",
   },
   {
-    icon: ScanLine,
-    title: "Digital Diagnostics",
-    desc: "3D imaging and intraoral scanning for precise, radiation-minimized treatment planning.",
+    icon: ClipboardList,
+    title: "Records & Clinical",
+    desc: "Patient history, lab and imaging results, treatment plans and clinical notes kept together and easy to find.",
   },
   {
-    icon: Baby,
-    title: "Pediatric Care",
-    desc: "Gentle, kid-friendly dentistry that builds healthy habits and happy dental visits.",
+    icon: BarChart3,
+    title: "Accounting & Reports",
+    desc: "Cash-basis ledger, income statement, balance sheet and operational reports to run the business side with confidence.",
   },
 ]
 
@@ -50,13 +50,13 @@ export function Services() {
       <div className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full bg-teal-50 px-4 py-1.5 text-sm font-medium text-teal-600">
-            Our Services
+            What Medira Does
           </span>
           <h2 className="mt-4 text-3xl font-bold tracking-tight text-teal-950 sm:text-4xl">
-            Complete Care Under One Roof
+            Run the Whole Hospital in One Place
           </h2>
           <p className="mt-4 text-lg text-slate-500">
-            A full spectrum of dental treatments, delivered by specialists using state-of-the-art technology.
+            Every department connected — from the front desk to the ward to the finance office — in a single system.
           </p>
         </div>
 

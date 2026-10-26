@@ -1,6 +1,6 @@
 "use client"
 
-import { BarChart3, BellRing, CalendarClock, ChevronRight, History, LucideMessagesSquare, MailCheck, Menu, ReceiptText, Settings2Icon, Sparkles, Stethoscope, ThermometerIcon, Trash, UploadCloudIcon, Users, Wallet, } from "lucide-react"
+import { Activity, Ambulance, Baby, BarChart3, BedDouble, BellRing, CalendarClock, ChevronRight, ClipboardList, Droplet, History, LucideMessagesSquare, MailCheck, Menu, Pill, ReceiptText, Scissors, Settings2Icon, Share2, ShoppingCart, Sparkles, Stethoscope, ThermometerIcon, Ticket, Trash, UploadCloudIcon, Users, Wallet, Wrench, } from "lucide-react"
 
 import {
   Collapsible,
@@ -68,6 +68,86 @@ export function NavMain({ role }:{role:IRole}) {
       roleField: "attendantManagement"
 
     },
+    {
+      title: "Emergency / A&E",
+      url: `/dashboard/emergency`,
+      icon: Ambulance,
+      isActive: false,
+      roleField: "emergencyManagement"
+
+    },
+    {
+      title: "Operating Theatre",
+      url: `/dashboard/theatre`,
+      icon: Scissors,
+      isActive: false,
+      roleField: "theatreManagement"
+
+    },
+    {
+      title: "Maternity",
+      url: `/dashboard/maternity`,
+      icon: Baby,
+      isActive: false,
+      roleField: "maternityManagement"
+
+    },
+    {
+      title: "Blood Bank",
+      url: `/dashboard/blood-bank`,
+      icon: Droplet,
+      isActive: false,
+      roleField: "bloodBankManagement"
+
+    },
+    {
+      title: "Referrals",
+      url: `/dashboard/referrals`,
+      icon: Share2,
+      isActive: false,
+      roleField: "referralManagement"
+
+    },
+    {
+      title: "Procurement",
+      url: `/dashboard/procurement`,
+      icon: ShoppingCart,
+      isActive: false,
+      roleField: "procurementManagement"
+
+    },
+    {
+      title: "Equipment & Assets",
+      url: `/dashboard/assets`,
+      icon: Wrench,
+      isActive: false,
+      roleField: "assetManagement"
+
+    },
+    {
+      title: "Order Entry (CPOE)",
+      url: `/dashboard/cpoe`,
+      icon: ClipboardList,
+      isActive: false,
+      roleField: "attPrescribe"
+
+    },
+    {
+      title: "Queue & Transfers",
+      url: `/dashboard/queue`,
+      icon: Ticket,
+      isActive: false,
+      roleField: "opdManagement"
+
+    },
+    {
+      title: "HR & Payroll",
+      url: `/dashboard/hr`,
+      icon: Wallet,
+      isActive: false,
+      roleField: "hrManagement"
+
+    },
 
     {
       title: "Manage Staff",
@@ -125,6 +205,16 @@ export function NavMain({ role }:{role:IRole}) {
           roleField: "accountManagement",
         },
         {
+          title: "Journal Entries",
+          url: "/dashboard/account/journal-entries",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "General Ledger",
+          url: "/dashboard/account/general-ledger",
+          roleField: "accountingManagement",
+        },
+        {
           title: "Income Statement",
           url: "/dashboard/account/income-statement",
           roleField: "AccountReport",
@@ -140,14 +230,44 @@ export function NavMain({ role }:{role:IRole}) {
           roleField: "AccountReport",
         },
         {
-          title: "Expenses",
-          url: "/dashboard/account/expenses",
-          roleField: "accountManagement",
+          title: "Cash Flow",
+          url: "/dashboard/account/cash-flow",
+          roleField: "AccountReport",
         },
         {
-          title: "Transactions",
-          url: "/dashboard/account/transactions",
-          roleField: "accountManagement",
+          title: "Expense Workflow",
+          url: "/dashboard/account/expense-workflow",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Approvals",
+          url: "/dashboard/account/approvals",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Vendors",
+          url: "/dashboard/account/vendors",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Budgets",
+          url: "/dashboard/account/budgets",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Budget vs Actual",
+          url: "/dashboard/account/budget-vs-actual",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Vendor Spend",
+          url: "/dashboard/account/vendor-spend",
+          roleField: "accountingManagement",
+        },
+        {
+          title: "Settings",
+          url: "/dashboard/account/settings",
+          roleField: "accountingSettings",
         },
       ],
     },
@@ -170,6 +290,28 @@ export function NavMain({ role }:{role:IRole}) {
           title: "Claims",
           url: "/dashboard/billing/claims",
           roleField: "insuranceManagement",
+        },
+      ],
+    },
+    {
+      title: "Inpatient",
+      url: "#",
+      icon: BedDouble,
+      items: [
+        {
+          title: "Nursing",
+          url: "/dashboard/nursing",
+          roleField: "nursingDashboard",
+        },
+        {
+          title: "Admissions",
+          url: "/dashboard/admission",
+          roleField: "admissionManagement",
+        },
+        {
+          title: "Wards & Beds",
+          url: "/dashboard/wards",
+          roleField: "wardManagement",
         },
       ],
     },
@@ -219,6 +361,11 @@ export function NavMain({ role }:{role:IRole}) {
           title: "Procedure Catalog",
           url: "/dashboard/procedures",
           roleField: "procedureManagement",
+        },
+        {
+          title: "Lab & Radiology",
+          url: "/dashboard/lab",
+          roleField: "labManagement",
         },
         {
           title: "Lab Cases",
@@ -294,6 +441,29 @@ export function NavMain({ role }:{role:IRole}) {
       ],
     },
     {
+      title: "Pharmacy",
+      url: "#",
+      icon: Pill,
+      roleField: "pharmacyManagement",
+      items: [
+        {
+          title: "Prescription Queue",
+          url: "/dashboard/pharmacy",
+          roleField: "pharmacyManagement",
+        },
+        {
+          title: "Drug Inventory",
+          url: "/dashboard/pharmacy/drugs",
+          roleField: "pharmacyManagement",
+        },
+        {
+          title: "Point of Sale",
+          url: "/dashboard/pharmacy/pos",
+          roleField: "pharmacyManagement",
+        },
+      ],
+    },
+    {
       title: "Operations",
       url: "#",
       icon: CalendarClock,
@@ -315,6 +485,13 @@ export function NavMain({ role }:{role:IRole}) {
         },
       ],
     },
+    // {
+    //   title: "Operations",
+    //   url: `/dashboard/ops`,
+    //   icon: Activity,
+    //   isActive: false,
+    //   roleField: "reportManagement"
+    // },
     {
       title: "Reports",
       url: `/dashboard/reports`,

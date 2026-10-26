@@ -16,6 +16,16 @@ const InvoiceSchema = new Schema<IInvoice>(
     {
         invoiceNumber: { type: String, required: true, unique: true },
         patientId: { type: Schema.Types.ObjectId, ref: "Patient", required: true },
+        // Direct link to the clinical visit this invoice bills (when it was
+        // generated from an attendance). Null for manual / plan invoices.
+        attendanceId: { type: Schema.Types.ObjectId, ref: "Attendance", default: null },
+        // How the invoice came to exist, so the billing list can distinguish
+        // auto-generated visit bills from manually created ones.
+        source: {
+            type: String,
+            enum: ["visit", "manual", "plan"],
+            default: "manual",
+        },
         treatmentPlanId: { type: Schema.Types.ObjectId, ref: "TreatmentPlan", default: null },
         items: { type: [InvoiceItemSchema], default: [] },
         subtotal: { type: Number, default: 0 },
@@ -46,6 +56,7 @@ const InvoiceSchema = new Schema<IInvoice>(
 );
 
 InvoiceSchema.index({ patientId: 1, createdAt: -1 });
+InvoiceSchema.index({ attendanceId: 1 });
 
 const Invoice: Model<IInvoice> =
     models.Invoice ?? model<IInvoice>("Invoice", InvoiceSchema);

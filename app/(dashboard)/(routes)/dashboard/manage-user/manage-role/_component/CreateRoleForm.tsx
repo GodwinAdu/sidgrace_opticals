@@ -89,6 +89,22 @@ const rolePresets = {
     salesManagement: true,
     messaging: true,
     inventoryManagement: true,
+    pharmacyManagement: true,
+    attClinical: true,
+    attLabScan: true,
+    attEyeTest: true,
+    attTreatment: true,
+    attPrescribe: true,
+    attBilling: true,
+    attNursing: true,
+    auditView: true,
+    wardManagement: true,
+    admissionManagement: true,
+    nursingDashboard: true,
+    accountingManagement: true,
+    accountingPost: true,
+    accountingApprove: true,
+    accountingSettings: true,
     report: true,
     trash: true,
     history: true,
@@ -152,6 +168,22 @@ interface IRole {
   salesManagement: boolean
   messaging: boolean
   inventoryManagement: boolean
+  pharmacyManagement?: boolean
+  attClinical?: boolean
+  attLabScan?: boolean
+  attEyeTest?: boolean
+  attTreatment?: boolean
+  attPrescribe?: boolean
+  attBilling?: boolean
+  attNursing?: boolean
+  auditView?: boolean
+  wardManagement?: boolean
+  admissionManagement?: boolean
+  nursingDashboard?: boolean
+  accountingManagement?: boolean
+  accountingPost?: boolean
+  accountingApprove?: boolean
+  accountingSettings?: boolean
   report: boolean
   trash: boolean
   history: boolean
@@ -278,6 +310,46 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
     AccountReport: z.boolean(),
     inventoryReport: z.boolean(),
     attendanceReport: z.boolean(),
+    // Pharmacy
+    pharmacyManagement: z.boolean().optional(),
+    // Attendance detail tab-level permissions
+    attClinical: z.boolean().optional(),
+    attLabScan: z.boolean().optional(),
+    attEyeTest: z.boolean().optional(),
+    attTreatment: z.boolean().optional(),
+    attPrescribe: z.boolean().optional(),
+    attBilling: z.boolean().optional(),
+    attNursing: z.boolean().optional(),
+    // Clinical audit log visibility (gates the visit audit trail tab)
+    auditView: z.boolean().optional(),
+    // Inpatient / nursing module permissions
+    wardManagement: z.boolean().optional(),
+    admissionManagement: z.boolean().optional(),
+    nursingDashboard: z.boolean().optional(),
+    // Emergency / A&E module permission
+    emergencyManagement: z.boolean().optional(),
+    // Operating theatre / surgery module permission
+    theatreManagement: z.boolean().optional(),
+    // Maternity / obstetrics module permission
+    maternityManagement: z.boolean().optional(),
+    // ICU charting module permission (recording reuses attNursing)
+    icuManagement: z.boolean().optional(),
+    // Blood bank module permission (specimens reuse labManagement)
+    bloodBankManagement: z.boolean().optional(),
+    // Referrals (in/out) module permission
+    referralManagement: z.boolean().optional(),
+    // Procurement (requisition → PO → GRN) module permission
+    procurementManagement: z.boolean().optional(),
+    // Equipment / biomedical asset register + maintenance module permission
+    assetManagement: z.boolean().optional(),
+    // HR & payroll module permissions
+    hrManagement: z.boolean().optional(),
+    payrollManagement: z.boolean().optional(),
+    // Accounting (double-entry ledger) module permissions
+    accountingManagement: z.boolean().optional(),
+    accountingPost: z.boolean().optional(),
+    accountingApprove: z.boolean().optional(),
+    accountingSettings: z.boolean().optional(),
     // Dental clinic feature permissions
     procedureManagement: z.boolean().optional(),
     dentalChartManagement: z.boolean().optional(),
@@ -339,7 +411,7 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
   }
 
   // Inside the CreateRoleForm component, add this function after the onSubmit function
-  function applyRolePreset(preset: "doctor" | "nurse" | "receptionist") {
+  function applyRolePreset(preset: "doctor" | "nurse" | "receptionist" | "admin") {
     // Create a new object with all permissions set to false
     const baseValues = Object.keys(CreateRoleSchema.shape).reduce((acc, key) => {
       if (key === "name" || key === "displayName" || key === "description") {
@@ -583,6 +655,20 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
                           </FormControl>
                           <div className="space-y-1 leading-none">
                             <FormLabel>Inventory Management</FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="pharmacyManagement"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                          <FormControl>
+                            <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel>Pharmacy Management</FormLabel>
                           </div>
                         </FormItem>
                       )}
@@ -1271,7 +1357,100 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
 
                   {/* Dental clinic feature permissions */}
                   <div className="py-5">
-                    <h1 className="font-semibold text-lg capitalize">Dental Clinic Features</h1>
+                    <h1 className="font-semibold text-lg capitalize">Attendance Detail Tabs</h1>
+                    <p className="text-xs text-muted-foreground">Which tabs this role can see on a patient visit (consulting page).</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { name: "attClinical", label: "Clinical (History, Exam, Diagnosis, Notes, Vitals, Dental Chart, Perio)" },
+                      { name: "attLabScan", label: "Lab, Scan & Imaging" },
+                      { name: "attEyeTest", label: "Eye Test (Optical)" },
+                      { name: "attTreatment", label: "Treatment Plan" },
+                      { name: "attPrescribe", label: "Prescribe" },
+                      { name: "attBilling", label: "Consultation Fee & Billing" },
+                      { name: "attNursing", label: "Nursing (Notes, Medication, Intake/Output)" },
+                      { name: "auditView", label: "View clinical audit log" },
+                    ].map((perm) => (
+                      <FormField
+                        key={perm.name}
+                        control={form.control}
+                        name={perm.name as keyof z.infer<typeof CreateRoleSchema>}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                            <FormControl>
+                              <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>{perm.label}</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Inpatient / nursing module permissions */}
+                  <div className="py-5">
+                    <h1 className="font-semibold text-lg capitalize">Inpatient &amp; Nursing</h1>
+                    <p className="text-xs text-muted-foreground">Wards, beds, admissions and the nurse worklist.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { name: "wardManagement", label: "Wards & Beds (bed board)" },
+                      { name: "admissionManagement", label: "Admissions (admit / transfer / discharge)" },
+                      { name: "nursingDashboard", label: "Nursing Dashboard (worklist)" },
+                    ].map((perm) => (
+                      <FormField
+                        key={perm.name}
+                        control={form.control}
+                        name={perm.name as keyof z.infer<typeof CreateRoleSchema>}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                            <FormControl>
+                              <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>{perm.label}</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Accounting (double-entry ledger) module permissions */}
+                  <div className="py-5">
+                    <h1 className="font-semibold text-lg capitalize">Accounting</h1>
+                    <p className="text-xs text-muted-foreground">Chart of accounts, journal entries, statements, expenses, approvals and settings.</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {[
+                      { name: "accountingManagement", label: "Accounting (view ledger, statements & reports)" },
+                      { name: "accountingPost", label: "Post & reverse journal entries" },
+                      { name: "accountingApprove", label: "Approve expenses" },
+                      { name: "accountingSettings", label: "Accounting Settings (chart, periods, rules, budgets)" },
+                    ].map((perm) => (
+                      <FormField
+                        key={perm.name}
+                        control={form.control}
+                        name={perm.name as keyof z.infer<typeof CreateRoleSchema>}
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-start space-x-3 space-y-0 p-4">
+                            <FormControl>
+                              <Checkbox checked={!!field.value} onCheckedChange={field.onChange} />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                              <FormLabel>{perm.label}</FormLabel>
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="py-5">
+                    <h1 className="font-semibold text-lg capitalize">Clinical &amp; Specialty Features</h1>
+                    <p className="text-xs text-muted-foreground">Modules used by specific specialties (e.g. dental chart, perio) plus billing, lab and reports.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {[
@@ -1283,6 +1462,16 @@ const CreateRoleForm = ({ type, initialData }: { type: "create" | "update"; init
                       { name: "insuranceManagement", label: "Insurance & Claims" },
                       { name: "recallManagement", label: "Recalls & Waitlist" },
                       { name: "labManagement", label: "Lab Cases" },
+                      { name: "emergencyManagement", label: "Emergency / A&E" },
+                      { name: "theatreManagement", label: "Operating Theatre" },
+                      { name: "maternityManagement", label: "Maternity / Obstetrics" },
+                      { name: "icuManagement", label: "ICU Charting" },
+                      { name: "bloodBankManagement", label: "Blood Bank" },
+                      { name: "referralManagement", label: "Referrals (In / Out)" },
+                      { name: "procurementManagement", label: "Procurement (Requisition / PO / GRN)" },
+                      { name: "assetManagement", label: "Equipment / Biomedical Assets" },
+                      { name: "hrManagement", label: "HR (Leave / Timesheet)" },
+                      { name: "payrollManagement", label: "Payroll Runs" },
                       { name: "rosterManagement", label: "Staff Roster" },
                       { name: "reportManagement", label: "Reports & Analytics" },
                       { name: "branchManagement", label: "Branches" },

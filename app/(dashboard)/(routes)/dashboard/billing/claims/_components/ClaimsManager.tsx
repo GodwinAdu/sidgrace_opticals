@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter, usePathname } from "next/navigation";
-import { Loader2, Plus, Search, User2, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search, User2, Trash2, CheckCircle2 } from "lucide-react";
 import { fetchPatientBySearch } from "@/lib/actions/patient.actions";
 import { createClaim, updateClaim, deleteClaim } from "@/lib/actions/insurance.actions";
 
@@ -99,6 +99,21 @@ export function ClaimsManager({ claims }: { claims: Claim[] }) {
             router.refresh();
         } catch {
             toast.error("Something went wrong");
+        } finally {
+            setBusyId(null);
+        }
+    };
+
+    // One-click: approve the full claimed amount and post the insurer's payment
+    // to the linked invoice. Handles the common "insurer paid as expected" case.
+    const approveInFull = async (id: string, claimed: number) => {
+        try {
+            setBusyId(id);
+            await updateClaim(id, { amountApproved: Number(claimed) || 0, status: "approved" }, path);
+            toast.success("Claim approved in full");
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
         } finally {
             setBusyId(null);
         }
@@ -197,6 +212,18 @@ export function ClaimsManager({ claims }: { claims: Claim[] }) {
                                             </SelectContent>
                                         </Select>
                                     </div>
+                                    {!["approved", "partially-approved", "paid", "rejected"].includes(c.status) && (
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="mb-1"
+                                            onClick={() => approveInFull(c._id, Number(c.amountClaimed) || 0)}
+                                            disabled={busyId === c._id}
+                                        >
+                                            {busyId === c._id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                                            Approve in Full
+                                        </Button>
+                                    )}
                                     <button onClick={() => remove(c._id)} disabled={busyId === c._id} className="mb-1 text-red-500 hover:text-red-700">
                                         {busyId === c._id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                                     </button>

@@ -1,5 +1,6 @@
 "use server"
 import { format } from "date-fns"
+import { revalidatePath } from "next/cache"
 import { type User, withAuth } from "../helpers/auth"
 import Appointment from "../models/appointment.models"
 import { Patient } from "../models/patient.models"
@@ -305,3 +306,86 @@ async function _deleteAppointment(user: User, id: string) {
 export const createAppointment = await withAuth(_createAppointment);
 export const fetchAppointments = await withAuth(_fetchAppointments);
 export const deleteAppointment = await withAuth(_deleteAppointment)
+
+
+/**
+ * Provider day-view: all appointments on a date, grouped by provider, with each
+ * one's time slot and status — the schedule depth needed to see who is booked
+ * when. `date` is YYYY-MM-DD.
+ */
+async function _getProviderDaySchedule(user: User, date: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+
+        const start = new Date(`${date}T00:00:00`);
+        const end = new Date(`${date}T23:59:59`);
+
+        const appts = await Appointment.find({ date: { $gte: start, $lte: end } })
+            .populate("patientId", "fullName patientId")
+            .populate("doctorId", "fullName")
+            .sort({ timeSlot: 1 })
+            .lean();
+
+        // Group by provider (or "Unassigned").
+        const groups: Record<string, { provider: string; appointments: unknown[] }> = {};
+        for (const a of appts) {
+            const doc = a.doctorId as { _id?: unknown; fullName?: string } | null;
+            const key = doc?._id ? String(doc._id) : "unassigned";
+            if (!groups[key]) groups[key] = { provider: doc?.fullName || "Unassigned", appointments: [] };
+            groups[key].appointments.push(a);
+        }
+
+        return JSON.parse(JSON.stringify(Object.values(groups)));
+    } catch (error) {
+        console.error("Error building provider day schedule:", error);
+        return [];
+    }
+}
+export const getProviderDaySchedule = await withAuth(_getProviderDaySchedule, "appointmentManagement");
+
+/**
+ * Check a scheduled appointment into OPD: creates the visit (attendance) for the
+ * patient and marks the appointment completed, so a booked appointment flows
+ * into the OPD queue. Returns the created attendance id.
+ */
+async function _checkInAppointment(user: User, appointmentId: string, path?: string) {
+    try {
+        if (!user) throw new Error("User not authenticated");
+        await connectToDB();
+
+        const appt = await Appointment.findById(appointmentId);
+        if (!appt) throw new Error("Appointment not found");
+        if (appt.status === "completed") throw new Error("Appointment already checked in");
+
+        // Lazy import to avoid any load-order coupling between action modules.
+        const { createAttendance } = await import("./attendance.actions");
+        const attendance = await createAttendance({
+            patientId: String(appt.patientId),
+            visitType: appt.appointmentType === "procedure" ? "procedure" : "outpatient",
+            visitReason: appt.reason || "",
+            status: "waiting",
+        });
+
+        appt.status = "completed";
+        appt.updatedAt = new Date();
+        await appt.save();
+
+        await History.create({
+            actionType: "APPOINTMENT_UPDATED",
+            details: { itemId: appt._id, deletedAt: new Date() },
+            message: `${user.fullName} checked in appointment ${String(appt._id)} to OPD on ${new Date().toLocaleString()}.`,
+            performedBy: user._id,
+            entityId: appt._id,
+            entityType: "APPOINTMENT",
+        });
+
+        if (path) revalidatePath(path);
+        revalidatePath("/dashboard/opd");
+        return JSON.parse(JSON.stringify({ attendanceId: attendance?._id ?? null }));
+    } catch (error) {
+        console.error("Error checking in appointment:", error);
+        throw error;
+    }
+}
+export const checkInAppointment = await withAuth(_checkInAppointment, "opdManagement");

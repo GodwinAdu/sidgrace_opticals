@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SidGrace Dental",
-  description: "Modern dental clinic management for SidGrace Dental.",
+  title: "Medira",
+  description: "Medira — hospital management for clinics and hospitals of every kind.",
 };
 
 export default function RootLayout({

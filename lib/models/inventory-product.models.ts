@@ -21,6 +21,103 @@ const InventoryProductSchema: Schema<IInventoryProduct> = new Schema({
         type: Number,
         required: true,
     },
+    // ─────────── Drug / pharmacy fields (optional) ───────────
+    isDrug: {
+        type: Boolean,
+        default: false,
+    },
+    strength: {
+        type: String,
+        default: "",
+    },
+    form: {
+        type: String,
+        default: "",
+    },
+    unit: {
+        type: String,
+        default: "",
+    },
+    reorderLevel: {
+        type: Number,
+        default: 0,
+    },
+    prescriptionRequired: {
+        type: Boolean,
+        default: false,
+    },
+    // ─────────── Chart-of-Accounts links (optional; null = fall back to defaults) ───────────
+    inventoryAccountId: {
+        type: Schema.Types.ObjectId,
+        ref: "ChartAccount",
+        default: null,
+    },
+    revenueAccountId: {
+        type: Schema.Types.ObjectId,
+        ref: "ChartAccount",
+        default: null,
+    },
+    cogsAccountId: {
+        type: Schema.Types.ObjectId,
+        ref: "ChartAccount",
+        default: null,
+    },
+    // ─────────── Batch / lot tracking (embedded; quantity stays the derived sum) ───────────
+    batches: [
+        {
+            batchNumber: {
+                type: String,
+                required: true,
+            },
+            expiryDate: {
+                type: Date,
+                default: null,
+            },
+            quantity: {
+                type: Number,
+                required: true,
+                min: 0,
+            },
+            manufactureDate: {
+                type: Date,
+                default: null,
+            },
+            costPerUnit: {
+                type: Number,
+                default: null,
+            },
+            supplierId: {
+                type: Schema.Types.ObjectId,
+                ref: "InventorySupplier",
+                default: null,
+            },
+            receivedAt: {
+                type: Date,
+                default: null,
+            },
+        }
+    ],
+    // ─────────── Additional pharmacy fields (optional) ───────────
+    genericName: {
+        type: String,
+        default: "",
+    },
+    manufacturer: {
+        type: String,
+        default: "",
+    },
+    barcode: {
+        type: String,
+        default: "",
+    },
+    storageConditions: {
+        type: String,
+        default: "",
+    },
+    controlledSubstance: {
+        type: Boolean,
+        default: false,
+    },
     createdBy: {
         type: Schema.Types.ObjectId,
         ref: "Staff",

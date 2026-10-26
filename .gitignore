@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# uploaded files (local storage adapter) — keep the folder, ignore contents
+/public/uploads/*
+!/public/uploads/.gitkeep
+
+# scratch tsc output
+tsc-*.txt

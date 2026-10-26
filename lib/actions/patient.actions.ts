@@ -37,7 +37,7 @@ async function _createPatient(user: User, values) {
 
         const data = {
             destination: values.phone,
-            message: `Hi ${values.fullName}, welcome to SidGrace! Your account is now active. We're glad to have you with us!`
+            message: `Hi ${values.fullName}, welcome to Medira! Your account is now active. We're glad to have you with us!`
         };
 
         const patient = new Patient({
@@ -79,7 +79,7 @@ async function _createPatient(user: User, values) {
     }
 }
 
-export const createPatient = await withAuth(_createPatient)
+export const createPatient = await withAuth(_createPatient, "patientManagement")
 
 async function _fetchPatientId(user: User, id: string) {
     try {
@@ -341,7 +341,7 @@ async function _updatePatient(user: User, id: string, values: any) {
     }
 }
 
-export const updatePatient = await withAuth(_updatePatient)
+export const updatePatient = await withAuth(_updatePatient, "patientManagement")
 
 
 // export async function updatePatient() {
@@ -455,4 +455,4 @@ async function _deletePatient(user: User, id: string) {
     }
 }
 
-export const deletePatient = await withAuth(_deletePatient)
+export const deletePatient = await withAuth(_deletePatient, "patientManagement")

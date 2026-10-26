@@ -3,16 +3,14 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { motion } from "framer-motion"
-import { Menu, X, Stethoscope, Phone } from "lucide-react"
+import { Menu, X, Stethoscope, LogIn } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
 
 const NAV_LINKS = [
-  { label: "Services", href: "#services" },
-  { label: "Why Us", href: "#why-us" },
-  { label: "Technology", href: "#technology" },
-  { label: "Testimonials", href: "#testimonials" },
-  { label: "Contact", href: "#contact" },
+  { label: "Features", href: "#services" },
+  { label: "Why Medira", href: "#why-us" },
+  { label: "Platform", href: "#technology" },
 ]
 
 export function Navbar() {
@@ -53,7 +51,7 @@ export function Navbar() {
               scrolled ? "text-teal-950" : "text-white"
             )}
           >
-            Sid<span className="text-teal-500">Grace</span> Dental
+            Med<span className="text-teal-400">ira</span>
           </span>
         </Link>
 
@@ -73,24 +71,15 @@ export function Navbar() {
         </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <a
-            href="tel:+10000000000"
-            className={cn(
-              "flex items-center gap-2 text-sm font-semibold transition-colors",
-              scrolled ? "text-teal-900" : "text-white"
-            )}
-          >
-            <Phone className="h-4 w-4" />
-            +1 (000) 000-0000
-          </a>
           <Link
             href="/sign-in"
             className={cn(
               buttonVariants({ size: "lg" }),
-              "bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30 hover:from-teal-600 hover:to-cyan-700"
+              "gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white shadow-lg shadow-teal-500/30 hover:from-teal-600 hover:to-cyan-700"
             )}
           >
-            Book Appointment
+            <LogIn className="h-4 w-4" />
+            Sign In
           </Link>
         </div>
 
@@ -126,12 +115,14 @@ export function Navbar() {
             ))}
             <Link
               href="/sign-in"
+              onClick={() => setOpen(false)}
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "mt-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white"
+                "mt-2 gap-2 bg-gradient-to-r from-teal-500 to-cyan-600 text-white"
               )}
             >
-              Book Appointment
+              <LogIn className="h-4 w-4" />
+              Sign In
             </Link>
           </div>
         </motion.div>

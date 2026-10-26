@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useRouter, usePathname } from "next/navigation";
-import { Loader2, Plus } from "lucide-react";
-import { recordPayment } from "@/lib/actions/payment.actions";
+import { Loader2, Plus, History } from "lucide-react";
+import { recordPayment, settlePatientOutstanding } from "@/lib/actions/payment.actions";
 
 interface Invoice {
     _id: string;
@@ -41,7 +41,17 @@ const METHODS = [
     { value: "other", label: "Other" },
 ];
 
-export function PaymentPanel({ invoice, payments }: { invoice: Invoice; payments: Payment[] }) {
+export function PaymentPanel({
+    invoice,
+    payments,
+    outstanding,
+    currency = "",
+}: {
+    invoice: Invoice;
+    payments: Payment[];
+    outstanding?: { total: number; count: number };
+    currency?: string;
+}) {
     const router = useRouter();
     const path = usePathname();
     const [amount, setAmount] = useState(String(invoice.balance || 0));
@@ -49,7 +59,38 @@ export function PaymentPanel({ invoice, payments }: { invoice: Invoice; payments
     const [reference, setReference] = useState("");
     const [saving, setSaving] = useState(false);
 
+    // Settle-previous-outstanding state
+    const prevTotal = Number(outstanding?.total) || 0;
+    const prevCount = Number(outstanding?.count) || 0;
+    const [settleAmount, setSettleAmount] = useState(String(prevTotal || 0));
+    const [settleMethod, setSettleMethod] = useState("cash");
+    const [settling, setSettling] = useState(false);
+
     const patientId = typeof invoice.patientId === "object" && invoice.patientId ? invoice.patientId._id : (invoice.patientId as string);
+
+    const settle = async () => {
+        const amt = Number(settleAmount);
+        if (!amt || amt <= 0) {
+            toast.error("Enter a valid amount");
+            return;
+        }
+        try {
+            setSettling(true);
+            const res = await settlePatientOutstanding(
+                patientId as string,
+                amt,
+                settleMethod as "cash",
+                invoice._id,
+                path
+            );
+            toast.success(`Settled ${Number(res?.applied || 0).toFixed(2)} across ${res?.settledCount || 0} invoice(s)`);
+            router.refresh();
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Something went wrong");
+        } finally {
+            setSettling(false);
+        }
+    };
 
     const save = async () => {
         const amt = Number(amount);
@@ -122,6 +163,40 @@ export function PaymentPanel({ invoice, payments }: { invoice: Invoice; payments
                         </div>
                     )}
                 </div>
+
+                {prevTotal > 0 && (
+                    <div className="border-t pt-3">
+                        <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            <History className="h-3.5 w-3.5" /> Settle Previous Outstanding
+                        </p>
+                        <div className="rounded-lg bg-amber-50 p-3 text-sm dark:bg-amber-900/20">
+                            <div className="flex justify-between">
+                                <span>Previous unpaid ({prevCount} invoice{prevCount === 1 ? "" : "s"})</span>
+                                <span className="font-bold">{currency ? `${currency} ` : ""}{prevTotal.toFixed(2)}</span>
+                            </div>
+                        </div>
+                        <div className="mt-2">
+                            <label className="mb-1 block text-xs text-muted-foreground">Amount to settle</label>
+                            <Input type="number" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} />
+                        </div>
+                        <div className="mt-2">
+                            <label className="mb-1 block text-xs text-muted-foreground">Method</label>
+                            <Select value={settleMethod} onValueChange={setSettleMethod}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    {METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button variant="secondary" className="mt-3 w-full" onClick={settle} disabled={settling}>
+                            {settling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <History className="mr-2 h-4 w-4" />}
+                            {settling ? "Settling..." : "Settle Oldest First"}
+                        </Button>
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                            Pays down the patient&#39;s older unpaid invoices, oldest first. Does not affect this invoice.
+                        </p>
+                    </div>
+                )}
             </CardContent>
         </Card>
     );

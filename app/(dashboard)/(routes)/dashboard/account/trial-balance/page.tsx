@@ -1,19 +1,27 @@
 import { Separator } from "@/components/ui/separator";
 import Heading from "@/app/components/Heading";
 import TrialBalance from "./_components/TrialBalance";
-import { getTrialBalance } from "@/lib/actions/accounting-reports.actions";
+import { trialBalance } from "@/lib/actions/accounting/reports.actions";
 import { getClinicSettings } from "@/lib/actions/clinic-settings.actions";
 
 const page = async () => {
-    const [data, settings] = await Promise.all([getTrialBalance(), getClinicSettings()]);
+    const now = new Date();
+    const from = new Date(now.getFullYear(), 0, 1).toISOString().slice(0, 10);
+    const to = now.toISOString().slice(0, 10);
+
+    const [data, settings] = await Promise.all([
+        trialBalance({ from, to }, "accrual"),
+        getClinicSettings(),
+    ]);
+
     return (
         <>
             <div className="flex justify-between items-center">
-                <Heading title="Trial Balance" description="Account balances with debit and credit totals from real ledger activity." />
+                <Heading title="Trial Balance" description="Per-account debit and credit positions from posted journal entries." />
             </div>
             <Separator />
             <div className="pt-4">
-                <TrialBalance data={data} currency={settings?.currency || ""} />
+                <TrialBalance initial={data} from={from} to={to} currency={settings?.currency || ""} />
             </div>
         </>
     );

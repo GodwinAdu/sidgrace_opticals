@@ -2,7 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { FileDown, Printer } from "lucide-react";
+import { FileDown, Printer, ReceiptText, Zap } from "lucide-react";
+import { toast } from "sonner";
+import { buildEposReceiptXml, eposEndpoint, sendToEposPrinter } from "@/lib/clinical/epos-receipt";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatMoney } from "@/lib/utils";
@@ -33,7 +35,7 @@ interface Payment {
     createdAt?: string;
 }
 
-const CLINIC_NAME = "SidGrace Dental";
+const CLINIC_NAME = "Medira";
 
 const STATUS: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700",
@@ -43,22 +45,119 @@ const STATUS: Record<string, string> = {
     cancelled: "bg-gray-200 text-gray-600",
 };
 
+interface ClinicInfo {
+    name?: string;
+    address?: string;
+    phone?: string;
+    email?: string;
+}
+
+interface EposConfig {
+    enabled?: boolean;
+    printerUrl?: string;
+    deviceId?: string;
+    openDrawer?: boolean;
+}
+
 export function InvoiceView({
     invoice,
     payments = [],
     currency = "",
+    clinicName,
+    clinic,
+    epos,
 }: {
     invoice: Invoice;
     payments?: Payment[];
     currency?: string;
+    clinicName?: string;
+    clinic?: ClinicInfo;
+    epos?: EposConfig;
 }) {
+    const CLINIC = clinic?.name || clinicName || CLINIC_NAME;
     const patient = typeof invoice.patientId === "object" ? invoice.patientId : null;
     const m = (n: number) => formatMoney(n, currency);
+
+    /**
+     * Print the compact 80mm receipt (Epson / thermal). We toggle a body class so
+     * the receipt-only print CSS applies, print, then remove it on the next tick
+     * (and defensively on afterprint) so the normal page/print is unaffected.
+     */
+    const printReceipt = () => {
+        const body = document.body;
+        body.classList.add("printing-receipt");
+        const cleanup = () => body.classList.remove("printing-receipt");
+        window.addEventListener("afterprint", cleanup, { once: true });
+        window.print();
+        // Fallback cleanup in case afterprint does not fire (some browsers).
+        setTimeout(cleanup, 1000);
+    };
+
+    /**
+     * One-click, driverless print straight to a networked Epson ePOS printer.
+     * Builds the ePOS XML from the invoice and POSTs it to the printer's own web
+     * service. On ANY failure (printer off, wrong IP, CORS/mixed-content) it
+     * falls back to the browser receipt print so the cashier always gets a slip.
+     */
+    const quickPrintEpson = async () => {
+        if (!epos?.enabled || !epos.printerUrl) {
+            // Not configured → just use the browser receipt print.
+            printReceipt();
+            return;
+        }
+        const t = toast.loading("Printing to Epson…");
+        try {
+            const xml = buildEposReceiptXml({
+                clinicName: CLINIC,
+                clinicAddress: clinic?.address,
+                clinicPhone: clinic?.phone,
+                title: "RECEIPT",
+                invoiceNumber: invoice.invoiceNumber,
+                dateText: invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString(),
+                patientName: patient?.fullName || "Patient",
+                patientId: patient?.patientId,
+                lines: invoice.items.map((it) => ({
+                    name: it.description,
+                    detail: `${it.quantity} x ${m(Number(it.unitPrice))}`,
+                    amount: m(Number(it.amount)),
+                })),
+                totals: [
+                    { label: "Subtotal", value: m(invoice.subtotal) },
+                    ...(invoice.tax ? [{ label: "Tax", value: m(invoice.tax) }] : []),
+                    ...(invoice.discount ? [{ label: "Discount", value: `-${m(invoice.discount)}` }] : []),
+                    { label: "TOTAL", value: m(invoice.total), bold: true },
+                    { label: "Paid", value: m(invoice.amountPaid) },
+                    { label: "Balance", value: m(invoice.balance), bold: true },
+                ],
+                footer: `Thank you for choosing ${CLINIC}.`,
+                // Only kick the drawer when configured AND something was paid.
+                openDrawer: !!epos.openDrawer && invoice.amountPaid > 0,
+                width: 42,
+            });
+            const endpoint = eposEndpoint(epos.printerUrl, epos.deviceId || "local_printer");
+            const result = await sendToEposPrinter(endpoint, xml);
+            if (result.ok) {
+                toast.success("Receipt sent to Epson printer", { id: t });
+            } else {
+                toast.error("Epson print failed — using browser print", {
+                    id: t,
+                    description: result.error,
+                });
+                printReceipt();
+            }
+        } catch (err) {
+            toast.error("Epson print failed — using browser print", {
+                id: t,
+                description: err instanceof Error ? err.message : undefined,
+            });
+            printReceipt();
+        }
+    };
 
     const exportPdf = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text(CLINIC_NAME, 14, 20);
+        doc.text(CLINIC, 14, 20);
         doc.setFontSize(11);
         doc.text(`Invoice: ${invoice.invoiceNumber}`, 14, 30);
         doc.text(`Date: ${invoice.createdAt ? new Date(invoice.createdAt).toLocaleDateString() : ""}`, 14, 36);
@@ -93,13 +192,14 @@ export function InvoiceView({
     const print = () => window.print();
 
     return (
+        <>
         <Card className="print:border-0 print:shadow-none">
             <CardContent className="pt-6" id="invoice-print-area">
                 {/* Clinic header */}
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b pb-4">
                     <div>
-                        <h1 className="text-2xl font-bold tracking-tight text-teal-700">{CLINIC_NAME}</h1>
-                        <p className="text-sm text-muted-foreground">Dental Clinic • Invoice / Receipt</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-teal-700">{CLINIC}</h1>
+                        <p className="text-sm text-muted-foreground">Invoice / Receipt</p>
                     </div>
                     <div className="text-right">
                         <h2 className="text-lg font-bold">{invoice.invoiceNumber}</h2>
@@ -198,13 +298,21 @@ export function InvoiceView({
                 {invoice.notes && <p className="mt-4 text-sm text-muted-foreground">Notes: {invoice.notes}</p>}
 
                 <p className="mt-8 text-center text-xs text-muted-foreground print:mt-16">
-                    Thank you for choosing {CLINIC_NAME}.
+                    Thank you for choosing {CLINIC}.
                 </p>
 
                 {/* Actions — hidden when printing */}
                 <div className="mt-6 flex justify-end gap-2 print:hidden">
+                    {epos?.enabled && epos.printerUrl ? (
+                        <Button onClick={quickPrintEpson}>
+                            <Zap className="mr-2 h-4 w-4" /> Quick Print (Epson)
+                        </Button>
+                    ) : null}
+                    <Button variant="outline" onClick={printReceipt}>
+                        <ReceiptText className="mr-2 h-4 w-4" /> Print Receipt
+                    </Button>
                     <Button variant="outline" onClick={print}>
-                        <Printer className="mr-2 h-4 w-4" /> Print
+                        <Printer className="mr-2 h-4 w-4" /> Print A4
                     </Button>
                     <Button variant="outline" onClick={exportPdf}>
                         <FileDown className="mr-2 h-4 w-4" /> Download PDF
@@ -212,5 +320,80 @@ export function InvoiceView({
                 </div>
             </CardContent>
         </Card>
+
+        {/* ───────── 80mm thermal receipt (screen-hidden; printed via "Print Receipt") ───────── */}
+        <div id="receipt-print-area" style={{ width: "72mm", fontSize: "11px", lineHeight: 1.35 }}>
+            <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: "14px", fontWeight: 700 }}>{CLINIC}</div>
+                {clinic?.address ? <div>{clinic.address}</div> : null}
+                {clinic?.phone ? <div>Tel: {clinic.phone}</div> : null}
+                <div style={{ marginTop: 4 }}>RECEIPT</div>
+            </div>
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>No:</span><span>{invoice.invoiceNumber}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Date:</span>
+                <span>{invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : ""}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Patient:</span><span>{patient?.fullName || "Patient"}</span>
+            </div>
+            {patient?.patientId ? (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>ID:</span><span>{patient.patientId}</span>
+                </div>
+            ) : null}
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            {invoice.items.map((it, i) => (
+                <div key={i} style={{ marginBottom: 3 }}>
+                    <div>{it.description}</div>
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <span>{it.quantity} x {m(Number(it.unitPrice))}</span>
+                        <span>{m(Number(it.amount))}</span>
+                    </div>
+                </div>
+            ))}
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Subtotal</span><span>{m(invoice.subtotal)}</span>
+            </div>
+            {invoice.tax ? (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Tax</span><span>{m(invoice.tax)}</span>
+                </div>
+            ) : null}
+            {invoice.discount ? (
+                <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Discount</span><span>-{m(invoice.discount)}</span>
+                </div>
+            ) : null}
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700, fontSize: "13px", marginTop: 2 }}>
+                <span>TOTAL</span><span>{m(invoice.total)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>Paid</span><span>{m(invoice.amountPaid)}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}>
+                <span>Balance</span><span>{m(invoice.balance)}</span>
+            </div>
+
+            <div style={{ borderTop: "1px dashed #000", margin: "6px 0" }} />
+
+            <div style={{ textAlign: "center", marginTop: 4 }}>
+                Thank you for choosing {CLINIC}.
+            </div>
+            <div style={{ textAlign: "center", fontSize: "9px", marginTop: 2 }}>
+                {new Date().toLocaleString()}
+            </div>
+        </div>
+        </>
     );
 }

@@ -1,0 +1,124 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Harden the bridge test to pin current behavior (safety net BEFORE changing anything)": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043921391
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043931303
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044080434
+      }
+    ],
+    "2. Rework `reverseLedgerEntry` to accept a JournalEntry id (with legacy fallback)": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043921819
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044084567
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044263354
+      }
+    ],
+    "3. Make `postLedgerEntry` post ONLY the JournalEntry (stop writing Transaction/Account)": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043922066
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044268058
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044843042
+      }
+    ],
+    "4. Decide + handle the two legacy screens (default: retire)": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043922886
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044852020
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792060269977
+      }
+    ],
+    "5. Historical-data diagnostic": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043923153
+      },
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792044861289
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792058277638
+      }
+    ],
+    "6. Remove dead legacy code (only after grep proves it is unreferenced)": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043923388
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792060274359
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792061007240
+      }
+    ],
+    "7. Final full verification + regression sweep": [
+      {
+        "executionId": "28124edc-75b1-497e-88c9-603c82eeb53b",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792043923550
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792061011406
+      },
+      {
+        "executionId": "61b6aa33-f30b-497e-b4a7-8da2bba25414",
+        "chatSessionId": "sess_13d73fc0-b23f-40f2-b206-1d897f56fb3b",
+        "timestamp": 1792064070281
+      }
+    ]
+  }
+}

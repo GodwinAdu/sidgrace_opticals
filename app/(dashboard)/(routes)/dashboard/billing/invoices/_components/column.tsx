@@ -12,8 +12,15 @@ interface InvoiceRow {
     amountPaid: number;
     balance: number;
     status: string;
+    source?: "visit" | "manual" | "plan";
     createdAt?: string;
 }
+
+const SOURCE_LABEL: Record<string, string> = {
+    visit: "Visit",
+    manual: "Manual",
+    plan: "Plan",
+};
 
 const STATUS: Record<string, string> = {
     draft: "bg-slate-100 text-slate-700",
@@ -35,6 +42,15 @@ export const columns: ColumnDef<InvoiceRow>[] = [
             const p = row.original.patientId;
             return <span>{typeof p === "object" && p ? p.fullName || "—" : "—"}</span>;
         },
+    },
+    {
+        id: "source",
+        header: "Source",
+        cell: ({ row }) => (
+            <Badge variant="outline" className="text-xs font-normal">
+                {SOURCE_LABEL[row.original.source || "manual"]}
+            </Badge>
+        ),
     },
     {
         accessorKey: "total",

@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { useRouter, usePathname } from "next/navigation";
 import { Loader2, Plus, Trash2, Save } from "lucide-react";
 import { createTreatmentPlan } from "@/lib/actions/treatment-plan.actions";
+import { addProceduresToVisit } from "@/lib/actions/visit-clinical.actions";
 
 interface ProcedureLite {
     _id: string;
@@ -45,9 +46,13 @@ const STATUS_COLORS: Record<string, string> = {
 export function TreatmentPlanBuilder({
     patientId,
     procedures,
+    attendanceId,
+    onBillingChange,
 }: {
     patientId: string;
     procedures: ProcedureLite[];
+    attendanceId?: string;
+    onBillingChange?: (billing: Record<string, unknown>) => void;
 }) {
     const router = useRouter();
     const path = usePathname();
@@ -96,8 +101,28 @@ export function TreatmentPlanBuilder({
         }
         try {
             setSaving(true);
+            // Save the proposed plan for the record.
             await createTreatmentPlan({ patientId, title: title.trim(), items, status: "proposed" });
-            toast.success("Treatment plan created");
+
+            // Inside a visit (attendance detail), also charge these procedures to
+            // the current visit bill in the same action — one task for the doctor.
+            if (attendanceId) {
+                const res = await addProceduresToVisit(
+                    attendanceId,
+                    items.map((it) => ({
+                        procedureId: it.procedureId ?? null,
+                        procedureName: it.procedureName,
+                        tooth: it.tooth ?? null,
+                        cost: Number(it.cost) || 0,
+                    })),
+                    path
+                );
+                if (res?.billing) onBillingChange?.(res.billing);
+                toast.success("Treatment plan saved and charged to the current bill");
+            } else {
+                toast.success("Treatment plan created");
+            }
+
             setTitle("");
             setItems([]);
             router.refresh();
@@ -197,6 +222,11 @@ export function TreatmentPlanBuilder({
                         {saving ? "Saving..." : "Save Treatment Plan"}
                     </Button>
                 </div>
+                {attendanceId && (
+                    <p className="text-right text-xs text-muted-foreground">
+                        Saving the plan on a visit also charges these procedures to the current bill.
+                    </p>
+                )}
             </CardContent>
         </Card>
     );

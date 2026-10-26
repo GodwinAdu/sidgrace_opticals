@@ -1,0 +1,226 @@
+{
+  "pbtResults": {},
+  "executionHistory": {
+    "1. Structured EMR (problems, allergies, immunizations) + allergy banner": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839248719
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839259494
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839889163
+      }
+    ],
+    "2. Emergency / A&E (triage + board + disposition)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839249477
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839893533
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791840470025
+      }
+    ],
+    "3. CPOE unified orders + ICD-10 coding + allergy decision support": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839249792
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791840474109
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791841106541
+      }
+    ],
+    "4. Operating theatre / surgery scheduling (+ billing)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839250284
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791841111258
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791841689094
+      }
+    ],
+    "5. Maternity / obstetrics (ANC, delivery, newborn)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839250530
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791841693727
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791842426381
+      }
+    ],
+    "6. ICU charting (time-stamped observations)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839250843
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791842430896
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791843031080
+      }
+    ],
+    "7. Blood bank & specimen tracking": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839251137
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791843035628
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791843903513
+      }
+    ],
+    "8. Referrals (in/out)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839251368
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791843909367
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791844457520
+      }
+    ],
+    "9. Document management (DMS) + consent archive": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839251536
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791844463610
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791845042687
+      }
+    ],
+    "10. Queue management + bed-transfer approval": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839251751
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791845047850
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791845849215
+      }
+    ],
+    "11. Procurement (requisition → PO → GRN)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839251981
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791845854246
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791846591117
+      }
+    ],
+    "12. Equipment / biomedical assets + maintenance": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839252130
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791846596711
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791847506365
+      }
+    ],
+    "13. HR & payroll (leave, attendance, payroll run)": [
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791839252304
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791847511450
+      },
+      {
+        "executionId": "48771a7a-1391-4173-be0b-928c88746d84",
+        "chatSessionId": "sess_12954b0f-4578-4002-8320-f0f77711338d",
+        "timestamp": 1791848751128
+      }
+    ]
+  }
+}

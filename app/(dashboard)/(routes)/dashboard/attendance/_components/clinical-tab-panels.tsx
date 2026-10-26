@@ -42,6 +42,9 @@ import {
     createInvoiceFromVisit, getVisitInvoice, setVisitOtherCharges,
     dispenseVisitProducts,
 } from "@/lib/actions/visit-clinical.actions";
+import { getPatientOutstanding } from "@/lib/actions/invoice.actions";
+import { settlePatientOutstanding } from "@/lib/actions/payment.actions";
+import { uploadFile } from "@/lib/actions/upload.actions";
 import { getClinicSettings } from "@/lib/actions/clinic-settings.actions";
 import { formatMoney } from "@/lib/utils";
 
@@ -240,15 +243,26 @@ export function VisitImagingPanel({
     const [tooth, setTooth] = useState("");
     const [fileUrl, setFileUrl] = useState("");
     const [saving, setSaving] = useState(false);
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => { setList(images); }, [images]);
 
-    const onFile = (file?: File) => {
+    const onFile = async (file?: File) => {
         if (!file) return;
-        if (file.size > 1.5 * 1024 * 1024) return toast.error("Image too large (max 1.5MB). Paste a URL instead.");
-        const reader = new FileReader();
-        reader.onload = () => setFileUrl(String(reader.result || ""));
-        reader.readAsDataURL(file);
+        if (file.size > 15 * 1024 * 1024) return toast.error("File too large (max 15MB).");
+        try {
+            setUploading(true);
+            const fd = new FormData();
+            fd.append("file", file);
+            fd.append("keyHint", patientId || "");
+            const res = await uploadFile(fd);
+            setFileUrl(res.url);
+            toast.success("File uploaded");
+        } catch (e) {
+            toast.error(e instanceof Error ? e.message : "Upload failed");
+        } finally {
+            setUploading(false);
+        }
     };
 
     const save = async () => {
@@ -290,8 +304,8 @@ export function VisitImagingPanel({
                         </div>
                         <div className="flex flex-wrap items-end gap-3">
                             <div>
-                                <label className="mb-1 block text-xs text-muted-foreground">Upload</label>
-                                <Input type="file" accept="image/*" onChange={(e) => onFile(e.target.files?.[0])} />
+                                <label className="mb-1 block text-xs text-muted-foreground">Upload {uploading && "(uploading…)"}</label>
+                                <Input type="file" accept="image/*,application/pdf" disabled={uploading} onChange={(e) => onFile(e.target.files?.[0])} />
                             </div>
                             <div className="flex-1 min-w-[180px]">
                                 <label className="mb-1 block text-xs text-muted-foreground">or paste URL</label>
@@ -547,7 +561,7 @@ export function CustomChargesPanel({
 
 /* ═══════════ DISPENSE PRODUCTS / DRUGS (inventory → visit bill) ═══════════ */
 interface InvProduct { _id: string; name: string; salePrice?: number; quantity?: number }
-interface DispensedRow { productId: string; name?: string; quantity?: number; unitPrice?: number; total?: number }
+interface DispensedRow { productId?: string; name?: string; quantity?: number; unitPrice?: number; total?: number }
 export function VisitProductsPanel({
     attendanceId,
     dispensed = [],
@@ -611,7 +625,7 @@ export function VisitProductsPanel({
             setSaving(true);
             const billing = await dispenseVisitProducts(
                 attendanceId,
-                rows.map((r) => ({ productId: r.productId, quantity: Number(r.quantity) || 0 })),
+                rows.filter((r) => r.productId).map((r) => ({ productId: String(r.productId), quantity: Number(r.quantity) || 0 })),
                 path
             );
             if (billing) onBillingChange?.(billing);
@@ -734,29 +748,43 @@ export function VisitProceduresPanel({
 
     const total = rows.reduce((s, r) => s + (Number(r.cost) || 0), 0);
 
-    const addRow = () => {
-        const proc = catalog.find((c) => c._id === selProc);
-        if (!proc) return toast.error("Select a procedure");
-        setRows((p) => [...p, { procedureId: proc._id, procedureName: `${proc.code} — ${proc.name}`, tooth: tooth ? Number(tooth) : null, cost: Number(proc.price) || 0 }]);
-        setSelProc(""); setTooth("");
-    };
-    const removeRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
-
-    const persist = async () => {
-        if (!attendanceId) return toast.error("Save the visit first");
-        const prev = procedures; // snapshot for rollback
-        onProceduresChange?.(rows); // optimistic
+    // Persist the given list to the visit bill. Procedures carry a catalog
+    // price, so recording one immediately charges the visit — no second
+    // "Add to Bill" step for the doctor to forget.
+    const persist = async (next: VisitProc[], prev: VisitProc[]) => {
+        if (!attendanceId) {
+            toast.error("Save the visit first");
+            setRows(prev);
+            return;
+        }
+        onProceduresChange?.(next); // optimistic
         try {
             setSaving(true);
-            const res = await saveVisitProcedures(attendanceId, rows, path);
+            const res = await saveVisitProcedures(attendanceId, next, path);
             if (res?.dentalProcedures) onProceduresChange?.(res.dentalProcedures);
             if (res?.billing) onBillingChange?.(res.billing);
-            toast.success("Procedures added to the bill");
+            toast.success("Procedure recorded and charged to the bill");
         } catch {
             setRows(prev); // restore local rows
             onProceduresChange?.(prev); // rollback shared
             toast.error("Something went wrong");
         } finally { setSaving(false); }
+    };
+
+    const addRow = () => {
+        const proc = catalog.find((c) => c._id === selProc);
+        if (!proc) return toast.error("Select a procedure");
+        const prev = rows;
+        const next = [...rows, { procedureId: proc._id, procedureName: `${proc.code} — ${proc.name}`, tooth: tooth ? Number(tooth) : null, cost: Number(proc.price) || 0 }];
+        setRows(next);
+        setSelProc(""); setTooth("");
+        void persist(next, prev); // auto-charge immediately
+    };
+    const removeRow = (i: number) => {
+        const prev = rows;
+        const next = rows.filter((_, idx) => idx !== i);
+        setRows(next);
+        void persist(next, prev); // reverse the charge immediately
     };
 
     if (loading) return <Spinner />;
@@ -813,16 +841,13 @@ export function VisitProceduresPanel({
                     <p className="text-sm text-muted-foreground">No procedures recorded for this visit.</p>
                 )}
 
-                {!readOnly && (
-                    <div className="flex justify-end">
-                        <Button onClick={persist} disabled={saving}>
-                            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                            Add to Bill
-                        </Button>
+                {saving && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving to bill…
                     </div>
                 )}
                 <p className="text-xs text-muted-foreground">
-                    Procedure prices come from the Procedure Catalog. These add to the visit bill — the patient settles it under Payment &amp; Balance below.
+                    Procedure prices come from the Procedure Catalog. Adding a procedure charges the visit bill automatically — the patient settles it under Payment &amp; Balance.
                 </p>
             </CardContent>
         </Card>
@@ -859,6 +884,7 @@ const STATUS_COLOR: Record<string, string> = {
 };
 export function VisitPaymentPanel({
     attendanceId,
+    patientId,
     billing,
     procedures = [],
     currency = "",
@@ -866,6 +892,7 @@ export function VisitPaymentPanel({
     readOnly,
 }: {
     attendanceId?: string;
+    patientId?: string;
     billing?: Billing;
     procedures?: VisitProc[];
     currency?: string;
@@ -875,11 +902,16 @@ export function VisitPaymentPanel({
     const path = usePathname();
     const [cur, setCur] = useState(currency);
     const [invoice, setInvoice] = useState<InvoiceLite | null>(null);
+    const [prevOutstanding, setPrevOutstanding] = useState(0);
+    const [prevCount, setPrevCount] = useState(0);
     const [loading, setLoading] = useState(true);
     const [amount, setAmount] = useState("");
     const [method, setMethod] = useState("cash");
     const [paying, setPaying] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [settleAmount, setSettleAmount] = useState("");
+    const [settleMethod, setSettleMethod] = useState("cash");
+    const [settling, setSettling] = useState(false);
 
     // Local (pre-invoice) charge summary — computed from the SAME data the
     // panel displays (consultation fee + the procedures list + other charges),
@@ -898,14 +930,25 @@ export function VisitPaymentPanel({
     const total = invoice ? Number(invoice.total) || 0 : localTotal;
     const amountPaid = invoice ? Number(invoice.amountPaid) || 0 : 0;
     const balance = invoice ? Number(invoice.balance) || 0 : localTotal;
+    // Grand total the patient owes = this visit balance + prior unpaid invoices.
+    const grandTotal = balance + prevOutstanding;
 
     const load = () => {
         if (!attendanceId) { setLoading(false); return; }
         setLoading(true);
-        Promise.all([getVisitInvoice(attendanceId), currency ? Promise.resolve(null) : getClinicSettings()])
-            .then(([inv, s]) => {
+        getVisitInvoice(attendanceId)
+            .then(async (inv) => {
                 setInvoice(inv || null);
-                if (!currency && s?.currency) setCur(s.currency);
+                if (!currency) {
+                    const s = await getClinicSettings().catch(() => null);
+                    if (s?.currency) setCur(s.currency);
+                }
+                // Previous outstanding = unpaid balances on OTHER invoices.
+                if (patientId) {
+                    const out = await getPatientOutstanding(patientId, inv?._id).catch(() => null);
+                    setPrevOutstanding(Number(out?.total) || 0);
+                    setPrevCount(Number(out?.count) || 0);
+                }
             })
             .catch(() => setInvoice(null))
             .finally(() => setLoading(false));
@@ -915,6 +958,7 @@ export function VisitPaymentPanel({
     useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [attendanceId, billing?.totalCharged, billing?.consultationFee, billing?.proceduresTotal]);
 
     useEffect(() => { setAmount(balance > 0 ? String(balance) : ""); }, [balance]);
+    useEffect(() => { setSettleAmount(prevOutstanding > 0 ? String(prevOutstanding) : ""); }, [prevOutstanding]);
 
     const generate = async () => {
         if (!attendanceId) return toast.error("Save the visit first");
@@ -939,6 +983,18 @@ export function VisitPaymentPanel({
             if (res?.billing) onBillingChange?.(res.billing);
             toast.success("Payment recorded");
         } catch (e) { toast.error(e instanceof Error ? e.message : "Something went wrong"); } finally { setPaying(false); }
+    };
+
+    const settle = async () => {
+        if (!patientId) return toast.error("No patient linked to this visit");
+        const amt = Number(settleAmount);
+        if (!amt || amt <= 0) return toast.error("Enter an amount");
+        try {
+            setSettling(true);
+            const res = await settlePatientOutstanding(patientId, amt, settleMethod as never, invoice?._id, path);
+            toast.success(`Settled ${res?.settledCount || 0} invoice(s)`);
+            load(); // refresh previous outstanding
+        } catch (e) { toast.error(e instanceof Error ? e.message : "Something went wrong"); } finally { setSettling(false); }
     };
 
     const row = (label: string, value: number, bold = false) => (
@@ -1004,9 +1060,19 @@ export function VisitPaymentPanel({
                     <div className="mt-2 border-t pt-2">
                         {row("Total", total, true)}
                         {row("Paid", amountPaid)}
-                        <div className="flex items-center justify-between border-t pt-2 text-base font-bold">
-                            <span>Balance Due</span>
+                        <div className="flex items-center justify-between py-1.5 text-sm">
+                            <span>This Visit Balance</span>
                             <span className={balance > 0 ? "text-red-600" : "text-green-600"}>{formatMoney(balance, cur)}</span>
+                        </div>
+                        {prevOutstanding > 0 && (
+                            <div className="flex items-center justify-between py-1.5 text-sm">
+                                <span className="text-amber-700">Previous Outstanding{prevCount > 0 ? ` (${prevCount} invoice${prevCount === 1 ? "" : "s"})` : ""}</span>
+                                <span className="text-amber-700">{formatMoney(prevOutstanding, cur)}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between border-t pt-2 text-base font-bold">
+                            <span>{prevOutstanding > 0 ? "Grand Total Due" : "Balance Due"}</span>
+                            <span className={grandTotal > 0 ? "text-red-600" : "text-green-600"}>{formatMoney(grandTotal, cur)}</span>
                         </div>
                     </div>
                 </div>
@@ -1029,6 +1095,32 @@ export function VisitPaymentPanel({
                             {paying ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
                             Record Payment
                         </Button>
+                        <span className="w-full text-xs text-muted-foreground">Pays this visit&#39;s invoice.</span>
+                    </div>
+                )}
+
+                {/* Settle previous outstanding (prior unpaid invoices, oldest first) */}
+                {!readOnly && prevOutstanding > 0 && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3 dark:bg-amber-900/10">
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-700">Settle Previous Outstanding</p>
+                        <div className="flex flex-wrap items-end gap-3">
+                            <div className="w-40">
+                                <label className="mb-1 block text-xs text-muted-foreground">Amount</label>
+                                <Input type="number" value={settleAmount} onChange={(e) => setSettleAmount(e.target.value)} />
+                            </div>
+                            <div className="w-44">
+                                <label className="mb-1 block text-xs text-muted-foreground">Method</label>
+                                <Select value={settleMethod} onValueChange={setSettleMethod}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>{PAY_METHODS.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <Button variant="secondary" onClick={settle} disabled={settling}>
+                                {settling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wallet className="mr-2 h-4 w-4" />}
+                                Settle Outstanding
+                            </Button>
+                            <span className="w-full text-xs text-muted-foreground">Applied oldest-first across prior unpaid invoices.</span>
+                        </div>
                     </div>
                 )}
 
@@ -1041,7 +1133,7 @@ export function VisitPaymentPanel({
 }
 
 /* ═══════════ TREATMENT PLAN (living, cross-visit) ═══════════ */
-export function DentalPlanTabPanel({ patientId }: { patientId: string }) {
+export function DentalPlanTabPanel({ patientId, attendanceId, onBillingChange }: { patientId: string; attendanceId?: string; onBillingChange?: (billing: Record<string, unknown>) => void }) {
     const [plans, setPlans] = useState<unknown[]>([]);
     const [procedures, setProcedures] = useState<unknown[]>([]);
     const [loading, setLoading] = useState(true);
@@ -1058,7 +1150,7 @@ export function DentalPlanTabPanel({ patientId }: { patientId: string }) {
     if (loading) return <Spinner />;
     return (
         <div className="space-y-6">
-            <TreatmentPlanBuilder patientId={patientId} procedures={procedures as never} />
+            <TreatmentPlanBuilder patientId={patientId} procedures={procedures as never} attendanceId={attendanceId} onBillingChange={onBillingChange} />
             <div>
                 <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">Existing Plans</h3>
                 <ExistingPlans plans={plans as never} />

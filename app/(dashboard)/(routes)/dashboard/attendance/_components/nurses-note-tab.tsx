@@ -14,24 +14,22 @@ interface NurseNotesData {
 interface NurseNotesTabProps {
     initialData?: NurseNotesData
     onSave?: (data: NurseNotesData) => void
+    onChange?: (data: NurseNotesData) => void
+    autoSave?: boolean
     readOnly?: boolean
 }
 
-export default function NurseNotesTab({ initialData, onSave, readOnly = false }: NurseNotesTabProps) {
-    const [notesData, setNotesData] = useState<NurseNotesData>(
-        initialData || {
-            nurseNote: "",
-        },
-    )
+export default function NurseNotesTab({ initialData, onSave, onChange, autoSave, readOnly = false }: NurseNotesTabProps) {
+    const [notesData, setNotesData] = useState<NurseNotesData>(initialData || { nurseNote: "" })
 
     const handleChange = (value: string) => {
-        setNotesData({ nurseNote: value })
+        const next = { nurseNote: value }
+        setNotesData(next)
+        onChange?.(next)
     }
 
     const handleSave = () => {
-        if (onSave) {
-            onSave(notesData)
-        }
+        if (onSave) onSave(notesData)
     }
 
     return (
@@ -42,7 +40,7 @@ export default function NurseNotesTab({ initialData, onSave, readOnly = false }:
                         <ClipboardList className="h-5 w-5 inline mr-2" />
                         Nurse&#39;s Notes
                     </CardTitle>
-                    {!readOnly && (
+                    {!readOnly && !autoSave && (
                         <Button size="sm" onClick={handleSave}>
                             <Save className="h-4 w-4 mr-1" />
                             Save Notes
@@ -60,33 +58,24 @@ export default function NurseNotesTab({ initialData, onSave, readOnly = false }:
                         value={notesData.nurseNote}
                         onChange={(e) => handleChange(e.target.value)}
                     />
-
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
                         <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Nursing Documentation Guide</h3>
                         <div className="space-y-2 text-sm">
                             <div>
                                 <p className="font-medium text-blue-700 dark:text-blue-300">Assessment</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document patient assessment findings, including vital signs and general condition.
-                                </p>
+                                <p className="text-gray-600 dark:text-gray-400">Document patient assessment findings, including vital signs and general condition.</p>
                             </div>
                             <div>
                                 <p className="font-medium text-blue-700 dark:text-blue-300">Interventions</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document nursing interventions, procedures performed, and medications administered.
-                                </p>
+                                <p className="text-gray-600 dark:text-gray-400">Document nursing interventions, procedures performed, and medications administered.</p>
                             </div>
                             <div>
                                 <p className="font-medium text-blue-700 dark:text-blue-300">Response</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document patient&#39;s response to interventions and any changes in condition.
-                                </p>
+                                <p className="text-gray-600 dark:text-gray-400">Document patient&#39;s response to interventions and any changes in condition.</p>
                             </div>
                             <div>
                                 <p className="font-medium text-blue-700 dark:text-blue-300">Education</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document patient education provided and patient&#39;s understanding.
-                                </p>
+                                <p className="text-gray-600 dark:text-gray-400">Document patient education provided and patient&#39;s understanding.</p>
                             </div>
                         </div>
                     </div>

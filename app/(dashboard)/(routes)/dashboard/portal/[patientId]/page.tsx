@@ -15,6 +15,7 @@ import { getImagingByPatient } from "@/lib/actions/imaging.actions";
 import { getClaimsByPatient, getInsuranceByPatient } from "@/lib/actions/insurance.actions";
 import { getConsentsByPatient } from "@/lib/actions/waitlist.actions";
 import { getPatientTimeline } from "@/lib/actions/portal.actions";
+import { getPrescriptionsByPatient } from "@/lib/actions/prescription.actions";
 import { PatientTimeline } from "../_components/PatientTimeline";
 
 type Props = Promise<{ patientId: string }>;
@@ -22,7 +23,7 @@ type Props = Promise<{ patientId: string }>;
 const page = async ({ params }: { params: Props }) => {
     const { patientId } = await params;
 
-    const [patient, appointments, plans, invoices, imaging, insurance, claims, consents, timeline] = await Promise.all([
+    const [patient, appointments, plans, invoices, imaging, insurance, claims, consents, timeline, prescriptions] = await Promise.all([
         fetchPatientId(patientId),
         getAppointmentsByPatient(patientId),
         getPlansByPatient(patientId),
@@ -32,6 +33,7 @@ const page = async ({ params }: { params: Props }) => {
         getClaimsByPatient(patientId),
         getConsentsByPatient(patientId),
         getPatientTimeline(patientId),
+        getPrescriptionsByPatient(patientId),
     ]);
 
     const totalBilled = (invoices || []).reduce((s: number, i: { total?: number }) => s + (Number(i.total) || 0), 0);
@@ -89,6 +91,7 @@ const page = async ({ params }: { params: Props }) => {
                         <TabsTrigger value="timeline">Visit History</TabsTrigger>
                         <TabsTrigger value="appointments">Appointments</TabsTrigger>
                         <TabsTrigger value="plans">Treatment Plans</TabsTrigger>
+                        <TabsTrigger value="prescriptions">Prescriptions</TabsTrigger>
                         <TabsTrigger value="invoices">Invoices</TabsTrigger>
                         <TabsTrigger value="insurance">Insurance & Claims</TabsTrigger>
                         <TabsTrigger value="imaging">Imaging</TabsTrigger>
@@ -116,6 +119,31 @@ const page = async ({ params }: { params: Props }) => {
                                 <span>{p.title} <Badge variant="outline" className="ml-2">{p.status}</Badge></span>
                                 <span className="font-semibold">{Number(p.totalCost).toFixed(2)}</span>
                             </div>
+                        ))}
+                    </TabsContent>
+
+                    <TabsContent value="prescriptions" className="space-y-3 pt-4">
+                        {(prescriptions || []).length === 0 && <p className="text-sm text-muted-foreground">No prescriptions.</p>}
+                        {(prescriptions || []).map((rx: { _id: string; status: string; createdAt?: string; prescribedBy?: { fullName?: string } | null; items?: { drugName?: string; dosage?: string; frequency?: string; duration?: string; quantity?: number }[] }) => (
+                            <Card key={rx._id}>
+                                <CardContent className="pt-5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs text-muted-foreground">
+                                            {rx.createdAt ? new Date(rx.createdAt).toLocaleString() : ""}
+                                            {rx.prescribedBy?.fullName ? ` • ${rx.prescribedBy.fullName}` : ""}
+                                        </span>
+                                        <Badge variant="outline" className="capitalize">{rx.status}</Badge>
+                                    </div>
+                                    <ul className="mt-2 space-y-1 text-sm">
+                                        {(rx.items || []).map((it, i) => (
+                                            <li key={i} className="flex items-center justify-between">
+                                                <span>{it.drugName}{[it.dosage, it.frequency, it.duration].filter(Boolean).length ? ` — ${[it.dosage, it.frequency, it.duration].filter(Boolean).join(", ")}` : ""}</span>
+                                                <span className="text-muted-foreground">qty {it.quantity}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </CardContent>
+                            </Card>
                         ))}
                     </TabsContent>
 

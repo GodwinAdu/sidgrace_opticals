@@ -20,10 +20,14 @@ interface VitalsData {
 interface VitalsTabProps {
     initialData?: VitalsData
     onSave?: (data: VitalsData) => void
+    /** Fired on every field change (drives auto-save). */
+    onChange?: (data: VitalsData) => void
+    /** When true, the explicit Save button is hidden (auto-save is active). */
+    autoSave?: boolean
     readOnly?: boolean
 }
 
-export default function VitalsTab({ initialData, onSave, readOnly = false }: VitalsTabProps) {
+export default function VitalsTab({ initialData, onSave, onChange, autoSave, readOnly = false }: VitalsTabProps) {
     const [vitalsData, setVitalsData] = useState<VitalsData>(
         initialData || {
             temperature: null,
@@ -36,32 +40,34 @@ export default function VitalsTab({ initialData, onSave, readOnly = false }: Vit
         },
     )
 
+    const commit = (next: VitalsData) => {
+        setVitalsData(next)
+        onChange?.(next)
+    }
+
     const handleChange = (field: keyof VitalsData, value: string) => {
         if (field === "bloodPressure") {
-            setVitalsData((prev) => ({ ...prev, [field]: value }))
-        } else {
-            const numValue = value === "" ? null : Number.parseFloat(value)
-            setVitalsData((prev) => ({ ...prev, [field]: numValue }))
+            commit({ ...vitalsData, [field]: value })
+            return
+        }
+        const numValue = value === "" ? null : Number.parseFloat(value)
+        let next: VitalsData = { ...vitalsData, [field]: numValue }
 
-            // Auto-calculate BMI if both height and weight are present
-            if ((field === "height" || field === "weight") && vitalsData.height && vitalsData.weight) {
-                const height = field === "height" ? Number.parseFloat(value) : vitalsData.height
-                const weight = field === "weight" ? Number.parseFloat(value) : vitalsData.weight
-
-                if (height && weight) {
-                    // BMI = weight(kg) / (height(m))²
-                    const heightInMeters = height / 100 // Convert cm to meters
-                    const bmi = weight / (heightInMeters * heightInMeters)
-                    setVitalsData((prev) => ({ ...prev, bmi: Number.parseFloat(bmi.toFixed(2)) }))
-                }
+        // Auto-calculate BMI if both height and weight are present.
+        if (field === "height" || field === "weight") {
+            const height = field === "height" ? numValue : vitalsData.height
+            const weight = field === "weight" ? numValue : vitalsData.weight
+            if (height && weight) {
+                const heightInMeters = height / 100
+                const bmi = weight / (heightInMeters * heightInMeters)
+                next = { ...next, bmi: Number.parseFloat(bmi.toFixed(2)) }
             }
         }
+        commit(next)
     }
 
     const handleSave = () => {
-        if (onSave) {
-            onSave(vitalsData)
-        }
+        if (onSave) onSave(vitalsData)
     }
 
     return (
@@ -72,7 +78,7 @@ export default function VitalsTab({ initialData, onSave, readOnly = false }: Vit
                         <Activity className="h-5 w-5 inline mr-2" />
                         Vital Signs
                     </CardTitle>
-                    {!readOnly && (
+                    {!readOnly && !autoSave && (
                         <Button size="sm" onClick={handleSave}>
                             <Save className="h-4 w-4 mr-1" />
                             Save Vitals
@@ -83,122 +89,71 @@ export default function VitalsTab({ initialData, onSave, readOnly = false }: Vit
             <CardContent className="p-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
-                        <Label htmlFor="temperature" className="dark:text-gray-300">
-                            Temperature
-                        </Label>
+                        <Label htmlFor="temperature" className="dark:text-gray-300">Temperature</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="temperature"
-                                type="number"
-                                step="0.1"
-                                disabled={readOnly}
+                            <Input id="temperature" type="number" step="0.1" disabled={readOnly}
                                 value={vitalsData.temperature?.toString() || ""}
                                 onChange={(e) => handleChange("temperature", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">°C</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="pulse" className="dark:text-gray-300">
-                            Pulse Rate
-                        </Label>
+                        <Label htmlFor="pulse" className="dark:text-gray-300">Pulse Rate</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="pulse"
-                                type="number"
-                                disabled={readOnly}
+                            <Input id="pulse" type="number" disabled={readOnly}
                                 value={vitalsData.pulse?.toString() || ""}
                                 onChange={(e) => handleChange("pulse", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">bpm</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="bloodPressure" className="dark:text-gray-300">
-                            Blood Pressure
-                        </Label>
+                        <Label htmlFor="bloodPressure" className="dark:text-gray-300">Blood Pressure</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="bloodPressure"
-                                disabled={readOnly}
-                                placeholder="120/80"
+                            <Input id="bloodPressure" disabled={readOnly} placeholder="120/80"
                                 value={vitalsData.bloodPressure}
                                 onChange={(e) => handleChange("bloodPressure", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">mmHg</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="respiratoryRate" className="dark:text-gray-300">
-                            Respiratory Rate
-                        </Label>
+                        <Label htmlFor="respiratoryRate" className="dark:text-gray-300">Respiratory Rate</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="respiratoryRate"
-                                type="number"
-                                disabled={readOnly}
+                            <Input id="respiratoryRate" type="number" disabled={readOnly}
                                 value={vitalsData.respiratoryRate?.toString() || ""}
                                 onChange={(e) => handleChange("respiratoryRate", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">/min</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="weight" className="dark:text-gray-300">
-                            Weight
-                        </Label>
+                        <Label htmlFor="weight" className="dark:text-gray-300">Weight</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="weight"
-                                type="number"
-                                step="0.1"
-                                disabled={readOnly}
+                            <Input id="weight" type="number" step="0.1" disabled={readOnly}
                                 value={vitalsData.weight?.toString() || ""}
                                 onChange={(e) => handleChange("weight", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">kg</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="height" className="dark:text-gray-300">
-                            Height
-                        </Label>
+                        <Label htmlFor="height" className="dark:text-gray-300">Height</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="height"
-                                type="number"
-                                disabled={readOnly}
+                            <Input id="height" type="number" disabled={readOnly}
                                 value={vitalsData.height?.toString() || ""}
                                 onChange={(e) => handleChange("height", e.target.value)}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">cm</span>
                         </div>
                     </div>
-
                     <div>
-                        <Label htmlFor="bmi" className="dark:text-gray-300">
-                            BMI
-                        </Label>
+                        <Label htmlFor="bmi" className="dark:text-gray-300">BMI</Label>
                         <div className="flex items-center gap-2 mt-2">
-                            <Input
-                                id="bmi"
-                                type="number"
-                                step="0.01"
-                                disabled={true}
+                            <Input id="bmi" type="number" step="0.01" disabled={true}
                                 value={vitalsData.bmi?.toString() || ""}
-                                className="dark:bg-gray-700 dark:text-gray-300"
-                            />
+                                className="dark:bg-gray-700 dark:text-gray-300" />
                             <span className="dark:text-gray-300">kg/m²</span>
                         </div>
                     </div>

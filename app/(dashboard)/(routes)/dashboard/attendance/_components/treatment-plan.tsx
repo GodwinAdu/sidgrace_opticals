@@ -16,25 +16,22 @@ interface TreatmentPlanData {
 interface TreatmentPlanTabProps {
     initialData?: TreatmentPlanData
     onSave?: (data: TreatmentPlanData) => void
+    onChange?: (data: TreatmentPlanData) => void
+    autoSave?: boolean
     readOnly?: boolean
 }
 
-export default function TreatmentPlanTab({ initialData, onSave, readOnly = false }: TreatmentPlanTabProps) {
-    const [planData, setPlanData] = useState<TreatmentPlanData>(
-        initialData || {
-            treatment: "",
-            followUp: "",
-        },
-    )
+export default function TreatmentPlanTab({ initialData, onSave, onChange, autoSave, readOnly = false }: TreatmentPlanTabProps) {
+    const [planData, setPlanData] = useState<TreatmentPlanData>(initialData || { treatment: "", followUp: "" })
 
     const handleChange = (field: keyof TreatmentPlanData, value: string) => {
-        setPlanData((prev) => ({ ...prev, [field]: value }))
+        const next = { ...planData, [field]: value }
+        setPlanData(next)
+        onChange?.(next)
     }
 
     const handleSave = () => {
-        if (onSave) {
-            onSave(planData)
-        }
+        if (onSave) onSave(planData)
     }
 
     return (
@@ -45,7 +42,7 @@ export default function TreatmentPlanTab({ initialData, onSave, readOnly = false
                         <ClipboardList className="h-5 w-5 inline mr-2" />
                         Plan &amp; Follow-up
                     </CardTitle>
-                    {!readOnly && (
+                    {!readOnly && !autoSave && (
                         <Button size="sm" onClick={handleSave}>
                             <Save className="h-4 w-4 mr-1" />
                             Save Plan
@@ -57,25 +54,15 @@ export default function TreatmentPlanTab({ initialData, onSave, readOnly = false
                 <div className="space-y-6">
                     <div>
                         <Label className="dark:text-gray-300 font-medium">Treatment Given / Summary</Label>
-                        <Textarea
-                            disabled={readOnly}
-                            placeholder="Summary of treatment given this visit and follow-up notes"
+                        <Textarea disabled={readOnly} placeholder="Summary of treatment given this visit and follow-up notes"
                             className="mt-2 min-h-[200px] dark:bg-gray-700 dark:text-gray-300"
                             value={planData.treatment}
-                            onChange={(e) => handleChange("treatment", e.target.value)}
-                        />
+                            onChange={(e) => handleChange("treatment", e.target.value)} />
                     </div>
-
                     <div>
                         <Label className="dark:text-gray-300 font-medium">Follow-up</Label>
-                        <Select
-                            disabled={readOnly}
-                            value={planData.followUp}
-                            onValueChange={(value) => handleChange("followUp", value)}
-                        >
-                            <SelectTrigger className="mt-2 dark:bg-gray-700 dark:text-gray-300">
-                                <SelectValue placeholder="Select follow-up period" />
-                            </SelectTrigger>
+                        <Select disabled={readOnly} value={planData.followUp} onValueChange={(value) => handleChange("followUp", value)}>
+                            <SelectTrigger className="mt-2 dark:bg-gray-700 dark:text-gray-300"><SelectValue placeholder="Select follow-up period" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="1week">1 Week</SelectItem>
                                 <SelectItem value="2weeks">2 Weeks</SelectItem>
@@ -86,36 +73,6 @@ export default function TreatmentPlanTab({ initialData, onSave, readOnly = false
                                 <SelectItem value="prn">As Needed (PRN)</SelectItem>
                             </SelectContent>
                         </Select>
-                    </div>
-
-                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
-                        <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-2">Treatment Plan Guide</h3>
-                        <div className="space-y-2 text-sm">
-                            <div>
-                                <p className="font-medium text-blue-700 dark:text-blue-300">Medications</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Include all prescribed medications with dosages, frequencies, and durations.
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-700 dark:text-blue-300">Procedures</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document any procedures to be performed, including timing and preparation.
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-700 dark:text-blue-300">Lifestyle Modifications</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Include recommendations for diet, exercise, and other lifestyle changes.
-                                </p>
-                            </div>
-                            <div>
-                                <p className="font-medium text-blue-700 dark:text-blue-300">Patient Education</p>
-                                <p className="text-gray-600 dark:text-gray-400">
-                                    Document educational materials provided and topics discussed with the patient.
-                                </p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </CardContent>

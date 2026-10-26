@@ -27,19 +27,19 @@ export function Hero() {
         <motion.div variants={container} initial="hidden" animate="show">
           <motion.div variants={item} className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-sm text-teal-100 backdrop-blur-md">
             <ShieldCheck className="h-4 w-4 text-teal-300" />
-            Trusted by 20,000+ smiles
+            Trusted by care teams everywhere
           </motion.div>
 
           <motion.h1 variants={item} className="max-w-xl text-4xl font-bold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl">
-            Modern Dentistry for a{" "}
+            One Platform to Run Your{" "}
             <span className="relative bg-gradient-to-r from-teal-300 to-cyan-200 bg-clip-text text-transparent">
-              Healthier Smile
+              Whole Hospital
             </span>
           </motion.h1>
 
           <motion.p variants={item} className="mt-6 max-w-lg text-lg leading-relaxed text-teal-100/85">
-            Gentle, expert care backed by the latest digital dentistry. From routine cleanings to
-            full smile makeovers, our specialists deliver comfortable, precise treatment tailored to you.
+            Medira brings OPD, inpatient wards, pharmacy, nursing, billing and accounting into one
+            system — for clinics and hospitals of every kind, from a single practice to a full facility.
           </motion.p>
 
           <motion.div variants={item} className="mt-9 flex flex-col gap-4 sm:flex-row">
@@ -51,7 +51,7 @@ export function Hero() {
               )}
             >
               <CalendarCheck className="h-5 w-5" />
-              Book an Appointment
+              Get Started
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <a
@@ -61,7 +61,7 @@ export function Hero() {
                 "h-12 border-white/30 bg-transparent px-7 text-base text-white hover:bg-white/10 hover:text-white"
               )}
             >
-              Explore Services
+              Explore Features
             </a>
           </motion.div>
 
@@ -78,7 +78,7 @@ export function Hero() {
                 ))}
                 <span className="ml-1 text-sm font-semibold text-white">4.9/5</span>
               </div>
-              <p className="text-sm text-teal-100/70">from 3,200+ patient reviews</p>
+              <p className="text-sm text-teal-100/70">from care teams who switched to Medira</p>
             </div>
           </motion.div>
         </motion.div>
@@ -94,8 +94,8 @@ export function Hero() {
             <div className="rounded-2xl bg-white p-6 shadow-2xl">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-teal-500">Next available</p>
-                  <p className="text-lg font-bold text-teal-950">Today, 3:30 PM</p>
+                  <p className="text-sm text-teal-500">Today at a glance</p>
+                  <p className="text-lg font-bold text-teal-950">Ward &amp; clinic overview</p>
                 </div>
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-teal-50 text-teal-600">
                   <CalendarCheck className="h-5 w-5" />
@@ -104,9 +104,9 @@ export function Hero() {
               <div className="my-5 h-px bg-teal-100" />
               <div className="space-y-3">
                 {[
-                  { name: "Dental Checkup", time: "30 min", price: "$49" },
-                  { name: "Teeth Whitening", time: "60 min", price: "$199" },
-                  { name: "Invisalign Consult", time: "45 min", price: "Free" },
+                  { name: "Outpatients seen", time: "OPD", price: "128" },
+                  { name: "Beds occupied", time: "Inpatient", price: "42/60" },
+                  { name: "Invoices settled", time: "Billing", price: "96%" },
                 ].map((s) => (
                   <div key={s.name} className="flex items-center justify-between rounded-xl bg-teal-50/60 px-4 py-3">
                     <div>
@@ -124,8 +124,8 @@ export function Hero() {
                 <ShieldCheck className="h-5 w-5" />
               </span>
               <div>
-                <p className="text-xs text-teal-500">Painless</p>
-                <p className="text-sm font-bold text-teal-950">Sedation Options</p>
+                <p className="text-xs text-teal-500">Secure</p>
+                <p className="text-sm font-bold text-teal-950">Role-based access</p>
               </div>
             </div>
           </div>
