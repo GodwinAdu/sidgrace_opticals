@@ -10,7 +10,7 @@ import Payment from "../models/payment.models";
 import { User, withAuth } from "../helpers/auth";
 import { deleteDocument } from "./trash.actions";
 import { postLedgerEntry } from "./accounting/bridge.actions";
-import { nextSequence } from "../models/counter.models";
+import { nextSequence, nextUniqueNumber } from "../models/counter.models";
 
 /* ─────────────── INSURANCE ─────────────── */
 
@@ -101,8 +101,11 @@ interface ClaimValues {
 
 async function generateClaimNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    const seq = await nextSequence(`claim-${year}`);
-    return `CLM-${year}-${String(seq).padStart(5, "0")}`;
+    return nextUniqueNumber(
+        `claim-${year}`,
+        (seq) => `CLM-${year}-${String(seq).padStart(5, "0")}`,
+        async (value) => !!(await Claim.exists({ claimNumber: value })),
+    );
 }
 
 async function _createClaim(user: User, values: ClaimValues) {

@@ -22,7 +22,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Stethoscope, Users, Clock, BedDouble } from "lucide-react";
+import { Stethoscope, Users, Clock, BedDouble, ChevronDown } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +67,31 @@ export default function PatientHeader({ admission = null }: PatientHeaderProps) 
     const { state, mode } = useEncounter();
     const attendance = state.attendance;
     const isHistorical = mode === "historical";
+
+    // Collapsible admission + billing details. Collapsed by default so the
+    // encounter sections get maximum vertical room; the clinician opens it on
+    // demand. The preference is remembered per browser.
+    const DETAILS_KEY = "encounter.header.detailsOpen";
+    const [detailsOpen, setDetailsOpen] = useState(false);
+    useEffect(() => {
+        try {
+            const saved = window.localStorage.getItem(DETAILS_KEY);
+            if (saved === "1") setDetailsOpen(true);
+        } catch {
+            // ignore storage access errors (e.g. privacy mode)
+        }
+    }, []);
+    const toggleDetails = () => {
+        setDetailsOpen((prev) => {
+            const next = !prev;
+            try {
+                window.localStorage.setItem(DETAILS_KEY, next ? "1" : "0");
+            } catch {
+                // ignore
+            }
+            return next;
+        });
+    };
 
     const patient = attendance.patientId || {};
     const patientMongoId = patient._id ? String(patient._id) : "";
@@ -163,12 +188,27 @@ export default function PatientHeader({ admission = null }: PatientHeaderProps) 
                                 <span className="hidden sm:inline">Dental Records</span>
                             </Link>
                         )}
+                        <button
+                            type="button"
+                            onClick={toggleDetails}
+                            aria-expanded={detailsOpen}
+                            aria-controls="encounter-header-details"
+                            className="inline-flex items-center gap-1.5 rounded-md bg-white/15 px-3 py-1.5 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                            title={detailsOpen ? "Hide billing & admission details" : "Show billing & admission details"}
+                        >
+                            <ChevronDown
+                                className={`h-4 w-4 transition-transform ${detailsOpen ? "rotate-180" : ""}`}
+                                aria-hidden="true"
+                            />
+                            <span className="hidden sm:inline">{detailsOpen ? "Hide details" : "Details"}</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            {/* Admission context + billing summary */}
-            <CardContent className="grid gap-5 pt-5 lg:grid-cols-2">
+            {/* Admission context + billing summary - collapsible (Details toggle). */}
+            {detailsOpen && (
+            <CardContent id="encounter-header-details" className="grid gap-5 pt-5 lg:grid-cols-2">
                 {/* Inpatient admission context — banner when admitted, Admit button otherwise */}
                 {admission ? (
                     <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4 dark:border-indigo-900 dark:bg-indigo-950/30">
@@ -233,6 +273,7 @@ export default function PatientHeader({ admission = null }: PatientHeaderProps) 
                     </div>
                 </div>
             </CardContent>
+            )}
         </Card>
     );
 }

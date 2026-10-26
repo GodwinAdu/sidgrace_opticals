@@ -24,7 +24,7 @@ import Invoice from "../models/invoice.models";
 import History from "../models/history.models";
 import InventoryProduct from "../models/inventory-product.models";
 import ChartAccount from "../models/accounting/chart-account.models";
-import { nextSequence } from "../models/counter.models";
+import { nextSequence, nextUniqueNumber } from "../models/counter.models";
 import { makeVersion } from "../clinical/attribution";
 import { writeVisitAuditEntry } from "../helpers/clinical-audit";
 import {
@@ -816,8 +816,11 @@ async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
     // Shares the same atomic sequence as invoice.actions so visit-generated and
     // manual invoices never collide.
-    const seq = await nextSequence(`invoice-${year}`);
-    return `INV-${year}-${String(seq).padStart(5, "0")}`;
+    return nextUniqueNumber(
+        `invoice-${year}`,
+        (seq) => `INV-${year}-${String(seq).padStart(5, "0")}`,
+        async (value) => !!(await Invoice.exists({ invoiceNumber: value })),
+    );
 }
 
 /** Build invoice line items + total from a visit's current charges. */

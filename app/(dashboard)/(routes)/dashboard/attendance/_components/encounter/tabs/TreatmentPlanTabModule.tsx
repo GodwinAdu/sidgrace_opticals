@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Thin wrapper for "Plan & Follow-up": the existing `TreatmentPlanTab` (plan
- * portion, now as-you-type auto-save via onChange + hidden Save button) plus the
- * self-persisting `VisitProceduresPanel` (own billing bus, unchanged). Both
- * components reused unchanged except the additive onChange/autoSave props.
+ * Thin wrapper for "Plan & Follow-up": the visit note + follow-up only
+ * (`TreatmentPlanTab`, as-you-type auto-save via onChange + hidden Save button).
+ *
+ * NOTE: Procedure recording/billing was moved OUT of this tab and now lives
+ * solely on the "Treatment Plan" tab (DentalPlanTabModule), so there is a single
+ * home for procedures + billing. This tab is purely the per-visit plan note and
+ * follow-up interval.
  */
 import TreatmentPlanTab from "../../treatment-plan";
-import { VisitProceduresPanel } from "../../clinical-tab-panels";
-import { EntryAttributionList, SectionAttribution } from "../attribution-blocks";
+import { SectionAttribution } from "../attribution-blocks";
 import { usePersistSection } from "../usePersistSection";
 import type { EncounterTabProps } from "./types";
 
@@ -16,8 +18,6 @@ export default function TreatmentPlanTabModule({
     attendance,
     attendanceId,
     readOnly,
-    onPatchSection,
-    onPatchBilling,
 }: EncounterTabProps) {
     const { autoSave, flush } = usePersistSection();
     return (
@@ -33,19 +33,6 @@ export default function TreatmentPlanTabModule({
                     attendanceId={attendanceId}
                     field="plan"
                     versions={attendance?.planVersions as never}
-                />
-            </div>
-            <div>
-                <VisitProceduresPanel
-                    attendanceId={attendanceId}
-                    procedures={attendance?.dentalProcedures as never}
-                    onBillingChange={(billing) => onPatchBilling?.(billing as Record<string, unknown>)}
-                    onProceduresChange={(procedures) => onPatchSection?.("dentalProcedures", procedures)}
-                    readOnly={readOnly}
-                />
-                <EntryAttributionList
-                    entries={attendance?.dentalProcedures as never}
-                    label="Recorded by"
                 />
             </div>
         </div>

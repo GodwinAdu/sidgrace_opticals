@@ -8,7 +8,7 @@ import History from "../models/history.models";
 import { User, withAuth } from "../helpers/auth";
 import { deleteDocument } from "./trash.actions";
 import { computeInvoiceTotals } from "../finance/calc";
-import { nextSequence } from "../models/counter.models";
+import { nextSequence, nextUniqueNumber } from "../models/counter.models";
 
 interface InvoiceItemInput {
     description: string;
@@ -31,8 +31,11 @@ interface InvoiceValues {
 async function generateInvoiceNumber(): Promise<string> {
     const year = new Date().getFullYear();
     // Atomic per-year sequence — safe under concurrent creation.
-    const seq = await nextSequence(`invoice-${year}`);
-    return `INV-${year}-${String(seq).padStart(5, "0")}`;
+    return nextUniqueNumber(
+        `invoice-${year}`,
+        (seq) => `INV-${year}-${String(seq).padStart(5, "0")}`,
+        async (value) => !!(await Invoice.exists({ invoiceNumber: value })),
+    );
 }
 
 function computeTotals(items: InvoiceItemInput[], tax = 0, discount = 0) {

@@ -1,13 +1,21 @@
 "use client";
 
-/** Thin wrapper around the self-persisting `DentalPlanTabPanel` (living,
- * cross-visit treatment plan). The panel owns its own server-action
- * persistence; this adapter maps provider state (attendanceId + patientId),
- * preserves the "No patient linked to this visit." fallback (Req 1.3), and
- * forwards the panel's `onBillingChange` to the provider's `onPatchBilling`
- * billing bus so the header reconciles optimistic then server-returned billing
- * (Req 4.5). It never routes saves through the record save (Req 4.4). Gated by
- * `attTreatment` in the registry. */
+/**
+ * "Treatment Plan" tab ? the single home for procedure selection + billing.
+ *
+ * Renders the living, cross-visit treatment-plan builder (`DentalPlanTabPanel`),
+ * which is itself a procedure selector: the clinician picks procedures into a
+ * (optionally phased) plan and can push them to the CURRENT visit bill via the
+ * builder's save action. There is intentionally ONE procedure UI here ? the
+ * separate per-visit procedures panel used to live on "Plan & Follow-up" and
+ * was removed to avoid a duplicate procedure picker.
+ *
+ * The panel owns its own server-action persistence; this adapter maps provider
+ * state (attendanceId + patientId), preserves the "No patient linked" fallback
+ * (Req 1.3), and forwards billing to the provider's billing bus so the header
+ * reconciles optimistic then server-returned billing (Req 4.5). Gated by
+ * `attTreatment` in the registry.
+ */
 import { DentalPlanTabPanel } from "../../clinical-tab-panels";
 import type { EncounterTabProps } from "./types";
 

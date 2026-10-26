@@ -84,6 +84,7 @@ interface DeliveryRow {
 }
 
 const pName = (p: AncRow["patientId"]) => (typeof p === "object" && p ? p.fullName || "" : "");
+const pId = (p: AncRow["patientId"]) => (typeof p === "object" && p ? String((p as { _id?: string })._id || "") : String(p || ""));
 
 const statusTone = (status?: string) => {
     switch (status) {
@@ -92,6 +93,63 @@ const statusTone = (status?: string) => {
         default: return "bg-pink-100 text-pink-800 border-pink-200";
     }
 };
+
+/**
+ * Patient search box. Module-level (NOT defined inside MaternityManager) so its
+ * identity is stable across renders ? otherwise React remounts it on every
+ * keystroke and the input loses focus after one character.
+ */
+function PatientPicker({
+    target,
+    onPick,
+    term,
+    setTerm,
+    results,
+    setResults,
+    searching,
+    whichSearch,
+    search,
+}: {
+    target: "anc" | "delivery";
+    onPick: (p: PatientLite) => void;
+    term: string;
+    setTerm: (v: string) => void;
+    results: PatientLite[];
+    setResults: (v: PatientLite[]) => void;
+    searching: boolean;
+    whichSearch: "anc" | "delivery";
+    search: (t: "anc" | "delivery") => void;
+}) {
+    return (
+        <div>
+            <div className="flex gap-2">
+                <Input
+                    value={term}
+                    onChange={(e) => setTerm(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && search(target)}
+                    placeholder="Search patient..."
+                    className="max-w-sm"
+                />
+                <Button type="button" onClick={() => search(target)} disabled={searching}>
+                    {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                </Button>
+            </div>
+            {whichSearch === target && (
+                <div className="mt-2 space-y-1">
+                    {results.map((p) => (
+                        <button
+                            key={p._id}
+                            onClick={() => { onPick(p); setResults([]); }}
+                            className="flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm hover:bg-muted"
+                        >
+                            <User2 className="h-4 w-4 text-pink-600" /> {p.fullName}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
 
 export function MaternityManager({
     ancRecords,
@@ -266,36 +324,6 @@ export function MaternityManager({
         }
     };
 
-    const PatientPicker = ({ onPick, target }: { onPick: (p: PatientLite) => void; target: "anc" | "delivery" }) => (
-        <div>
-            <div className="flex gap-2">
-                <Input
-                    value={term}
-                    onChange={(e) => setTerm(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && search(target)}
-                    placeholder="Search patient..."
-                    className="max-w-sm"
-                />
-                <Button type="button" onClick={() => search(target)} disabled={searching}>
-                    {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                </Button>
-            </div>
-            {whichSearch === target && (
-                <div className="mt-2 space-y-1">
-                    {results.map((p) => (
-                        <button
-                            key={p._id}
-                            onClick={() => { onPick(p); setResults([]); }}
-                            className="flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm hover:bg-muted"
-                        >
-                            <User2 className="h-4 w-4 text-pink-600" /> {p.fullName}
-                        </button>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-
     return (
         <div className="space-y-6">
             {/* Open ANC episode */}
@@ -303,7 +331,7 @@ export function MaternityManager({
                 <CardContent className="space-y-4 pt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Open ANC Episode</h3>
                     {!ancPatient ? (
-                        <PatientPicker target="anc" onPick={setAncPatient} />
+                        <PatientPicker target="anc" onPick={setAncPatient} term={term} setTerm={setTerm} results={results} setResults={setResults} searching={searching} whichSearch={whichSearch} search={search} />
                     ) : (
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 rounded-lg border bg-pink-50/50 px-3 py-2 text-sm">
@@ -413,7 +441,7 @@ export function MaternityManager({
                 <CardContent className="space-y-4 pt-6">
                     <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Record Delivery</h3>
                     {!delPatient ? (
-                        <PatientPicker target="delivery" onPick={setDelPatient} />
+                        <PatientPicker target="delivery" onPick={setDelPatient} term={term} setTerm={setTerm} results={results} setResults={setResults} searching={searching} whichSearch={whichSearch} search={search} />
                     ) : (
                         <div className="space-y-3">
                             <div className="flex items-center gap-2 rounded-lg border bg-pink-50/50 px-3 py-2 text-sm">
@@ -427,7 +455,7 @@ export function MaternityManager({
                                         <SelectTrigger><SelectValue placeholder="Select episode" /></SelectTrigger>
                                         <SelectContent>
                                             {ancRecords
-                                                .filter((r) => pName(r.patientId) === delPatient.fullName)
+                                                .filter((r) => pId(r.patientId) === delPatient._id)
                                                 .map((r) => <SelectItem key={r._id} value={r._id}>{r.episodeNumber}</SelectItem>)}
                                         </SelectContent>
                                     </Select>

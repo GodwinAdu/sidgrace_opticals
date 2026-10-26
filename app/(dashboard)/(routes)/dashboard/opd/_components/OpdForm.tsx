@@ -119,33 +119,17 @@ type AttendancePatient = Patient & {
     status: "waiting" | "in-progress" | "completed"
 }
 
-// Form schema for vital signs
+// Form schema for vital signs. Vitals are OPTIONAL at OPD check-in: a patient
+// can be checked in without them. Empty fields coerce to undefined and pass;
+// upper bounds still guard against obviously bad numbers when values ARE given.
 const vitalsFormSchema = z.object({
-    bloodPressure: z.string().min(1, { message: "Blood pressure is required" }),
-    systolic: z.coerce
-        .number()
-        .min(70, { message: "Systolic must be at least 70" })
-        .max(250, { message: "Systolic must be less than 250" }),
-    diastolic: z.coerce
-        .number()
-        .min(40, { message: "Diastolic must be at least 40" })
-        .max(150, { message: "Diastolic must be less than 150" }),
-    pulse: z.coerce
-        .number()
-        .min(40, { message: "Pulse must be at least 40" })
-        .max(220, { message: "Pulse must be less than 220" }),
-    temperature: z.coerce
-        .number()
-        .min(95, { message: "Temperature must be at least 95°F" })
-        .max(105, { message: "Temperature must be less than 105°F" }),
-    respiratoryRate: z.coerce
-        .number()
-        .min(8, { message: "Respiratory rate must be at least 8" })
-        .max(40, { message: "Respiratory rate must be less than 40" }),
-    oxygenSaturation: z.coerce
-        .number()
-        .min(70, { message: "Oxygen saturation must be at least 70%" })
-        .max(100, { message: "Oxygen saturation must be less than 100%" }),
+    bloodPressure: z.string().optional(),
+    systolic: z.coerce.number().min(0).max(300, { message: "Systolic looks too high" }),
+    diastolic: z.coerce.number().min(0).max(200, { message: "Diastolic looks too high" }),
+    pulse: z.coerce.number().min(0).max(300, { message: "Pulse looks too high" }),
+    temperature: z.coerce.number().min(0).max(120, { message: "Temperature looks too high" }),
+    respiratoryRate: z.coerce.number().min(0).max(80, { message: "Respiratory rate looks too high" }),
+    oxygenSaturation: z.coerce.number().min(0).max(100, { message: "SpO2 cannot exceed 100%" }),
 })
 
 // Form schema for eye test

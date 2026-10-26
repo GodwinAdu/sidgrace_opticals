@@ -9,6 +9,22 @@ import { deleteDocument } from './trash.actions';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import ClinicSettings from '../models/clinic-settings.models';
 import { ensureVisitInvoice } from './visit-clinical.actions';
+import { revalidatePath } from 'next/cache';
+
+/**
+ * Invalidate the Next data cache for the screens that list attendances, so a
+ * check-in / vitals save shows up immediately after the client calls
+ * router.refresh(). Server revalidation + client refresh together give the
+ * freshest view without a manual reload.
+ */
+function revalidateAttendanceViews() {
+    try {
+        revalidatePath("/dashboard/opd");
+        revalidatePath("/dashboard/attendance");
+    } catch {
+        // revalidatePath can throw outside a request scope; never block the write.
+    }
+}
 import { resolveCompleteStatus, type VisitStatus } from '../clinical/encounter';
 import {
     isMeaningfulChange,
@@ -161,6 +177,7 @@ async function _createAttendance(user: User, values: Record<string, unknown>) {
         }
 
         // Return the created doc (id) so callers can navigate to the visit.
+        revalidateAttendanceViews();
         return JSON.parse(JSON.stringify(attendance));
     } catch (error) {
         console.error("Error creating attendance", error);
@@ -450,9 +467,11 @@ async function _updateAttendanceById(
                 if (!updatedAttendance) {
                     throw new Error("Attendance not found.");
                 }
+                revalidateAttendanceViews();
                 return JSON.parse(JSON.stringify(updatedAttendance));
             }
 
+            revalidateAttendanceViews();
             return JSON.parse(JSON.stringify(visit));
         }
 
@@ -467,6 +486,7 @@ async function _updateAttendanceById(
             throw new Error("Attendance not found.");
         }
 
+        revalidateAttendanceViews();
         return JSON.parse(JSON.stringify(updatedAttendance));
     } catch (err) {
         console.error("Failed to update attendance:", err);

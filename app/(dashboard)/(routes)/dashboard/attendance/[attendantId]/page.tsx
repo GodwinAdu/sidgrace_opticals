@@ -1,4 +1,4 @@
-import ConsultingPageWrapper from "../_components/consulting-page-wrapper"
+import EncounterWorkspace from "../_components/encounter/EncounterWorkspace"
 import { getAttendanceById, getPreviousVisitsByPatientId } from "@/lib/actions/attendance.actions"
 import { getAdmissionByAttendance } from "@/lib/actions/admission.actions"
 import { currentUserRole } from "@/lib/helpers/current-role"
@@ -21,7 +21,7 @@ const page = async ({ params }: { params: Promise<{ attendantId: string }> }) =>
 
   return (
     <div>
-      <ConsultingPageWrapper initialAttendance={patient} previousVisits={previousVisits} role={JSON.parse(JSON.stringify(role || null))} admission={JSON.parse(JSON.stringify(admission || null))} />
+      <EncounterWorkspace initialAttendance={patient} previousVisits={previousVisits} role={JSON.parse(JSON.stringify(role || null))} admission={JSON.parse(JSON.stringify(admission || null))} />
     </div>
   )
 }
