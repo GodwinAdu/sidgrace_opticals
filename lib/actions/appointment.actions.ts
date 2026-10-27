@@ -189,14 +189,23 @@ async function _createAppointment(user: User, appointmentData: {
         await Promise.all([
             newAppointment.save(),
             history.save(),
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(values),
-            }),
         ])
+
+        // Best-effort confirmation SMS — must not fail appointment creation (the
+        // appointment is already saved). On Vercel the SMS endpoint / Twilio may
+        // be unconfigured, which would otherwise throw and abort the action.
+        try {
+            const smsBase = process.env.NEXT_PUBLIC_API_URL;
+            if (smsBase) {
+                await fetch(`${smsBase}sms/send-sms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(values),
+                });
+            }
+        } catch (smsError) {
+            console.error("Appointment SMS failed (appointment was still created):", smsError);
+        }
 
         return {
             success: true,

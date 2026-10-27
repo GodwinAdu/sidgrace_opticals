@@ -61,15 +61,23 @@ async function _createPatient(user: User, values) {
         await Promise.all([
             patient.save(),
             history.save(),
-            fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(data),
-            })
         ])
 
+        // Best-effort welcome SMS — must not fail patient creation (the patient
+        // is already saved). On Vercel the SMS endpoint / Twilio may be
+        // unconfigured, which would otherwise throw and abort the action.
+        try {
+            const smsBase = process.env.NEXT_PUBLIC_API_URL;
+            if (smsBase) {
+                await fetch(`${smsBase}sms/send-sms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+            }
+        } catch (smsError) {
+            console.error("Welcome SMS failed (patient was still created):", smsError);
+        }
 
         return JSON.parse(JSON.stringify(patient))
 

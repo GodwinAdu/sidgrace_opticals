@@ -154,6 +154,60 @@ export function InvoiceView({
         }
     };
 
+    /**
+     * Print to the networked thermal printer (Xprinter XP-E200L) via the server
+     * ESC/POS route. Driverless — no Windows spooler. Falls back to the browser
+     * receipt print if the printer is unreachable.
+     */
+    const printThermal = async () => {
+        const t = toast.loading("Printing receipt…");
+        try {
+            const payload = {
+                clinicName: CLINIC,
+                clinicAddress: clinic?.address,
+                clinicPhone: clinic?.phone,
+                title: "RECEIPT",
+                docNumber: invoice.invoiceNumber,
+                dateText: invoice.createdAt ? new Date(invoice.createdAt).toLocaleString() : new Date().toLocaleString(),
+                customerName: patient?.fullName || "Patient",
+                customerId: patient?.patientId,
+                lines: invoice.items.map((it) => ({
+                    name: it.description,
+                    detail: `${it.quantity} x ${m(Number(it.unitPrice))}`,
+                    amount: m(Number(it.amount)),
+                })),
+                totals: [
+                    { label: "Subtotal", value: m(invoice.subtotal) },
+                    ...(invoice.tax ? [{ label: "Tax", value: m(invoice.tax) }] : []),
+                    ...(invoice.discount ? [{ label: "Discount", value: `-${m(invoice.discount)}` }] : []),
+                    { label: "TOTAL", value: m(invoice.total), bold: true },
+                    { label: "Paid", value: m(invoice.amountPaid) },
+                    { label: "Balance", value: m(invoice.balance), bold: true },
+                ],
+                footer: `Thank you for choosing ${CLINIC}.`,
+                width: 48,
+            };
+            const res = await fetch("/api/print-receipt", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            const result = await res.json().catch(() => ({ ok: false }));
+            if (res.ok && result.ok) {
+                toast.success("Receipt printed", { id: t });
+            } else {
+                toast.error("Printer unreachable — using browser print", { id: t, description: result?.error });
+                printReceipt();
+            }
+        } catch (err) {
+            toast.error("Printer error — using browser print", {
+                id: t,
+                description: err instanceof Error ? err.message : undefined,
+            });
+            printReceipt();
+        }
+    };
+
     const exportPdf = () => {
         const doc = new jsPDF();
         doc.setFontSize(18);
@@ -303,13 +357,16 @@ export function InvoiceView({
 
                 {/* Actions — hidden when printing */}
                 <div className="mt-6 flex justify-end gap-2 print:hidden">
+                    <Button onClick={printThermal}>
+                        <ReceiptText className="mr-2 h-4 w-4" /> Print Receipt
+                    </Button>
                     {epos?.enabled && epos.printerUrl ? (
-                        <Button onClick={quickPrintEpson}>
+                        <Button variant="outline" onClick={quickPrintEpson}>
                             <Zap className="mr-2 h-4 w-4" /> Quick Print (Epson)
                         </Button>
                     ) : null}
                     <Button variant="outline" onClick={printReceipt}>
-                        <ReceiptText className="mr-2 h-4 w-4" /> Print Receipt
+                        <ReceiptText className="mr-2 h-4 w-4" /> Browser Receipt
                     </Button>
                     <Button variant="outline" onClick={print}>
                         <Printer className="mr-2 h-4 w-4" /> Print A4

@@ -100,13 +100,25 @@ async function _createStaff(user: User, values: CreateStaffValues) {
             department.save(),
             history.save()
         ]);
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL}sms/send-sms`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data),
-        });
+
+        // Welcome SMS is a best-effort side effect. It must NEVER fail staff
+        // creation: the account is already saved above. On Vercel the SMS
+        // endpoint / Twilio may be unconfigured or NEXT_PUBLIC_API_URL may be
+        // unset, which previously made fetch throw and abort the whole action
+        // (the staff was created but the UI reported an error). Swallow any
+        // failure and only log it.
+        try {
+            const smsBase = process.env.NEXT_PUBLIC_API_URL;
+            if (smsBase) {
+                await fetch(`${smsBase}sms/send-sms`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
+                });
+            }
+        } catch (smsError) {
+            console.error("Welcome SMS failed (staff was still created):", smsError);
+        }
 
 
     } catch (error) {

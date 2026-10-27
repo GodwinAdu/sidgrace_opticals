@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface ReceiptItem {
   name: string;
@@ -36,6 +38,67 @@ const Receipt = ({ sale, clinicName, cashierName }: ReceiptProps) => {
   const items = sale?.items || [];
   const isCash = sale?.paymentMethod === "cash";
   const when = sale?.createdAt ? new Date(sale.createdAt) : new Date();
+  const [printing, setPrinting] = useState(false);
+
+  /**
+   * Print to the networked thermal printer (ESC/POS) via the server. Falls back
+   * to the browser print dialog if the printer is unreachable, so the cashier
+   * always gets a receipt one way or another.
+   */
+  const printToThermal = async () => {
+    setPrinting(true);
+    const t = toast.loading("Printing receipt…");
+    try {
+      const payload = {
+        clinicName,
+        title: "PHARMACY RECEIPT",
+        docNumber: sale?.saleNumber,
+        dateText: when.toLocaleString(),
+        customerName: sale?.customerName,
+        cashierName,
+        lines: items.map((it) => ({
+          name: it.name,
+          detail: `${it.quantity} x ${money(it.unitPrice)}`,
+          amount: money(it.total),
+        })),
+        totals: [
+          { label: "Subtotal", value: money(sale?.subTotal) },
+          { label: "TOTAL", value: money(sale?.total), bold: true },
+          { label: "Payment", value: (sale?.paymentMethod || "").replace("-", " ") },
+          ...(sale?.paymentReference ? [{ label: "Reference", value: sale.paymentReference }] : []),
+          ...(isCash ? [
+            { label: "Tendered", value: money(sale?.amountTendered) },
+            { label: "Change", value: money(sale?.change) },
+          ] : []),
+        ],
+        footer: "Thank you.",
+        width: 48,
+      };
+      const res = await fetch("/api/print-receipt", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const result = await res.json().catch(() => ({ ok: false }));
+      if (res.ok && result.ok) {
+        toast.success("Receipt printed", { id: t });
+      } else {
+        toast.error("Printer unreachable — using browser print", {
+          id: t,
+          description: result?.error,
+        });
+        window.print();
+      }
+    } catch (err) {
+      toast.error("Printer error — using browser print", {
+        id: t,
+        description: err instanceof Error ? err.message : undefined,
+      });
+      window.print();
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   return (
     <div>
@@ -132,8 +195,11 @@ const Receipt = ({ sale, clinicName, cashierName }: ReceiptProps) => {
         <p className="text-center text-xs mt-3">Thank you.</p>
       </div>
 
-      <div className="mt-4 flex justify-end">
-        <Button onClick={() => window.print()}>Print</Button>
+      <div className="mt-4 flex justify-end gap-2 print:hidden">
+        <Button variant="outline" onClick={() => window.print()}>Browser Print</Button>
+        <Button onClick={printToThermal} disabled={printing}>
+          {printing ? "Printing…" : "Print Receipt"}
+        </Button>
       </div>
     </div>
   );
