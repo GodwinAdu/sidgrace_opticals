@@ -245,13 +245,14 @@ async function _getAllAttendances(user: User) {
 
         const filterAttendance = attendances.map(data => ({
             _id: data._id,
-            patient: data.patientId.fullName,
-            visitDate:format(data.date,"PPP"),
+            // patientId is populated with only `fullName` and can be null when the
+            // referenced patient was deleted or the reference is stale. Guard it so
+            // one orphaned row never throws and takes down the whole OPD page.
+            patient: data.patientId?.fullName ?? "Unknown patient",
+            visitDate: data.date ? format(data.date, "PPP") : "",
             status: data.status,
             ...data._doc
         }));
-
-        console.log(filterAttendance,"filter")
 
         // Convert Mongoose documents to plain objects
         return JSON.parse(JSON.stringify(filterAttendance));
