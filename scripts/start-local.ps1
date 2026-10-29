@@ -17,28 +17,39 @@
 $ErrorActionPreference = "Stop"
 
 # --- Paths ---
-$NodeDir    = Join-Path $env:LOCALAPPDATA "nodejs"
-$MongoDir   = Join-Path $env:LOCALAPPDATA "mongodb"
-$MongoExe   = Join-Path $MongoDir "mongod.exe"
-$MongoCfg   = Join-Path $MongoDir "mongod.cfg"
+# Node and MongoDB can live in two places:
+#   1. Per-user (no admin) installs under %LOCALAPPDATA% (original setup), or
+#   2. Normal admin installs (Node MSI -> Program Files\nodejs, MongoDB MSI ->
+#      Program Files\MongoDB\Server\<ver>\bin, usually running as a Windows service).
+# We resolve whichever exists so the same launcher works on a fresh machine.
 $ProjectDir = Split-Path -Parent $PSScriptRoot   # repo root (scripts\ is one level down)
 $AppUrl     = "http://localhost:3000"
 
-# --- Make node + npm available for this process ---
-$env:Path = "$NodeDir;$env:Path"
+$NodeDir = @(
+    (Join-Path $env:LOCALAPPDATA "nodejs"),
+    (Join-Path $env:ProgramFiles "nodejs")
+) | Where-Object { Test-Path (Join-Path $_ "node.exe") } | Select-Object -First 1
+if (-not $NodeDir) {
+    $onPath = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($onPath) { $NodeDir = Split-Path -Parent $onPath.Source }
+}
 
-Write-Host "SidGrace Opticals - local launcher (production)" -ForegroundColor Cyan
+$MongoExe = @(
+    (Join-Path $env:LOCALAPPDATA "mongodb\mongod.exe")
+) + (Get-ChildItem "$env:ProgramFiles\MongoDB\Server\*\bin\mongod.exe" -ErrorAction SilentlyContinue | Sort-Object FullName -Descending | ForEach-Object FullName) |
+    Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+$MongoCfg = Join-Path $env:LOCALAPPDATA "mongodb\mongod.cfg"
+
+Write-Host "Dapfam Dental Clinic - local launcher (production)" -ForegroundColor Cyan
 Write-Host "Project: $ProjectDir"
 
 # --- Sanity checks ---
-if (-not (Test-Path $MongoExe)) {
-    Write-Host "ERROR: MongoDB not found at $MongoExe" -ForegroundColor Red
+if (-not $NodeDir) {
+    Write-Host "ERROR: Node.js not found. Install Node.js 22 LTS (see docs/REINSTALL-GUIDE.md)." -ForegroundColor Red
     exit 1
 }
-if (-not (Test-Path (Join-Path $NodeDir "node.exe"))) {
-    Write-Host "ERROR: Node.js not found at $NodeDir" -ForegroundColor Red
-    exit 1
-}
+$env:Path = "$NodeDir;$env:Path"
+Write-Host "Node: $NodeDir"
 if (-not (Test-Path (Join-Path $ProjectDir ".next"))) {
     Write-Host "WARNING: No production build found (.next missing)." -ForegroundColor Red
     Write-Host "Run 'npm run build' first. Attempting to build now..." -ForegroundColor Yellow
@@ -58,14 +69,28 @@ if (Test-Port 27017) {
     Write-Host "MongoDB already running on 127.0.0.1:27017" -ForegroundColor Green
 } else {
     Write-Host "Starting MongoDB..." -ForegroundColor Yellow
-    Start-Process -FilePath $MongoExe -ArgumentList "--config","`"$MongoCfg`"" -WindowStyle Hidden
+    # Prefer the Windows service (normal MSI install); fall back to running
+    # mongod.exe directly with our per-user config (no-admin install).
+    $svc = Get-Service -Name MongoDB -ErrorAction SilentlyContinue
+    if ($svc) {
+        try { Start-Service MongoDB -ErrorAction Stop } catch { Write-Host "Could not start MongoDB service: $($_.Exception.Message)" -ForegroundColor Yellow }
+    } elseif ($MongoExe -and (Test-Path $MongoCfg)) {
+        Start-Process -FilePath $MongoExe -ArgumentList "--config","`"$MongoCfg`"" -WindowStyle Hidden
+    } elseif ($MongoExe) {
+        $dataDir = Join-Path $env:LOCALAPPDATA "mongodb\data"
+        New-Item -ItemType Directory -Path $dataDir -Force | Out-Null
+        Start-Process -FilePath $MongoExe -ArgumentList "--dbpath","`"$dataDir`"","--bind_ip","127.0.0.1","--port","27017" -WindowStyle Hidden
+    } else {
+        Write-Host "ERROR: MongoDB not found. Install MongoDB Community (see docs/REINSTALL-GUIDE.md)." -ForegroundColor Red
+        exit 1
+    }
     $ready = $false
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
         if (Test-Port 27017) { $ready = $true; break }
     }
     if ($ready) { Write-Host "MongoDB is up on 127.0.0.1:27017" -ForegroundColor Green }
-    else { Write-Host "WARNING: MongoDB did not open port 27017 in time. See $MongoDir\log\mongod.log" -ForegroundColor Red }
+    else { Write-Host "WARNING: MongoDB did not open port 27017 in time." -ForegroundColor Red }
 }
 
 # --- Start the app (production) if not already running ---
