@@ -37,6 +37,9 @@ try {
     Start-Sleep -Milliseconds 800
     $stream.Close(); $client.Close()
     "SENT $($arr.Length) bytes to ${Ip}:${Port}" | Add-Content $log
+    Write-Host "Sent $($arr.Length) bytes to ${Ip}:${Port}. Check the printer." -ForegroundColor Green
 } catch {
     "FAILED: $($_.Exception.Message)" | Add-Content $log
+    Write-Host "Could not reach the printer at ${Ip}:${Port}: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Check it is on, cabled to the router, and print a self-test to confirm its IP." -ForegroundColor Yellow
 }

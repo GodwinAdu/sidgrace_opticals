@@ -156,6 +156,100 @@ Login: `admin` / `Admin@1234`. Change it after the first login.
    (sign out of Windows and back in, or reboot).
 
 The printer itself keeps its settings (DHCP on). Don't reset it.
+A Windows reinstall does **not** affect the printer. Only Part H below is needed
+if the printer is new, was factory-reset, or stops showing a `192.168.1.x` IP.
+
+---
+
+## Part H: Xprinter XP-E200L receipt printer
+
+### How printing works
+
+The app does **not** use Windows printing, a driver, or USB. The server sends
+raw ESC/POS commands straight to the printer over the network
+(`PRINTER_IP:9100`, see `lib/clinical/escpos-receipt.ts` and
+`app/api/print-receipt/route.ts`). So you don't need to install any Xprinter
+driver or the CD software. The printer just has to be on the same network as
+the host PC.
+
+Printer facts (from its self-test):
+
+| Setting | Value |
+|---|---|
+| Model | Xprinter XP-E200L, 80mm (72mm print width), auto-cutter |
+| Interface | USB + Ethernet |
+| MAC address | `00-61-7B-FB-41-E5` |
+| Factory network settings | IP `192.168.123.100`, gateway `192.168.123.1`, **DHCP disabled** |
+| Our working settings | **DHCP enabled**, gets `192.168.1.158` from the router, port `9100` |
+
+### Print a self-test (to see the printer's current IP)
+
+1. Turn the printer **off**.
+2. Hold the **FEED** button and turn the printer **on**, keeping FEED held
+   until it starts printing.
+3. The slip shows `IP address`, `Gateway` and `Net DHCP`.
+   - Gateway `192.168.1.1` and an IP like `192.168.1.x` means it's already
+     set up. Go to "Point the app at the printer".
+   - IP `192.168.123.100` with DHCP **Disabled** means it's at factory settings.
+     Do "Put the printer on the network" first.
+
+### Put the printer on the network (only if it's at factory settings)
+
+The printer's factory IP (`192.168.123.100`) is on a different network from
+ours (`192.168.1.x`), so it can't be reached until it's switched to DHCP. Do
+this from a **spare laptop**, not the host PC. Changing the host's IP knocks it
+off the clinic network.
+
+1. On the spare laptop, turn **Wi-Fi off**.
+2. Connect a network cable **directly from the laptop to the printer's Ethernet port**.
+3. On the laptop, open **Command Prompt as administrator** and give it a
+   temporary address on the printer's network:
+   ```
+   netsh interface ip set address name="Ethernet" static 192.168.123.50 255.255.255.0
+   ```
+   (If the adapter isn't called "Ethernet", find its name with
+   `netsh interface show interface`.)
+4. Open a browser on the laptop and go to **http://192.168.123.100**
+   (type `http://`, not https). If it asks for a login, try leaving it blank
+   or `admin` / `admin`.
+5. In the network/TCP-IP settings, set **DHCP = Enabled** and **Save**.
+6. Put the laptop back to normal:
+   ```
+   netsh interface ip set address name="Ethernet" dhcp
+   ```
+7. Unplug the printer from the laptop, **plug it into the clinic router**
+   (the same router as the host PC), then turn the printer **off and on**.
+8. Print a self-test again. It should now show gateway `192.168.1.1` and a
+   `192.168.1.x` IP.
+
+### Point the app at the printer
+
+1. Put the printer's IP from the self-test in `.env.local`:
+   ```
+   PRINTER_IP=192.168.1.158
+   PRINTER_PORT=9100
+   ```
+2. Test the printer directly (no app needed):
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File scripts\print-receipt-test.ps1 -Ip 192.168.1.158
+   ```
+   A slip headed **DAPFAM DENTAL CLINIC** should print and cut.
+3. Restart the app (reboot, or sign out and back in) so it picks up the new
+   `PRINTER_IP`.
+4. In the app: **Billing → Invoices → open an invoice → Print Receipt**.
+   Pharmacy POS also has a **Print Receipt** button.
+5. In the router, reserve `00-61-7B-FB-41-E5` → `192.168.1.158` so the IP
+   never changes (Part G).
+
+If you can't find the printer's IP, this scans the clinic network for its
+MAC address and port 9100:
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\find-printer.ps1
+```
+
+If the app shows **"Printer unreachable — using browser print"**, the printer
+is off, unplugged, or its IP changed. Check the cable and link light, print a
+self-test, and update `PRINTER_IP`.
 
 ---
 
