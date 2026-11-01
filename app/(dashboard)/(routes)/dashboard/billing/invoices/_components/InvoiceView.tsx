@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { FileDown, Printer, ReceiptText, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { buildEposReceiptXml, eposEndpoint, sendToEposPrinter } from "@/lib/clinical/epos-receipt";
+import { printReceiptDirect } from "@/lib/print/receipt-printer";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { formatMoney } from "@/lib/utils";
@@ -187,16 +188,11 @@ export function InvoiceView({
                 footer: `Thank you for choosing ${CLINIC}.`,
                 width: 48,
             };
-            const res = await fetch("/api/print-receipt", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-            const result = await res.json().catch(() => ({ ok: false }));
-            if (res.ok && result.ok) {
+            const result = await printReceiptDirect(payload);
+            if (result.ok) {
                 toast.success("Receipt printed", { id: t });
             } else {
-                toast.error("Printer unreachable — using browser print", { id: t, description: result?.error });
+                toast.error("Printer unreachable — using browser print", { id: t, description: result.error });
                 printReceipt();
             }
         } catch (err) {

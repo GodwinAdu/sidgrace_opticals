@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import { toast } from "sonner"
 import type {
     IPatient,
@@ -9,7 +9,7 @@ import type {
     BulkSendProgress,
     NotificationResponse,
 } from "@/types/notification.types"
-import { createNotification } from "@/lib/actions/notification.actions"
+import { countBulkRecipients, createNotification } from "@/lib/actions/notification.actions"
 import { fetchPatientBySearch } from "@/lib/actions/patient.actions"
 
 export function useNotificationForm() {
@@ -100,56 +100,23 @@ export function useNotificationForm() {
         setSelectedContacts((prev) => prev.filter((c) => c._id !== id))
     }, [])
 
-    // Get bulk recipients count
-    const getBulkRecipientsCount = useCallback(
-        (roles: string[]) => {
-            if (formData.allContacts) {
-                return searchResults.filter((contact) => contact.status === "active").length
-            }
-            if (formData.selectedRole.length > 0) {
-                return searchResults.filter(
-                    (contact) => formData.selectedRole.includes(contact.role || "") && contact.status === "active",
-                ).length
-            }
-            return 0
-        },
-        [formData.allContacts, formData.selectedRole, searchResults],
-    )
-
-    // Simulate bulk send progress
-    const simulateBulkSendProgress = useCallback(async (totalRecipients: number) => {
-        setBulkSendProgress({
-            isActive: true,
-            current: 0,
-            total: totalRecipients,
-            status: "Initializing...",
-            errors: [],
-        })
-
-        for (let i = 0; i < totalRecipients; i++) {
-            await new Promise((resolve) => setTimeout(resolve, 300))
-            setBulkSendProgress((prev) => ({
-                ...prev,
-                current: i + 1,
-                status: `Processing recipient ${i + 1} of ${totalRecipients}...`,
-            }))
+    // Real number of patients a bulk send will reach (counted on the server)
+    const [bulkCount, setBulkCount] = useState(0)
+    const groupsKey = formData.selectedRole.join("|")
+    useEffect(() => {
+        if (formData.sendMode !== "bulk" || (!formData.allContacts && formData.selectedRole.length === 0)) {
+            setBulkCount(0)
+            return
         }
+        let cancelled = false
+        countBulkRecipients(formData.allContacts, formData.selectedRole)
+            .then((n) => { if (!cancelled) setBulkCount(n) })
+            .catch(() => { if (!cancelled) setBulkCount(0) })
+        return () => { cancelled = true }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [formData.sendMode, formData.allContacts, groupsKey])
 
-        setBulkSendProgress((prev) => ({
-            ...prev,
-            status: "Completed successfully!",
-        }))
-
-        setTimeout(() => {
-            setBulkSendProgress({
-                isActive: false,
-                current: 0,
-                total: 0,
-                status: "",
-                errors: [],
-            })
-        }, 2000)
-    }, [])
+    const getBulkRecipientsCount = useCallback(() => bulkCount, [bulkCount])
 
     // Handle scheduling
     const handleSchedule = useCallback(() => {
@@ -190,7 +157,15 @@ export function useNotificationForm() {
         }
 
         if (formData.sendMode === "bulk" && !formData.allContacts && formData.selectedRole.length === 0) {
-            errors.push("Please select patient categories or enable 'All Patients'")
+            errors.push("Please select patient groups or enable 'All patients'")
+        }
+
+        if (formData.sendMode === "bulk" && bulkCount === 0) {
+            errors.push("No patients with a phone number match the selected groups")
+        }
+
+        if (formData.isScheduled && formData.scheduledDate && new Date(formData.scheduledDate) <= new Date()) {
+            errors.push("The scheduled time must be in the future")
         }
 
         if (formData.isScheduled && !formData.scheduledDate) {
@@ -198,21 +173,21 @@ export function useNotificationForm() {
         }
 
         return errors
-    }, [formData, selectedContacts])
+    }, [formData, selectedContacts, bulkCount])
 
     // Submit form
     const handleSubmit = useCallback(async (): Promise<NotificationResponse> => {
         const validationErrors = validateForm()
-        // if (validationErrors.length > 0) {
-        //     toast.error("Validation Error", {
-        //         description: validationErrors.join(", "),
-        //     })
-        //     return {
-        //         success: false,
-        //         message: "Validation failed",
-        //         error: validationErrors.join(", "),
-        //     }
-        // }
+        if (validationErrors.length > 0) {
+            toast.error("Please check the message", {
+                description: validationErrors.join(". "),
+            })
+            return {
+                success: false,
+                message: "Validation failed",
+                error: validationErrors.join(", "),
+            }
+        }
 
         try {
             setIsSending(true)
@@ -223,26 +198,20 @@ export function useNotificationForm() {
                 recipients: formData.sendMode === "individual" ? selectedContacts.map((c) => c._id) : [], // For bulk mode, recipients will be resolved server-side
             }
 
-            console.log("=== NOTIFICATION SUBMISSION ===")
-            console.log("Form Data:", notificationData)
-            console.log("Selected Contacts:", selectedContacts)
-            console.log("=== END SUBMISSION DATA ===")
-
-            // Create notification
+            // Create notification (the SMS service queues and sends it)
             const result = await createNotification(notificationData)
 
             if (result.success) {
-                // Show progress for bulk sends
-                if (formData.sendMode === "bulk" && result.data?.recipientCount) {
-                    await simulateBulkSendProgress(result.data.recipientCount)
+                const count = result.data?.recipientCount || 0
+                if (formData.isScheduled && formData.scheduledDate) {
+                    toast.success("Message scheduled", {
+                        description: `${count} patient(s) will receive it on ${new Date(formData.scheduledDate).toLocaleString()}. Track it in the History tab.`,
+                    })
+                } else {
+                    toast.success("Message queued for sending", {
+                        description: `${count} patient(s). Messages go out within a minute; check the History tab for delivery status.`,
+                    })
                 }
-
-                const action = formData.isScheduled ? "scheduled" : "sent"
-                const modeText = formData.sendMode === "bulk" ? "bulk message" : "message"
-
-                toast.success(`${modeText.charAt(0).toUpperCase() + modeText.slice(1)} ${action}`, {
-                    description: `Successfully ${action} to ${result.data?.recipientCount || 0} patient(s)`,
-                })
 
                 // Reset form
                 resetForm()
@@ -267,7 +236,7 @@ export function useNotificationForm() {
         } finally {
             setIsSending(false)
         }
-    }, [formData, selectedContacts, validateForm, simulateBulkSendProgress])
+    }, [formData, selectedContacts, validateForm])
 
     // Reset form
     const resetForm = useCallback(() => {

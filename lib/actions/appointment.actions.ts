@@ -7,6 +7,7 @@ import { Patient } from "../models/patient.models"
 import { connectToDB } from "../mongoose"
 import { deleteDocument } from "./trash.actions"
 import History from "../models/history.models"
+import { getClinicName, sendSms } from "../helpers/sms"
 
 
 export async function fetchBookedAppointments(date: string) {
@@ -158,11 +159,6 @@ async function _createAppointment(user: User, appointmentData: {
             }
         }
 
-        const values = {
-            destination: patient.phone,
-            message: `Dear ${patient.fullName}, your appointment is confirmed for ${format(appointmentData.date, "PPP")} at ${appointmentData.timeSlot}.`
-        }
-
         // Create the new appointment
         const newAppointment = new Appointment({
             ...appointmentData,
@@ -191,21 +187,16 @@ async function _createAppointment(user: User, appointmentData: {
             history.save(),
         ])
 
-        // Best-effort confirmation SMS — must not fail appointment creation (the
-        // appointment is already saved). On Vercel the SMS endpoint / Twilio may
-        // be unconfigured, which would otherwise throw and abort the action.
-        try {
-            const smsBase = process.env.NEXT_PUBLIC_API_URL;
-            if (smsBase) {
-                await fetch(`${smsBase}sms/send-sms`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(values),
-                });
-            }
-        } catch (smsError) {
-            console.error("Appointment SMS failed (appointment was still created):", smsError);
-        }
+        // Best-effort confirmation SMS: never fails appointment creation (sendSms does
+        // not throw, and temporary failures are queued and retried by the SMS backend).
+        const clinicName = await getClinicName();
+        const sms = await sendSms({
+            to: patient.phone,
+            recipientName: patient.fullName,
+            source: "appointment",
+            message: `Dear ${patient.fullName}, your appointment at ${clinicName} is confirmed for ${format(appointmentData.date, "PPP")} at ${appointmentData.timeSlot}. Please arrive 10 minutes early.`,
+        });
+        if (!sms.success) console.warn(`Appointment SMS not sent${sms.queued ? " (queued for retry)" : ""}: ${sms.message}`);
 
         return {
             success: true,

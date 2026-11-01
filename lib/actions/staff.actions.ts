@@ -8,6 +8,7 @@ import { login } from "../helpers/user.actions";
 import Department from "../models/department.models";
 import History from "../models/history.models";
 import { deleteDocument } from "./trash.actions";
+import { getClinicName, sendSms } from "../helpers/sms";
 
 
 interface LoginProps {
@@ -28,15 +29,6 @@ interface CreateStaffValues {
 async function _createStaff(user: User, values: CreateStaffValues) {
     try {
         if (!user) throw new Error("User not authenticated");
-        const data = {
-            destination: values.phone,
-            message: `Dear ${values.fullName}, your staff account has been successfully created.
-
-       Login Email: ${values.email}
-       Temporary Password: ${values.password}
-
-        Please log in and change your password upon first login. Do not share your login credentials with anyone for security reasons.`
-        }
 
 
         const { password, username } = values
@@ -101,24 +93,17 @@ async function _createStaff(user: User, values: CreateStaffValues) {
             history.save()
         ]);
 
-        // Welcome SMS is a best-effort side effect. It must NEVER fail staff
-        // creation: the account is already saved above. On Vercel the SMS
-        // endpoint / Twilio may be unconfigured or NEXT_PUBLIC_API_URL may be
-        // unset, which previously made fetch throw and abort the whole action
-        // (the staff was created but the UI reported an error). Swallow any
-        // failure and only log it.
-        try {
-            const smsBase = process.env.NEXT_PUBLIC_API_URL;
-            if (smsBase) {
-                await fetch(`${smsBase}sms/send-sms`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
-            }
-        } catch (smsError) {
-            console.error("Welcome SMS failed (staff was still created):", smsError);
-        }
+        // Best-effort welcome SMS: never fails staff creation (sendSms does not throw).
+        // The password is deliberately NOT sent: SMS is stored in plain text on phones,
+        // the gateway and our message history. The admin hands it over in person.
+        const clinicName = await getClinicName();
+        const sms = await sendSms({
+            to: values.phone,
+            recipientName: values.fullName,
+            source: "staff-welcome",
+            message: `Dear ${values.fullName}, your ${clinicName} staff account has been created. Username: ${values.username}. Your administrator will give you your temporary password. Please change it when you first sign in.`,
+        });
+        if (!sms.success) console.warn(`Staff welcome SMS not sent${sms.queued ? " (queued for retry)" : ""}: ${sms.message}`);
 
 
     } catch (error) {

@@ -18,11 +18,7 @@ import { useNotificationForm } from "@/hooks/use-notification"
 
 
 
-interface ComposeMessageProps {
-    roles: IRole[]
-}
-
-export default function ComposeMessage({ roles = [] }: ComposeMessageProps) {
+export default function ComposeMessage() {
     const {
         formData,
         updateFormData,
@@ -49,13 +45,20 @@ export default function ComposeMessage({ roles = [] }: ComposeMessageProps) {
         handleSubmit,
     } = useNotificationForm()
 
-    const getUniqueGroups = () => {
-        const groups = roles.map((role) => role.displayName).filter(Boolean)
-        return [...new Set(groups)]
-    }
+    // Bulk groups are patient record statuses (see notification.actions.ts bulkQuery).
+    const PATIENT_GROUPS: { value: string; label: string }[] = [
+        { value: "active", label: "Active patients" },
+        { value: "follow-up", label: "Follow-up patients" },
+        { value: "pending", label: "Pending patients" },
+        { value: "inactive", label: "Inactive patients" },
+    ]
+    const getUniqueGroups = () => PATIENT_GROUPS.map((g) => g.value)
+    const groupLabel = (value: string) => PATIENT_GROUPS.find((g) => g.value === value)?.label ?? value
 
-    const bulkRecipientsCount = getBulkRecipientsCount(roles.map((r) => r.displayName))
-    const estimatedCost = (formData.sendMode === "individual" ? selectedContacts.length : bulkRecipientsCount) * 0.05
+    const bulkRecipientsCount = getBulkRecipientsCount()
+    const recipientTotal = formData.sendMode === "individual" ? selectedContacts.length : bulkRecipientsCount
+    // SMSOnlineGH charges one credit per SMS part per recipient.
+    const estimatedCredits = recipientTotal * Math.max(1, messageCount)
 
     return (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
@@ -146,13 +149,13 @@ export default function ComposeMessage({ roles = [] }: ComposeMessageProps) {
                                             }}
                                         />
                                         <Label htmlFor="selectAll" className="font-medium cursor-pointer">
-                                            Send to All Active Patients
+                                            Send to all patients (except inactive, archived and deceased)
                                         </Label>
                                     </div>
 
                                     {!formData.allContacts && (
                                         <div className="space-y-3">
-                                            <Label className="text-sm font-medium">Or select by patient categories:</Label>
+                                            <Label className="text-sm font-medium">Or select patient groups:</Label>
                                             <div className="grid grid-cols-2 gap-3">
                                                 {getUniqueGroups().map((group) => (
                                                     <div key={group} className="flex items-center space-x-2">
@@ -167,7 +170,7 @@ export default function ComposeMessage({ roles = [] }: ComposeMessageProps) {
                                                             }}
                                                         />
                                                         <Label htmlFor={group} className="text-sm cursor-pointer">
-                                                            {group}
+                                                            {groupLabel(group)}
                                                         </Label>
                                                     </div>
                                                 ))}
@@ -181,8 +184,8 @@ export default function ComposeMessage({ roles = [] }: ComposeMessageProps) {
                                             <span className="text-lg font-bold text-blue-600">{bulkRecipientsCount}</span>
                                         </div>
                                         <div className="text-xs text-gray-600 space-y-1">
-                                            <p>• Estimated cost: ${estimatedCost.toFixed(2)}</p>
-                                            <p>• Message parts: {messageCount}</p>
+                                            <p>• Patients with a phone number in the selected groups</p>
+                                            <p>• Message parts: {Math.max(1, messageCount)} · Estimated credits: {estimatedCredits}</p>
                                         </div>
                                     </div>
                                 </div>

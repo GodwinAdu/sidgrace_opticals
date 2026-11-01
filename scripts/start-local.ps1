@@ -93,6 +93,37 @@ if (Test-Port 27017) {
     else { Write-Host "WARNING: MongoDB did not open port 27017 in time." -ForegroundColor Red }
 }
 
+# --- Start the SMS backend (sibling folder ..\sidgrace-backend) if installed ---
+# The app sends SMS through it (NEXT_PUBLIC_API_URL=http://127.0.0.1:5000/api/v1/).
+# It listens on 127.0.0.1 only. If it is missing the app still runs; only SMS is skipped.
+$BackendDir   = Join-Path (Split-Path -Parent $ProjectDir) "sidgrace-backend"
+$BackendEntry = Join-Path $BackendDir "dist\server.js"
+if (Test-Port 5000) {
+    Write-Host "SMS backend already running on 127.0.0.1:5000" -ForegroundColor Green
+} elseif (Test-Path $BackendEntry) {
+    Write-Host "Starting SMS backend..." -ForegroundColor Yellow
+    $LogDir = Join-Path $env:LOCALAPPDATA "SidGrace\logs"
+    New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+    $outLog = Join-Path $LogDir "backend-out.log"
+    $errLog = Join-Path $LogDir "backend-err.log"
+    # keep logs from growing forever: roll over at 5 MB
+    foreach ($f in $outLog, $errLog) {
+        if ((Test-Path $f) -and (Get-Item $f).Length -gt 5MB) { Move-Item $f "$f.old" -Force }
+    }
+    Start-Process -FilePath (Join-Path $NodeDir "node.exe") -ArgumentList "`"$BackendEntry`"" `
+        -WorkingDirectory $BackendDir -WindowStyle Hidden `
+        -RedirectStandardOutput $outLog -RedirectStandardError $errLog
+    $ready = $false
+    for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Seconds 1
+        if (Test-Port 5000) { $ready = $true; break }
+    }
+    if ($ready) { Write-Host "SMS backend is up on 127.0.0.1:5000" -ForegroundColor Green }
+    else { Write-Host "WARNING: SMS backend did not start (see $errLog). The app will run without SMS." -ForegroundColor Red }
+} else {
+    Write-Host "SMS backend not found at $BackendDir (run 'npm install' and 'npm run build' there). SMS disabled." -ForegroundColor Yellow
+}
+
 # --- Start the app (production) if not already running ---
 if (Test-Port 3000) {
     Write-Host "App already running on $AppUrl" -ForegroundColor Green

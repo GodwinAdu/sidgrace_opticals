@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { printReceiptDirect } from "@/lib/print/receipt-printer";
 
 interface ReceiptItem {
   name: string;
@@ -74,18 +75,13 @@ const Receipt = ({ sale, clinicName, cashierName }: ReceiptProps) => {
         footer: "Thank you.",
         width: 48,
       };
-      const res = await fetch("/api/print-receipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const result = await res.json().catch(() => ({ ok: false }));
-      if (res.ok && result.ok) {
+      const result = await printReceiptDirect(payload);
+      if (result.ok) {
         toast.success("Receipt printed", { id: t });
       } else {
         toast.error("Printer unreachable — using browser print", {
           id: t,
-          description: result?.error,
+          description: result.error,
         });
         window.print();
       }

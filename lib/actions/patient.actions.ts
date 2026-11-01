@@ -6,6 +6,7 @@ import { connectToDB } from "../mongoose";
 import { withAuth, type User } from '../helpers/auth';
 import { deleteDocument } from "./trash.actions";
 import History from "../models/history.models";
+import { getClinicName, sendSms } from "../helpers/sms";
 
 
 interface FetchPatientsParams {
@@ -35,11 +36,6 @@ async function _createPatient(user: User, values) {
             throw new Error("Phone number is already registered");
         }
 
-        const data = {
-            destination: values.phone,
-            message: `Hi ${values.fullName}, welcome to Dapfam Dental Clinic! Your account is now active. We're glad to have you with us!`
-        };
-
         const patient = new Patient({
             ...values,
             createdBy: user._id,
@@ -63,21 +59,16 @@ async function _createPatient(user: User, values) {
             history.save(),
         ])
 
-        // Best-effort welcome SMS — must not fail patient creation (the patient
-        // is already saved). On Vercel the SMS endpoint / Twilio may be
-        // unconfigured, which would otherwise throw and abort the action.
-        try {
-            const smsBase = process.env.NEXT_PUBLIC_API_URL;
-            if (smsBase) {
-                await fetch(`${smsBase}sms/send-sms`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data),
-                });
-            }
-        } catch (smsError) {
-            console.error("Welcome SMS failed (patient was still created):", smsError);
-        }
+        // Best-effort welcome SMS: never fails patient creation (sendSms does not throw,
+        // and temporary failures are queued and retried by the SMS backend).
+        const clinicName = await getClinicName();
+        const sms = await sendSms({
+            to: values.phone,
+            recipientName: values.fullName,
+            source: "patient-welcome",
+            message: `Hi ${values.fullName}, welcome to ${clinicName}! Your patient record has been created. We look forward to seeing you.`,
+        });
+        if (!sms.success) console.warn(`Welcome SMS not sent${sms.queued ? " (queued for retry)" : ""}: ${sms.message}`);
 
         return JSON.parse(JSON.stringify(patient))
 

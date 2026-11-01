@@ -7,7 +7,7 @@ import { Patient } from "../models/patient.models";
 import History from "../models/history.models";
 import { User, withAuth } from "../helpers/auth";
 import { deleteDocument } from "./trash.actions";
-import { sendSMS } from "./twilo.actions";
+import { getClinicName, sendSms } from "../helpers/sms";
 
 interface RecallValues {
     patientId: string;
@@ -83,9 +83,9 @@ async function _updateRecallStatus(user: User, id: string, status: string, path:
 export const updateRecallStatus = await withAuth(_updateRecallStatus);
 
 /**
- * Sends an SMS reminder for a recall. Uses Twilio via sendSMS.
- * Returns { sent: boolean, reason?: string } so the UI can report gracefully
- * even when Twilio credentials are not configured.
+ * Sends an SMS reminder for a recall through the SMS backend (SMSOnlineGH).
+ * Returns { sent: boolean, queued?: boolean, reason?: string } so the UI can report
+ * gracefully when the SMS service is offline or not configured yet.
  */
 async function _sendRecallReminder(user: User, id: string, path: string) {
     try {
@@ -101,13 +101,17 @@ async function _sendRecallReminder(user: User, id: string, path: string) {
             return { sent: false, reason: "Patient has no phone number on file" };
         }
 
-        const message = `Dear ${patient.fullName || "patient"}, this is a reminder from Dapfam Dental Clinic that your ${recall.type} is due on ${new Date(recall.dueDate).toLocaleDateString()}. Please call us to schedule your appointment.`;
+        const clinicName = await getClinicName();
+        const dueDate = new Date(recall.dueDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+        const message = `Dear ${patient.fullName || "patient"}, this is a reminder from ${clinicName} that your ${recall.type} is due on ${dueDate}. Please call us to book your appointment.`;
 
-        try {
-            await sendSMS(phone, message);
-        } catch (smsError) {
-            console.error("SMS send failed (Twilio not configured?):", smsError);
-            return { sent: false, reason: "SMS gateway not configured" };
+        const sms = await sendSms({ to: phone, message, recipientName: patient.fullName, source: "recall" });
+        if (!sms.success) {
+            console.warn(`Recall SMS not sent${sms.queued ? " (queued for retry)" : ""}: ${sms.message}`);
+            const reason = sms.queued
+                ? `Not sent yet (${sms.message}). It is queued and will be retried automatically.`
+                : sms.message;
+            return { sent: false, queued: sms.queued, reason };
         }
 
         recall.lastRemindedAt = new Date();
