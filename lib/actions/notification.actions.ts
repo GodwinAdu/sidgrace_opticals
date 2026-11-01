@@ -5,7 +5,7 @@ import { withAuth, type User } from "../helpers/auth";
 import { connectToDB } from "../mongoose";
 import { Patient } from "../models/patient.models";
 import Notification from "../models/notification.models";
-import Staff from "../models/staff.models";
+import { kickSmsQueue } from "../helpers/sms";
 
 interface NotificationInput {
     sendMode: "individual" | "bulk" | "employeeBulk";
@@ -27,11 +27,34 @@ interface NotificationResponse {
     error?: string
 }
 
+/**
+ * Bulk SMS targets patients by their record status. (The form field is still called
+ * selectedRole for compatibility; it carries these status values, not staff roles.)
+ * "All patients" means every patient who is not inactive, archived or deceased.
+ */
+const BULK_GROUP_STATUSES = ["active", "follow-up", "pending", "inactive"] as const
+const NEVER_BULK = ["inactive", "archived", "deceased"]
+
+function bulkQuery(allContacts: boolean, groups: string[]) {
+    const hasPhone = { phone: { $exists: true, $nin: [null, ""] } }
+    if (allContacts) return { ...hasPhone, status: { $nin: NEVER_BULK } }
+    const statuses = groups.filter((g) => (BULK_GROUP_STATUSES as readonly string[]).includes(g))
+    return { ...hasPhone, status: { $in: statuses } }
+}
+
 async function getRecipientsForBulkMode(allContacts: boolean, selectedRole: string[]): Promise<Types.ObjectId[]> {
-    const query = allContacts ? {} : { role: { $in: selectedRole } }
-    const patients = await Patient.find(query).select("_id")
+    const patients = await Patient.find(bulkQuery(allContacts, selectedRole)).select("_id")
     return patients.map((p) => p._id)
 }
+
+/** Real number of patients a bulk send would reach (shown before sending). */
+async function _countBulkRecipients(user: User, allContacts: boolean, groups: string[] = []): Promise<number> {
+    if (!user) return 0
+    if (!allContacts && groups.length === 0) return 0
+    await connectToDB()
+    return Patient.countDocuments(bulkQuery(allContacts, groups))
+}
+export const countBulkRecipients = await withAuth(_countBulkRecipients, "messaging")
 
 async function validateNotificationInput(values: NotificationInput): Promise<string[]> {
     const errors: string[] = []
@@ -60,6 +83,14 @@ async function validateNotificationInput(values: NotificationInput): Promise<str
 
     if (values.sendMode === "individual" && (!values.recipients || values.recipients.length === 0)) {
         errors.push("At least one recipient is required for individual mode")
+    }
+
+    if (values.sendMode === "bulk" && !values.allContacts && !(values.selectedRole?.length)) {
+        errors.push("Choose 'All patients' or at least one patient group")
+    }
+
+    if (values.type !== "SMS") {
+        errors.push("Only SMS sending is supported")
     }
 
     return errors
@@ -129,19 +160,12 @@ async function _createNotification(user: User, values: NotificationInput): Promi
             allContacts,
             status,
             createdBy: new Types.ObjectId(user._id as string),
-            deliveryStatus: {
-                total: finalRecipients.length,
-                sent: 0,
-                failed: 0,
-                pending: finalRecipients.length,
-            },
         })
 
-        // If not scheduled, trigger send (could be done in background with queue)
+        // The SMS backend turns the notification into one queued message per patient and
+        // sends them (it also checks every minute). Ask it to start now for immediate sends.
         if (!isScheduled && status === "published") {
-            // Trigger immediate delivery
-            // TODO: Send SMS or Email here
-            console.log("🚀 Sending notification now:", notification._id)
+            await kickSmsQueue()
         }
 
         return {
@@ -173,4 +197,4 @@ async function _createNotification(user: User, values: NotificationInput): Promi
     }
 }
 
-export const createNotification = await withAuth(_createNotification)
+export const createNotification = await withAuth(_createNotification, "messaging")
